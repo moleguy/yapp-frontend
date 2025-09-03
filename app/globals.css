@@ -25,7 +25,16 @@
   font-weight: 600;
 }
 
+@font-face{
+  font-family: 'MyCustomFont', Arial, Helvetica, sans-serif;
+  src: url('/public/fonts/Product\ Sans\ Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 
+.subtitle{
+  font-family: 'MyCustomFont', Arial, Helvetica, sans-serif;
+}
 
 @font-face {
   font-family: 'MyFont';

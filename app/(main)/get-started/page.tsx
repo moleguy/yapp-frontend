@@ -82,7 +82,7 @@ export default function CoverPage() {
 
             <div className="flex flex-col justify-center items-center z-10">
                 <motion.p 
-                  className="text-3xl text-[#1e1e1e] font-MyFont mb-[32px] font-base tracking-tight"
+                  className="subtitle text-3xl text-[#1e1e1e] font-MyFont mb-[32px] tracking-tight"
                   initial={{opacity:0, y:50}}
                   animate={{opacity:1, y:0}}
                   transition={{duration:1, ease:'easeOut'}}

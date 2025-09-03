@@ -8,7 +8,7 @@ import { FaEye, FaEyeSlash, FaSpinner, FaCheck, FaTimes } from "react-icons/fa";
 import { useSignUp, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
-// Type definitions for Clerk errors
+// type definitions for Clerk errors
 interface ClerkError {
   code: string;
   message: string;
@@ -21,7 +21,7 @@ interface ClerkAPIError {
   clerkTraceId?: string;
 }
 
-// Type guard to check if error is a Clerk API error
+// type guard to check if error is a Clerk API error
 const isClerkAPIError = (error: unknown): error is ClerkAPIError => {
   return (
     typeof error === 'object' &&
@@ -32,7 +32,7 @@ const isClerkAPIError = (error: unknown): error is ClerkAPIError => {
   );
 };
 
-// Password strength enum
+// password strength enum
 enum PasswordStrength {
   WEAK = 'weak',
   FAIR = 'fair',
@@ -40,7 +40,7 @@ enum PasswordStrength {
   STRONG = 'strong'
 }
 
-// Form validation utilities
+// form validation utilities
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return emailRegex.test(email.trim());
@@ -53,12 +53,18 @@ const validateUsername = (username: string): boolean => {
 const checkPasswordStrength = (password: string): PasswordStrength => {
   let score = 0;
 
-  if (password.length >= 8) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^a-zA-Z0-9]/.test(password)) score++;
-  if (password.length >= 12) score++;
+  const rules: ((pw: string) => boolean)[] = [
+    pw => pw.length >= 8,
+    pw => /[a-z]/.test(pw),
+    pw => /[A-Z]/.test(pw),
+    pw => /[0-9]/.test(pw),
+    pw => /[^a-zA-Z0-9]/.test(pw),
+    pw => pw.length >= 12
+  ];
+
+  rules.forEach(rule => {
+    if(rule(password)) score++;
+  })
 
   if (score <= 2) return PasswordStrength.WEAK;
   if (score <= 3) return PasswordStrength.FAIR;
@@ -69,21 +75,19 @@ const checkPasswordStrength = (password: string): PasswordStrength => {
 const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  if (password.length < 8) {
-    errors.push('At least 8 characters long');
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push('One lowercase letter');
-  }
-  if (!/[A-Z]/.test(password)) {
-    errors.push('One uppercase letter');
-  }
-  if (!/[0-9]/.test(password)) {
-    errors.push('One number');
-  }
-  if (!/[^a-zA-Z0-9]/.test(password)) {
-    errors.push('One special character');
-  }
+  const rules: {test: (pw: string) => boolean; message: string}[] = [
+    {test: pw => pw.length >=8 , message: 'At least 8 characters long'},
+    {test: pw => /[a-z]/.test(pw), message: 'One lowercase letter'},
+    {test: pw => /[A-Z]/.test(pw), message: 'One uppercase letter'},
+    {test: pw => /[0-9]/.test(pw), message: 'One number'},
+    {test: pw => /[^a-zA-Z0-9]/.test(pw), message: 'One special character'}
+  ];
+
+  rules.forEach(rule => {
+    if(!rule.test(password)){
+      errors.push(rule.message)
+    }
+  });
 
   return { isValid: errors.length === 0, errors };
 };
@@ -96,11 +100,11 @@ export default function SignUp() {
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      router.replace('/home'); // Already signed-in users go straight to home
+      router.replace('/home'); // already signed-in users go straight to home
     }
   }, [isLoaded, isSignedIn, router]);
 
-  // Form state
+  // form state
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -123,34 +127,22 @@ export default function SignUp() {
       const errorCode = error.errors[0]?.code;
       const errorMessage = error.errors[0]?.message;
 
-      switch (errorCode) {
-        case 'form_identifier_exists':
-          return 'An account with this email already exists. Please sign in instead.';
-        case 'form_password_pwned':
-          return 'This password has been found in a data breach. Please use a different password.';
-        case 'form_password_length_too_short':
-          return 'Password must be at least 8 characters long';
-        case 'form_password_no_uppercase_letter':
-          return 'Password must contain at least one uppercase letter';
-        case 'form_password_no_lowercase_letter':
-          return 'Password must contain at least one lowercase letter';
-        case 'form_password_no_number':
-          return 'Password must contain at least one number';
-        case 'form_password_no_special_char':
-          return 'Password must contain at least one special character';
-        case 'form_identifier_invalid':
-          return 'Please enter a valid email address';
-        case 'form_param_nil':
-          return 'Please fill in all required fields';
-        case 'too_many_requests':
-          return 'Too many attempts. Please try again later.';
-        case 'form_username_invalid':
-          return 'Username can only contain letters, numbers, and underscores';
-        case 'form_username_exists':
-          return 'This username is already taken. Please choose another.';
-        default:
-          return errorMessage || 'Registration failed. Please try again.';
-      }
+      const errorMap: Record<string, string> = {
+        form_identifier_exists: 'An account with this email already exists. Please sign in instead',
+        form_password_pwned: 'This password has been found in a data breach. Please use a different password.',
+        form_password_length_too_short: 'Password must be at least 8 characters long',
+        form_password_no_uppercase_letter: 'Password must contain at least one uppercase letter',
+        form_password_no_lowercase_letter: 'Password must contain at least one lowercase letter',
+        form_password_no_number: 'Password must contain at least one number',
+        form_password_no_special_char: 'Password must contain at least one special character',
+        form_identifier_invalid: 'Please enter a valid email address',
+        form_param_nil: 'Please fill in all required fields',
+        too_many_requests: 'Too many attempts. Please try again later.',
+        form_username_invalid: 'Username can only contain letters, numbers, and underscores',
+        form_username_exists: 'This username is already taken. Please choose another.'
+      };
+
+      return errorMap[errorCode ?? ''] || errorMessage || 'Registration failed. Please try again.';
     }
 
     if (error instanceof Error) {
@@ -164,7 +156,7 @@ export default function SignUp() {
     return 'An unexpected error occurred. Please try again.';
   }, []);
 
-  //Temporarily Removed the need for username in sign up flow
+  //Ttemporarily removed the need for username in sign up flow
 
   const signUpWithCredentials = async (email: string, password: string) => {
     if (!isLoaded) return;
@@ -217,64 +209,43 @@ export default function SignUp() {
     }
   };
 
-  // Real-time validation
+  // real-time validation
   const validateField = useCallback((field: string, value: string) => {
     const errors = { ...fieldErrors };
 
-    switch (field) {
-      case 'email':
-        if (value && !validateEmail(value)) {
-          errors.email = 'Please enter a valid email address';
-        } else {
-          delete errors.email;
-        }
-        break;
-      case 'username':
-        if (value && !validateUsername(value)) {
-          errors.username = 'Username must be 3-20 characters, letters, numbers, and underscores only';
-        } else {
-          delete errors.username;
-        }
-        break;
-      case 'password':
-        const passwordValidation = validatePassword(value);
-        if (value && !passwordValidation.isValid) {
-          errors.password = 'Password requirements not met';
-        } else {
-          delete errors.password;
-        }
-        break;
-      case 'confirmPassword':
-        if (value && value !== password) {
-          errors.confirmPassword = 'Passwords do not match';
-        } else {
-          delete errors.confirmPassword;
-        }
-        break;
+    const rules: Record<string, (val: string) => string | null> = {
+      email: val => (val && !validateEmail(val) ? 'Please enter a valid email address' : null),
+      username: val => (val && !validateUsername(val)? 'Username must be 3-20 characters, letters, number, and underscores only' : null),
+      password: val => {
+        const res = validatePassword(val);
+        return val && !res.isValid ? 'Password requirements not met' : null
+      },
+      confirmPassword: val => (val && val !== password ? 'Passwords do not match': null)
+    };
+
+    const error = rules[field]?.(value) || null;
+    if(error){
+      errors[field] = error;
+    } else {
+      delete errors[field];
     }
 
     setFieldErrors(errors);
   }, [fieldErrors, password]);
 
   const handleInputChange = (field: string, value: string) => {
-    switch (field) {
-      case 'email':
-        setEmail(value);
-        break;
-      case 'username':
-        setUsername(value);
-        break;
-      case 'password':
-        setPassword(value);
-        if (confirmPassword) {
-          validateField('confirmPassword', confirmPassword);
-        }
-        break;
-      case 'confirmPassword':
-        setConfirmPassword(value);
-        break;
-    }
 
+    const setters: Record<string, (val: string) => void> = {
+      email: setEmail,
+      username: setUsername,
+      password: val => {
+        setPassword(val);
+        if(confirmPassword) validateField('confirmPassword', confirmPassword);
+      },
+      confirmPassword: setConfirmPassword,
+    };
+
+    setters[field]?.(value);
     validateField(field, value);
     if (formError) setFormError('');
   };
@@ -284,39 +255,47 @@ export default function SignUp() {
 
     if (isLoading) return;
 
-    // Validate all fields
-    const errors: { [key: string]: string } = {};
+    // validate all fields
+    const errors: Record<string, string> = {};
 
-    if (!email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!validateEmail(email)) {
-      errors.email = 'Please enter a valid email address';
-    }
+    const rules: { [key: string]: () => string | null } = {
+      email: () =>
+        !email.trim()
+          ? 'Email is required'
+          : !validateEmail(email)
+          ? 'Please enter a valid email address'
+          : null,
+      
+      username: () => 
+        !username.trim()
+          ? 'Username is required'
+          : !validateUsername(username)
+          ? 'Username must be 3-20 characters, letters, numbers, and underscores only'
+          : null,
 
-    if (!username.trim()) {
-      errors.username = 'Username is required';
-    } else if (!validateUsername(username)) {
-      errors.username = 'Username must be 3-20 characters, letters, numbers, and underscores only';
-    }
+      password: () => {
+        if(!password) return 'Password is required';
+        const res = validatePassword(password);
+        return !res.isValid ? 'Password requirements not met' : null;
+      },
 
-    if (!password) {
-      errors.password = 'Password is required';
-    } else {
-      const passwordValidation = validatePassword(password);
-      if (!passwordValidation.isValid) {
-        errors.password = 'Password requirements not met';
-      }
-    }
+      confirmPassword: () => 
+        !confirmPassword
+          ? 'Please confirm your password'
+          : confirmPassword !== password
+          ? 'Passwords do not match'
+          : null,
 
-    if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-    } else if (confirmPassword !== password) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
+      terms: () => 
+        !agreeToTerms
+          ? 'You must agree to all Terms, Privacy Policy and Fees'
+          : null,
+    };
 
-    if (!agreeToTerms) {
-      errors.terms = 'You must agree to all Terms, Privacy Policy and Fees';
-    }
+    Object.entries(rules).forEach(([field, check]) => {
+      const error = check();
+      if(error) errors[field] = error;
+    });
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -328,7 +307,6 @@ export default function SignUp() {
 
     setFormError('');
     setFieldErrors({});
-
     await signUpWithCredentials(email, password);
   };
 
@@ -339,7 +317,6 @@ export default function SignUp() {
       setFormError('Please enter the verification code');
       return;
     }
-
     await verifyEmail(verificationCode);
   };
 
@@ -485,7 +462,7 @@ export default function SignUp() {
               className="flex flex-col justify-center flex-1 text-[#1e1e1e] font-MyFont"
               noValidate
             >
-              {/** Email Field */}
+              {/* email field */}
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="email"
@@ -516,7 +493,7 @@ export default function SignUp() {
                 )}
               </div>
 
-              {/** Username Field */}
+              {/* username field */}
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="username"
@@ -550,7 +527,7 @@ export default function SignUp() {
                 )}
               </div>
 
-              {/** Password Field */}
+              {/* password Field */}
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="password"
@@ -586,7 +563,7 @@ export default function SignUp() {
                   </button>
                 </div>
 
-                {/* Password strength indicator */}
+                {/* password strength indicator */}
                 {password && passwordStrength && (
                   <div className="mt-2 space-y-1">
                     <div className="flex items-center gap-2">
@@ -600,7 +577,7 @@ export default function SignUp() {
                   </div>
                 )}
 
-                {/* Password requirements */}
+                {/* password requirements */}
                 <div id="password-requirements" className="mt-2 space-y-1">
                   {password && passwordValidation.errors.map((error, index) => (
                     <div key={index} className="flex items-center gap-1 text-xs">

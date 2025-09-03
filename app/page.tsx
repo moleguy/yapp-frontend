@@ -2,12 +2,13 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useRef, useEffect } from 'react';
-import gsap from 'gsap';
+// import { useRef, useEffect } from 'react';
+// import gsap from 'gsap';
 import right from './assets/images/right.png';
 import yapLogo from './assets/images/yapLogo.png';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
+import comm from './assets/images/communication.png';
 
 const containerVariants = {
   hidden: {},
@@ -31,16 +32,16 @@ const lineVariants: Variants = {
 };
 
 export default function CoverPage() {
-  const paraRef = useRef(null);
+  // const paraRef = useRef(null);
 
-  useEffect(() => {
-    if (paraRef.current) {
-      gsap.fromTo(paraRef.current,
-        { y: 50, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }
-      );
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (paraRef.current) {
+  //     gsap.fromTo(paraRef.current,
+  //       { y: 50, opacity: 0 },
+  //       { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }
+  //     );
+  //   }
+  // }, []);
 
   return (
 
@@ -57,30 +58,21 @@ export default function CoverPage() {
         <div className="flex flex-1 flex-col justify-start items-center h-full w-full p-10">
 
           <motion.div
-            className="text-7xl text-center mt-[16px] mb-[32px] font-bold leading-tight tracking-tight text-[#1e1e1e] font-[Space_Grotesk]"
+            className="text-7xl text-center mt-[16px] mb-[32px] font-bold leading-tight tracking-tight text-[#1e1e1e] font-Heading"
             variants={containerVariants}
             initial="hidden"
             animate="show"
           >
-            <motion.div variants={lineVariants}>CONNECT.</motion.div>
-            <motion.div variants={lineVariants}>COLLABORATE.</motion.div>
-            <motion.div variants={lineVariants}>COMMUNICATE.</motion.div>
+            <motion.h1 variants={lineVariants}>CONNECT.</motion.h1>
+            <motion.h1 variants={lineVariants}>COLLABORATE.</motion.h1>
+            <motion.h1 variants={lineVariants}>COMMUNICATE.</motion.h1>
           </motion.div>
 
-          {/* <motion.h1
-              className="text-7xl text-center mt-[4rem] mb-[4rem] font-bold leading-tight tracking-tight text-[#1e1e1e] font-[Heuvel_Grotesk_Demo]"
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-            >
-              CONNECT.<br />
-              COLLABORATE.<br />
-              COMMUNICATE.
-            </motion.h1> */}
+          
 
           <div className="flex flex-col justify-center items-center z-10">
             <motion.p
-              className="text-3xl text-[#1e1e1e] font-[SF_Pro_Rounded] mb-[32px] font-base tracking-tight"
+              className="text-3xl text-[#1e1e1e] font-MyFont mb-[32px] font-base tracking-tight"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: 'easeOut' }}
@@ -101,16 +93,16 @@ export default function CoverPage() {
                   transition={{ delay: 0.2, duration: 1 }}
                   className="flex items-center gap-2"
                 >
-                  <p className="text-2xl font-[SF_Pro_Rounded]">Get Started</p>
+                  <p className="text-2xl font-MyFont">Get Started</p>
                   <Image className="w-5 h-5" src={right} alt="right-arrow" priority />
                 </motion.div>
               </motion.button>
 
             </Link>
           </div>
-          {/* <div className='absolute top-[42rem] z-0'>
+          <div className='absolute top-[42rem] z-0'>
             <Image className='w-auto h-auto' src={comm} alt='communication' />
-          </div> */}
+          </div>
         </div>
       </main>
     </div>

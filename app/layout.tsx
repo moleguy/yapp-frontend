@@ -3,9 +3,9 @@ import {
   ClerkProvider,
   // SignInButton,
   // SignUpButton,
-  SignedIn,
+  // SignedIn,
   // SignedOut,
-  UserButton,
+  // UserButton,
 } from '@clerk/nextjs'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
