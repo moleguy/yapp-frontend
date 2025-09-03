@@ -3,8 +3,8 @@
 // import { Space_Grotesk } from 'next/font/google';
 import React from 'react';
 import Image from 'next/image';
-import { useRef, useEffect} from 'react';
-import gsap from 'gsap';
+// import { useRef, useEffect} from 'react';
+// import gsap from 'gsap';
 import right from '../../assets/images/right.png';
 import yapLogo from '../../assets/images/yapLogo.png';
 import Link from 'next/link';
@@ -33,16 +33,16 @@ const lineVariants:Variants = {
 };
 
 export default function CoverPage() {
-  const paraRef = useRef(null);
+  // const paraRef = useRef(null);
 
-  useEffect(() => {
-    if (paraRef.current) {
-      gsap.fromTo(paraRef.current, 
-        { y: 50, opacity: 0 }, 
-        { y:0, opacity: 1, duration: 1, ease: 'power3.out' }
-      );
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (paraRef.current) {
+  //     gsap.fromTo(paraRef.current, 
+  //       { y: 50, opacity: 0 }, 
+  //       { y:0, opacity: 1, duration: 1, ease: 'power3.out' }
+  //     );
+  //   }
+  // }, []);
 
   return (
     

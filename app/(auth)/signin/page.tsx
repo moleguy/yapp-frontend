@@ -2,15 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-<<<<<<< HEAD
 import logo from '../../assets/images/yappLogo.png';
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaSpinner, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-=======
-import logo from '../../assets/images/yapLogo.png';
-import { FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
->>>>>>> AuthUI
 import Link from 'next/link';
 import { useSignIn, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';

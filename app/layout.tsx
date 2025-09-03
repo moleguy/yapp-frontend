@@ -44,11 +44,11 @@ export default function RootLayout({
               </SignUpButton>
             </SignedOut>
           </header> */}
-          <header className="flex justify-end items-center p-4 gap-4 h-16 bg-inherit">
+          {/* <header className="flex justify-end items-center p-4 gap-4 h-16 bg-inherit">
             <SignedIn>
               <UserButton />
             </SignedIn>
-          </header>
+          </header> */}
           {children}
         </body>
       </html>
