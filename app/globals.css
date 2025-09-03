@@ -21,9 +21,11 @@
 
 @font-face {
   font-family: 'Heading';
-  src: url('/fonts/HeuvelGroteskDemoBlack-lxlK0.ttf') format('truetype');
-  font-weight: 800;
+  src: url('/fonts/HeuvelGroteskDemoBold-5y2OV.ttf') format('truetype');
+  font-weight: 600;
 }
+
+
 
 @font-face {
   font-family: 'MyFont';

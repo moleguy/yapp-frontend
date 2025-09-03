@@ -59,7 +59,7 @@ export default function CoverPage() {
         <div className="flex flex-1 flex-col justify-start items-center h-full w-full p-10">
 
           <motion.div
-            className="text-7xl text-center mt-[16px] mb-[32px] font-bold leading-tight tracking-tight text-[#1e1e1e] font-Heading"
+            className="text-7xl text-center mt-[16px] mb-[32px] leading-tight text-[#1e1e1e] font-Heading"
             variants={containerVariants}
             initial="hidden"
             animate="show"
