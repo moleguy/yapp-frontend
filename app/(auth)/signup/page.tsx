@@ -120,8 +120,6 @@ export default function SignUp() {
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-
-
   const getErrorMessage = useCallback((error: unknown): string => {
     if (isClerkAPIError(error)) {
       const errorCode = error.errors[0]?.code;
@@ -348,9 +346,9 @@ export default function SignUp() {
   };
 
   const isFormValid = email.trim() && username.trim() && password &&
-    confirmPassword && password === confirmPassword && agreeToTerms &&
-    validateEmail(email) && validateUsername(username) &&
-    passwordValidation.isValid && Object.keys(fieldErrors).length === 0;
+  confirmPassword && password === confirmPassword && agreeToTerms &&
+  validateEmail(email) && validateUsername(username) &&
+  passwordValidation.isValid && Object.keys(fieldErrors).length === 0;
 
   if (showVerification) {
     return (
@@ -527,7 +525,7 @@ export default function SignUp() {
                 )}
               </div>
 
-              {/* password Field */}
+              {/* password field */}
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="password"
