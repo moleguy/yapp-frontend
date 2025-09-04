@@ -80,7 +80,7 @@ export default function NumCode(){
 
                             <div className='flex justify-center items-center'>
                                 <p>Didn&apos;t recieve a code?</p>
-                                <p className='text-[#0077d4] pl-2'>Resend.</p>
+                                <button className='text-[#0077d4] pl-2 cursor-pointer'>Resend.</button>
                             </div>
                         </form>
                     </section>
