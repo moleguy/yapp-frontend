@@ -36,11 +36,12 @@ export default function NumCode(){
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-transparent bg-[radial-gradient(#000000_1px,#e5e5f7_1px)] bg-[length:30px_30px] ">
+        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1] 
+        bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
 
             <main className="flex flex-1 justify-center items-center m-8 rounded-[20px]">
 
-                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3'
+                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3 border-[#dcd9d3]'
                 initial={{opacity:0, y:40}}
                 animate={{opacity:1, y:0}}
                 transition={{duration:0.6, ease: 'easeOut'}}>
@@ -73,12 +74,13 @@ export default function NumCode(){
                                     ))}
                             </div>
 
-                            <div className="flex items-center my-2 w-full mb-4">
-                                    <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                                    <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                                </div>
+                            <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
+                                <div className="flex-grow h-px bg-gray-400 opacity-35" />
+                                {/* <span className="px-2 text-gray-500 text-sm">or</span> */}
+                                <div className="flex-grow h-px bg-gray-400 opacity-35" />
+                            </div>
 
-                            <div className='flex justify-center items-center'>
+                            <div className='flex justify-center items-center mt-3'>
                                 <p>Didn&apos;t recieve a code?</p>
                                 <button className='text-[#0077d4] pl-2 cursor-pointer'>Resend.</button>
                             </div>

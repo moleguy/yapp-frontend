@@ -168,7 +168,8 @@ export default function ChangePassword(){
     passwordValidation.isValid && Object.keys(fieldErrors).length === 0;
 
     return (
-        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-transparent bg-[radial-gradient(#000000_1px,#e5e5f7_1px)] bg-[length:30px_30px] ">
+        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3]     [--color:#E1E1E1] 
+          bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
 
         <div
             role="status"
@@ -181,7 +182,7 @@ export default function ChangePassword(){
 
             <main className='flex flex-1 justify-center items-center m-8 rounded-[20px]'>
 
-                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3'
+                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3 border-[#dcd9d3]'
                 initial={{opacity:0, y:40}}
                 animate={{opacity:1, y:0}}
                 transition={{duration:0.6, ease: 'easeOut'}}>
