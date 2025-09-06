@@ -6,7 +6,7 @@ import Image from 'next/image';
 // import { useRef, useEffect} from 'react';
 // import gsap from 'gsap';
 import right from '../../assets/images/right.png';
-import yapLogo from '../../assets/images/yapLogo.png';
+import yapLogo from '../../assets/images/yappLogo.png';
 import Link from 'next/link';
 import comm from '../../assets/images/communication.png';
 import { motion, Variants } from 'framer-motion';
@@ -46,7 +46,8 @@ export default function CoverPage() {
 
   return (
     
-    <div className="bg-[#d6c4a4] flex flex-col min-h-screen bg-[#f4f4f4]">
+    <div className="flex flex-col min-h-screen bg-[#F3F3F3]     [--color:#E1E1E1] 
+          bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
 
       <header className="flex justify-left items-center">
         <div className='ml-8 mt-8 flex justify-center items-center'>
