@@ -72,7 +72,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin">
-      <div className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
+      <div className="relative w-[100%] max-w-4xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
         {/* Sidebar Contents */}
         <div className="w-1/4 border-r rounded-l-xl p-4 bg-[#f9f9f9]">
           <button
@@ -82,12 +82,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <IoIosClose className='w-8 h-8 text-black'/>
           </button>
           <ul className="space-y-1">
+
+            {/* General Button */}
             <button
               onClick={()=> setActiveTab('General')}
               className={classNames(
-                'flex justify-start items-center gap-2 p-2 rounded-lg w-full cursor-pointer',
+                'flex justify-start items-center gap-2 p-2 rounded-lg w-full cursor-pointer relative pl-3',
                 {
-                  'bg-[#efefef] text-[#222831]': activeTab === 'General',
+                  'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'General',
                   'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'General',
                 }
               )}
@@ -95,12 +97,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               {activeTab === 'General' ? <IoSettings className='w-6 h-6'/> : <IoSettingsOutline className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>General</p>
             </button>
+
+            {/* Profile Button */}
             <button
               onClick={()=> setActiveTab('Profile')}
               className={classNames(
-                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
+                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2 relative pl-3',
               {
-                'bg-[#efefef] text-[#222831]': activeTab === 'Profile',
+                'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'Profile',
                 'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Profile',
               }
               )}
@@ -108,25 +112,29 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               {activeTab === 'Profile' ? <FaUser className='w-6 h-6'/> : <FaRegUser className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>Profile</p>
             </button>
+
+            {/* Personalization Button */}
             <button
               onClick={()=> setActiveTab('Personalization')}
               className={classNames(
-                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
+                'relative p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2 pl-3',
               {
-                'bg-[#efefef] text-[#222831]': activeTab === 'Personalization',
-                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Personalization',
+                'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'Personalization',
+                'hover:bg-[#efefef] text-[#222831] bg-none transition-all  duration-200': activeTab !== 'Personalization',
               }
               )}
             >
               {activeTab === 'Personalization' ? <HiPaintBrush className='w-6 h-6'/> : <HiOutlinePaintBrush className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>Personalization</p>
             </button>
+
+            {/* Security Button */}
             <button
               onClick={()=> setActiveTab('Security')}
               className={classNames(
-                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
+                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2 relative pl-3',
               {
-                'bg-[#efefef] text-[#222831] ': activeTab === 'Security',
+                'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'Security',
                 'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Security',
               }
               )}
@@ -134,12 +142,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               {activeTab === 'Security' ? <IoLockClosed className='w-6 h-6'/> : <IoLockClosedOutline className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>Security</p>
             </button>
+
+            {/* Notification Button */}
             <button
               onClick={()=> setActiveTab('Notification')}
               className={classNames(
-                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
+                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2 relative pl-3',
               {
-                'bg-[#efefef] text-[#222831]': activeTab === 'Notification',
+                'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'Notification',
                 'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Notification',
               }
               )}
@@ -147,12 +157,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               {activeTab === 'Notification' ? <IoNotifications className='w-6 h-6'/> : <IoNotificationsOutline className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>Notification</p>
             </button>
+
+            {/* Storage Button */}
             <button
               onClick={()=> setActiveTab('Storage')}
               className={classNames(
-                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
+                'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2 relative pl-3',
               {
-                'bg-[#efefef] text-[#222831]': activeTab === 'Storage',
+                'bg-[#efefef] text-[#222831] before:content-[""] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-1/2 before:border-l-4 before:border-blue-600 before:rounded-lg': activeTab === 'Storage',
                 'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Storage',
               }
               )}
@@ -168,7 +180,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         
           {/* close button */}
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl text-[#979797] font-medium">{activeTab}</h2>
+            <h2 className="text-2xl text-[#1e1e1e] font-medium">{activeTab}</h2>
           </div>
 
           {/* General Tab */}
@@ -230,7 +242,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           {/* Storage Tab */}
           {activeTab === 'Storage' && (
             <div className='space-y-4'>
-              <div className="flex items-center my-2 w-full" role="separator"   aria-label="or">
+              <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
                 <div className="flex-grow h-px bg-gray-500 opacity-35" />
                 <div className="flex-grow h-px bg-gray-500 opacity-35" />
               </div>
@@ -344,6 +356,15 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 >
                   <FaPen size={16}/>
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notification Tab */}
+          {activeTab === 'Notification' && (
+            <div className='space-y-4'>
+              <div className="flex items-center my-2 w-full" role="separator"   aria-label="or">
+                <div className="flex-grow h-px bg-gray-600 opacity-35" />
               </div>
             </div>
           )}
