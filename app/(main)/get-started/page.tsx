@@ -33,16 +33,6 @@ const lineVariants:Variants = {
 };
 
 export default function CoverPage() {
-  // const paraRef = useRef(null);
-
-  // useEffect(() => {
-  //   if (paraRef.current) {
-  //     gsap.fromTo(paraRef.current, 
-  //       { y: 50, opacity: 0 }, 
-  //       { y:0, opacity: 1, duration: 1, ease: 'power3.out' }
-  //     );
-  //   }
-  // }, []);
 
   return (
     

@@ -6,6 +6,7 @@ import React  from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import { RiUser6Fill } from "react-icons/ri";
 import SettingsPopup from "../components/SettingsPopup";
+import ServerList from "../components/ServerList";
 
 export default function HomePage() {
   const [ showMicrophone, setShowMicrophone ] = useState(true);
@@ -14,8 +15,12 @@ export default function HomePage() {
     <div className="flex h-screen bg-white text-black font-MyFont">
 
       <div className="w-full flex m-4 bg-[#EAE4D5] rounded-lg">
+        <div className="flex flex-col justify-between w-[400px] bg-[#B6B09F] rounded-l-lg">
 
-        <div className="flex flex-col-reverse w-[400px] bg-[#B6B09F] rounded-lg">
+          {/* servers, channels etc... */}
+          <ServerList />
+
+          {/* call, profile and settings */}
           <div className="flex m-1 border-3 py-3 px-3 bg-white border-[#D4C9BE] rounded-xl">
             <div className="w-1/2 flex items-center w-full hover:bg-[#ebebed] p-1 hover:rounded-lg cursor-pointer">
               <div className="flex justify-center items-center w-12 h-12 border border-[#B6B09F] rounded-full">
@@ -57,9 +62,6 @@ export default function HomePage() {
               <div className={` flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1]`}>
                 <SettingsPopup />
               </div>
-              {/* <button className="cursor-pointer hover:bg-[#dfdfe1] rounded-lg">
-                <SettingsPopup />
-              </button> */}
             </div>
             
           </div>
@@ -70,7 +72,7 @@ export default function HomePage() {
           <p className="flex flex-row">iaubsiub</p>
         </div>
 
-        <div className="flex w-[400px] bg-[#F2F2F2]"><p>iaubsiub</p></div>
+        <div className="flex w-[400px] bg-[#F2F2F2] rounded-r-lg"><p>iaubsiub</p></div>
 
       </div>
       

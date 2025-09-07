@@ -1,25 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { ChangeEvent, useState, useEffect, useRef } from 'react';
 import classNames from 'classnames';
 import { IoSettings, IoSettingsOutline, IoLockClosed, IoLockClosedOutline, IoNotifications, IoNotificationsOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
 import { FaUser, FaRegUser } from "react-icons/fa6";
 import { HiOutlinePaintBrush, HiPaintBrush } from "react-icons/hi2";
 import { MdOutlineSdStorage, MdSdStorage } from "react-icons/md";
+import { FaPen } from "react-icons/fa";
 import ThemeDropDown from './ThemeDropDown';
 import TextSizeDropDown from './TextSizeDropDown';
+import Image from 'next/image';
 
-export interface Props {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState('Appearance');
-
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
+
+  const [preview, setPreview] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
+  const [activeTab, setActiveTab] = useState('Appearance');
   const [selected, setSelected] = useState<string[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [name, setName] = useState('');
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    setShowOptions(false);
+  }
+
+  const handleRemovePic = () => {
+    setPreview(null);
+    setShowOptions(false);
+  }
 
   const toggleOption = (option: string) => {
     setSelected((prev) => 
@@ -27,21 +64,31 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     );
   }
 
+  const handleBlur = () => {
+    setEditing(false);
+  }
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs bg-black/30 text-black font-thin">
-      <div className="w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
-        {/* sidebar */}
-        <div className="w-2/4 border-r p-6">
-          <ul className="space-y-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin">
+      <div className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
+        {/* Sidebar Contents */}
+        <div className="w-1/4 border-r rounded-l-xl p-4 bg-[#f9f9f9]">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-black text-3xl cursor-pointer"
+          >
+            <IoIosClose className='w-8 h-8 text-black'/>
+          </button>
+          <ul className="space-y-1">
             <button
               onClick={()=> setActiveTab('General')}
               className={classNames(
                 'flex justify-start items-center gap-2 p-2 rounded-lg w-full cursor-pointer',
                 {
-                  'bg-gray-100 text-[#222831] font-medium': activeTab === 'General',
-                  'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'General',
+                  'bg-[#efefef] text-[#222831]': activeTab === 'General',
+                  'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'General',
                 }
               )}
             >
@@ -53,8 +100,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={classNames(
                 'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
               {
-                'bg-gray-100 text-[#222831] font-medium': activeTab === 'Profile',
-                'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'Profile',
+                'bg-[#efefef] text-[#222831]': activeTab === 'Profile',
+                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Profile',
               }
               )}
             >
@@ -66,8 +113,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={classNames(
                 'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
               {
-                'bg-gray-100 text-[#222831] font-medium': activeTab === 'Personalization',
-                'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'Personalization',
+                'bg-[#efefef] text-[#222831]': activeTab === 'Personalization',
+                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Personalization',
               }
               )}
             >
@@ -79,8 +126,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={classNames(
                 'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
               {
-                'bg-gray-100 text-[#222831] font-medium': activeTab === 'Security',
-                'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'Security',
+                'bg-[#efefef] text-[#222831] ': activeTab === 'Security',
+                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Security',
               }
               )}
             >
@@ -92,8 +139,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={classNames(
                 'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
               {
-                'bg-gray-100 text-[#222831] font-medium': activeTab === 'Notification',
-                'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'Notification',
+                'bg-[#efefef] text-[#222831]': activeTab === 'Notification',
+                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Notification',
               }
               )}
             >
@@ -105,8 +152,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={classNames(
                 'p-2 rounded-lg cursor-pointer flex flex-row w-full justify-start items-center gap-2',
               {
-                'bg-gray-100 text-[#222831] font-medium': activeTab === 'Storage',
-                'hover:bg-gray-100 text-[#222831] bg-none': activeTab !== 'Storage',
+                'bg-[#efefef] text-[#222831]': activeTab === 'Storage',
+                'hover:bg-[#efefef] text-[#222831] bg-none': activeTab !== 'Storage',
               }
               )}
             >
@@ -116,23 +163,18 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </ul>
         </div>
 
-        {/* main content */}
+        {/* Content Area */}
         <div className="relative w-3/4 p-6 space-y-6 z-0">
+        
+          {/* close button */}
           <div className="flex justify-between items-center">
             <h2 className="text-2xl text-[#979797] font-medium">{activeTab}</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-black text-3xl cursor-pointer"
-            >
-              <IoIosClose className='w-8 h-8 text-black'/>
-            </button>
           </div>
 
-          {/* general tab */}
+          {/* General Tab */}
           {activeTab === 'General' && (
             <div className="space-y-4">
               <div>
-                {/* <label className="block text-base font-normal">Dark Mode</label> */}
                 <div className='block text-lg font-normal mb-4'>Dark Mode</div>
                 <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
                   <div className="flex-grow h-px bg-gray-400 opacity-35" />
@@ -157,13 +199,12 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Personalization tab */}
-
+          {/* Personalization Tab */}
           {activeTab === 'Personalization' && (
             <div className='space-y-4'>
               <div className="flex items-center my-2 w-full" role="separator"   aria-label="or">
-                <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                <div className="flex-grow h-px bg-gray-400 opacity-35" />
+                <div className="flex-grow h-px bg-gray-600 opacity-35" />
+                <div className="flex-grow h-px bg-gray-600 opacity-35" />
               </div>
               <div>
                 <div>
@@ -171,6 +212,11 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <div className='text-[#7A7A73] font-light mt-1'>App color theme</div>
                   <ThemeDropDown />
                 </div>
+                <div 
+                  className="flex items-center my-2 mt-3 w-full"  role="separator" aria-label="or"
+                >
+                <div className="flex-grow h-px bg-gray-300 opacity-35" />
+              </div>
               {/* dropdown and showing option for text size in chat app */}
                 <div className='mt-2'>
                 <p className='text-lg font-light'>Text Size</p>
@@ -181,6 +227,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
+          {/* Storage Tab */}
           {activeTab === 'Storage' && (
             <div className='space-y-4'>
               <div className="flex items-center my-2 w-full" role="separator"   aria-label="or">
@@ -206,6 +253,97 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </label>
                 ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Profile Tab */}
+          {activeTab === 'Profile' && (
+            <div className='space-y-4'>
+              <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
+                <div className="flex-grow h-[2px] bg-gray-500 opacity-35" />
+                <div className="flex-grow h-[2px] bg-gray-500 opacity-35" />
+              </div>
+
+              {/* file handing for user profile selection */}
+              <div className="mt-2 relative" ref={dropdownRef}>
+                <div
+                  className="mt-4 w-24 h-24 border overflow-hidden rounded-full cursor-pointer group relative"
+                  onClick={() => {
+                    if(preview){
+                      setShowOptions(!showOptions)
+                    } else {
+                      document.getElementById('fileUpload')?.click();
+                    }
+                  }}
+                >
+                  {preview ? (
+                    <Image
+                      src={preview}
+                      alt="Profile"
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                      No Image
+                    </div>
+                  )}
+
+                {/* Hover pen overlay */}
+                  <div className="absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                    <FaPen className="text-white text-lg" />
+                  </div>
+                </div>
+
+                {/* Dropdown Menu */}
+                {preview && showOptions && (
+                  <div className="absolute top-12 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50">
+                    <label
+                      htmlFor="fileUpload"
+                      className="block px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    >
+                      Change
+                    </label>
+                    <button
+                      onClick={handleRemovePic}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="fileUpload"
+                  onChange={handlePicChange}
+                  className="hidden"
+                />
+              </div>
+
+              <div className='flex items-center'>
+                {editing ? (
+                  <input 
+                    type='text'
+                    value={name}
+                    autoFocus
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={handleBlur}
+                    className='bg-transparent outline-none text-2xl font-base'
+                  />
+                ): (
+                  <span className='text-2xl font-base'>{name}</span>
+                )}
+                <button
+                  onClick={() => setEditing(true)}
+                  className='absolute right-10 p-1 rounded-full hover:bg-gray-100'
+                >
+                  <FaPen size={16}/>
+                </button>
               </div>
             </div>
           )}

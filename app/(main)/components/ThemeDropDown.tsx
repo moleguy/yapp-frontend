@@ -20,7 +20,7 @@ const ThemeDropDown: React.FC = () => {
         <div className='relative w-64 mt-1'>
             <button 
               onClick={() => setIsDropDownOpen((prev) => !prev)}
-              className='relative flex items-center justify-start w-[200px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2'
+              className='relative flex items-center justify-start w-[240px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2'
             >
                 <span className='flex items-center gap-2'>
                   {options.find((opt) => opt.label === selected)?.icon}
@@ -31,7 +31,7 @@ const ThemeDropDown: React.FC = () => {
             </button>
         
             {isDropDownOpen && (
-              <ul className='absolute left-0 w-[200px] bg-white border rounded-b-lg border-[#dcd9d3] z-10 transition-all duration-200'>
+              <ul className='absolute left-0 w-[240px] bg-white border rounded-b-lg border-[#dcd9d3] z-10 transition-all duration-200'>
                 {options
                 .filter((opt) => opt.label !== selected)
                 .map((opt) => (
