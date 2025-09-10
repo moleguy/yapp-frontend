@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from "react";
-import Image from 'next/image';
+import { useEffect, useState } from "react";
+// import Image from 'next/image';
 
 type Props = {
     isOpen: boolean;
@@ -30,6 +30,15 @@ export default function AddServerPopup({
             reader.readAsDataURL(file);
         }
     };
+
+    useEffect(()=> {
+        if(!isOpen){
+            setStep("choice");
+            setServerName("");
+            setServerImage(undefined);
+            setInviteLink("");
+        }
+    }, [isOpen]);
 
     if(!isOpen) return null;
 
@@ -67,26 +76,34 @@ export default function AddServerPopup({
                     <div className="flex flex-col flex-1 justify-center items-center">
                         <h2 className="text-lg font-semibold mb-4">Create Server</h2>
                         <p className="mt-2 mb-2 ">Configure your new server with a name and an icon. You can always update it later.</p>
-                        <input 
-                            type="file"
-                            accept="image/"
-                            onChange={handleImageUpload}
-                            className="mt-3 mb-3 w-20 h-20 bg-gray-500 rounded-full cursor-pointer"
-                        />
+                        <div className="relative mt-3 mb-3">
+                            {serverImage ? (
+                                <img
+                                    src={serverImage}
+                                    alt="Server Preview"
+                                    className="w-20 h-20 rounded-full object-cover mx-auto cursor-pointer"
+                                    onClick={() => setServerImage(undefined)} // allow user to remove/change image
+                                    title="Click to remove/change"
+                                />
+                            ) : (
+                                <label className="w-20 h-20 bg-gray-500 rounded-full flex items-center justify-center cursor-pointer mx-auto">
+                                    <span className="text-white text-2xl">+</span>
+                                    <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    className="hidden"
+                                    />
+                                </label>
+                            )}
+                        </div>
                         <input
-                            type="text"
-                            placeholder="Server Name"
-                            value={serverName}
-                            onChange={(e) => setServerName(e.target.value)}
-                            className="w-full border rounded-lg p-3 mt-3"
+                          type="text"
+                          placeholder="Server Name"
+                          value={serverName}
+                          onChange={(e) => setServerName(e.target.value)}
+                          className="w-full border rounded-lg p-3 mt-3"
                         />
-                        {serverImage && (
-                            <Image 
-                                src={serverImage}
-                                alt="Server Preview"
-                                className="w-16 h-16 rounded-full mx-auto mb-3 object-cover"
-                            />
-                        )}
                         <div className="flex gap-2  mt-3">
                             <button
                                 onClick={() => {

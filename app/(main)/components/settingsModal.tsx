@@ -1,16 +1,17 @@
 'use client';
 
-import { ChangeEvent, useState, useEffect, useRef } from 'react';
+import {  useState } from 'react';
 import classNames from 'classnames';
 import { IoSettings, IoSettingsOutline, IoLockClosed, IoLockClosedOutline, IoNotifications, IoNotificationsOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
-import { FaUser, FaRegUser } from "react-icons/fa6";
+import { HiOutlineUser, HiUser } from "react-icons/hi2";
 import { HiOutlinePaintBrush, HiPaintBrush } from "react-icons/hi2";
 import { MdOutlineSdStorage, MdSdStorage } from "react-icons/md";
-import { FaPen } from "react-icons/fa";
 import ThemeDropDown from './ThemeDropDown';
 import TextSizeDropDown from './TextSizeDropDown';
-import Image from 'next/image';
+import { NotificationSettings } from './NotificationSettings';
+// import Image from 'next/image';
+import ProfileSettings from './ProfileSettings';
 
 interface Props {
   isOpen: boolean;
@@ -20,43 +21,8 @@ interface Props {
 const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
 
-  const [preview, setPreview] = useState<string | null>(null);
-  const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState('Appearance');
   const [selected, setSelected] = useState<string[]>([]);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [name, setName] = useState('');
-  const [editing, setEditing] = useState(false);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowOptions(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if(file){
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    setShowOptions(false);
-  }
-
-  const handleRemovePic = () => {
-    setPreview(null);
-    setShowOptions(false);
-  }
 
   const toggleOption = (option: string) => {
     setSelected((prev) => 
@@ -64,17 +30,15 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     );
   }
 
-  const handleBlur = () => {
-    setEditing(false);
-  }
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin">
-      <div className="relative w-[100%] max-w-4xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
+      <div className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
         {/* Sidebar Contents */}
         <div className="w-1/4 border-r rounded-l-xl p-4 bg-[#f9f9f9]">
+
+        {/* close button */}
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-black text-3xl cursor-pointer"
@@ -109,7 +73,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               }
               )}
             >
-              {activeTab === 'Profile' ? <FaUser className='w-6 h-6'/> : <FaRegUser className='w-6 h-6'/>}
+              {activeTab === 'Profile' ? <HiUser className='w-6 h-6'/> : <HiOutlineUser className='w-6 h-6'/>}
               <p className='text-base text-[#222831]'>Profile</p>
             </button>
 
@@ -178,7 +142,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {/* Content Area */}
         <div className="relative w-3/4 p-6 space-y-6 z-0">
         
-          {/* close button */}
           <div className="flex justify-between items-center">
             <h2 className="text-2xl text-[#1e1e1e] font-medium">{activeTab}</h2>
           </div>
@@ -227,8 +190,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div 
                   className="flex items-center my-2 mt-3 w-full"  role="separator" aria-label="or"
                 >
-                <div className="flex-grow h-px bg-gray-300 opacity-35" />
-              </div>
+                  <div className="flex-grow h-px bg-gray-300 opacity-35" />
+                </div>
               {/* dropdown and showing option for text size in chat app */}
                 <div className='mt-2'>
                 <p className='text-lg font-light'>Text Size</p>
@@ -247,13 +210,13 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div className="flex-grow h-px bg-gray-500 opacity-35" />
               </div>
               <div>
-                <p className='text-lg font-light'>Automatic Downloads</p>
+                <p className='text-lg'>Automatic Downloads</p>
                 <p className='text-[#7A7A73] mt-1'>Choose auto-download preferences for media</p>
                 <div className=' gap-2 mt-2'>
                   {mediaOptions.map((option) => (
                   <label
                     key={option}
-                    className='flex flex-row items-center gap-4 mb-2'
+                    className='flex flex-row items-center gap-2 mb-2'
                   >
                     <input 
                       type='checkbox'
@@ -271,101 +234,17 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* Profile Tab */}
           {activeTab === 'Profile' && (
-            <div className='space-y-4'>
-              <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
-                <div className="flex-grow h-[2px] bg-gray-500 opacity-35" />
-                <div className="flex-grow h-[2px] bg-gray-500 opacity-35" />
-              </div>
-
-              {/* file handing for user profile selection */}
-              <div className="mt-2 relative" ref={dropdownRef}>
-                <div
-                  className="mt-4 w-24 h-24 border overflow-hidden rounded-full cursor-pointer group relative"
-                  onClick={() => {
-                    if(preview){
-                      setShowOptions(!showOptions)
-                    } else {
-                      document.getElementById('fileUpload')?.click();
-                    }
-                  }}
-                >
-                  {preview ? (
-                    <Image
-                      src={preview}
-                      alt="Profile"
-                      width={96}
-                      height={96}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-gray-200">
-                      No Image
-                    </div>
-                  )}
-
-                {/* Hover pen overlay */}
-                  <div className="absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                    <FaPen className="text-white text-lg" />
-                  </div>
-                </div>
-
-                {/* Dropdown Menu */}
-                {preview && showOptions && (
-                  <div className="absolute top-12 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50">
-                    <label
-                      htmlFor="fileUpload"
-                      className="block px-4 py-2 cursor-pointer hover:bg-gray-100"
-                    >
-                      Change
-                    </label>
-                    <button
-                      onClick={handleRemovePic}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-
-                {/* Hidden file input */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  id="fileUpload"
-                  onChange={handlePicChange}
-                  className="hidden"
-                />
-              </div>
-
-              <div className='flex items-center'>
-                {editing ? (
-                  <input 
-                    type='text'
-                    value={name}
-                    autoFocus
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={handleBlur}
-                    className='bg-transparent outline-none text-2xl font-base'
-                  />
-                ): (
-                  <span className='text-2xl font-base'>{name}</span>
-                )}
-                <button
-                  onClick={() => setEditing(true)}
-                  className='absolute right-10 p-1 rounded-full hover:bg-gray-100'
-                >
-                  <FaPen size={16}/>
-                </button>
-              </div>
-            </div>
+            <ProfileSettings />
           )}
 
           {/* Notification Tab */}
           {activeTab === 'Notification' && (
-            <div className='space-y-4'>
-              <div className="flex items-center my-2 w-full" role="separator"   aria-label="or">
+            <div className='space-y-2'>
+              <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
                 <div className="flex-grow h-px bg-gray-600 opacity-35" />
               </div>
+
+              <NotificationSettings />
             </div>
           )}
         </div>

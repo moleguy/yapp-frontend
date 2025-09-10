@@ -41,7 +41,7 @@ const ThemeDropDown: React.FC = () => {
                       setSelected(opt.label);
                       setIsDropDownOpen(false);
                     }}
-                    className='flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-gray-200 hover:rounded-b-lg'
+                    className='flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-[#efefef] hover:rounded-b-lg'
                   >
                     {opt.icon}
                     {opt.label}

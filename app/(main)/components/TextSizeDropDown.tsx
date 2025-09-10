@@ -33,7 +33,7 @@ const TextSizeDropDown: React.FC = () => {
                             key={size}
                             onClick={() => handleSelect(size)}
                             className={`px-3 py-2 cursor-pointer ${
-                            size === selectedSize ? "bg-[#efefef] font-base hover:bg-[#efefef]" : "hover:bg-[#efefef]"
+                            size === selectedSize ? "bg-[#efefef] font-base hover:bg-[#efefef] rounded-md" : "hover:bg-[#efefef]"
                             }`}
                         >
                             {size}%
