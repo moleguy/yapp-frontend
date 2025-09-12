@@ -1,52 +1,20 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import Image from 'next/image';
 import logo from '../../assets/images/yappLogo.png';
-import { FaEye, FaSpinner, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
-import Link from 'next/link';
-import { useSignIn, useUser } from '@clerk/nextjs';
+import { FaEye, FaSpinner, FaEyeSlash } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
-// Type definitions for Clerk errors
-interface ClerkError {
-  code: string;
-  message: string;
-  longMessage?: string;
-  meta?: Record<string, unknown>;
-}
-
-interface ClerkAPIError {
-  errors: ClerkError[];
-  clerkTraceId?: string;
-}
-
-// Type guard to check if error is a Clerk API error
-const isClerkAPIError = (error: unknown): error is ClerkAPIError => {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'errors' in error &&
-    Array.isArray((error as ClerkAPIError).errors) &&
-    (error as ClerkAPIError).errors.length > 0
-  );
-};
-
-// Form validation utilities
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return emailRegex.test(email.trim());
 };
 
-const validatePassword = (password: string): boolean => {
-  return password.length >= 8;
-};
+const validatePassword = (password: string): boolean => password.length >= 8;
 
-// Main component
 export default function SignIn() {
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const { isSignedIn } = useUser();
   const router = useRouter();
 
   // Form state
@@ -60,147 +28,45 @@ export default function SignIn() {
   const [announceError, setAnnounceError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      router.replace('/home'); // Already signed-in users go straight to home
-    }
-  }, [isLoaded, isSignedIn, router]);
-
   // Load remember me preference on component mount
   useEffect(() => {
     const rememberMeCookie = document.cookie
       .split('; ')
-      .find(row => row.startsWith('remember_me='));
+      .find((row) => row.startsWith('remember_me='));
     if (rememberMeCookie) {
       setRememberMe(true);
     }
   }, []);
 
-  const getErrorMessage = useCallback((error: unknown): string => {
-    if (isClerkAPIError(error)) {
-      const errorCode = error.errors[0]?.code;
-      const errorMessage = error.errors[0]?.message;
-
-      switch (errorCode) {
-        case 'form_identifier_not_found':
-          return 'No account found with this email address';
-        case 'form_password_incorrect':
-          return 'Incorrect password. Please try again.';
-        case 'too_many_requests':
-          return 'Too many failed attempts. Please try again later.';
-        case 'session_exists':
-          return 'You are already signed in';
-        case 'identifier_already_signed_in':
-          return 'This account is already signed in from another session';
-        case 'form_password_pwned':
-          return 'This password has been found in a data breach. Please use a different password.';
-        case 'form_param_nil':
-          return 'Please fill in all required fields';
-        case 'form_password_length_too_short':
-          return 'Password must be at least 8 characters long';
-        case 'form_identifier_invalid':
-          return 'Please enter a valid email address';
-        case 'strategy_for_user_invalid':
-          return 'Invalid verification method. If you used Google for Sign Up use it for Sign In too.';
-        default:
-          // return errorCode + ': ' + errorMessage || 'An unexpected error occurred. Please try again.';
-          return errorMessage || 'Sign In failed. Please try again.';
-      }
-    }
-
-    if (error instanceof Error) {
-      return error.message || 'An unexpected error occurred';
-    }
-
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    return 'An unexpected error occurred. Please try again.';
-  }, []);
-
-  const signInWithCredentials = async (email: string, password: string, rememberMe: boolean) => {
-    if (!isLoaded) return;
-
-    setIsLoading(true);
-    try {
-      const result = await signIn.create({
-        identifier: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (result.status === 'complete') {
-        await setActive({
-          session: result.createdSessionId,
-          beforeEmit: () => {
-            if (rememberMe) {
-              document.cookie = `remember_me=true; max-age=${30 * 24 * 60 * 60}; path=/; secure; samesite=strict`;
-            }
-          }
-        });
-
-        router.push('/home');
-      } else if (
-        result.status === 'needs_identifier' ||
-        result.status === 'needs_first_factor' ||
-        result.status === 'needs_second_factor' ||
-        result.status === 'needs_new_password'
-      ) {
-        setFormError('Additional verification steps required');
-      } else {
-        setFormError('Sign In failed. Please try again.');
-      }
-    } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error);
-      setFormError(errorMessage);
-      setAnnounceError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+  const getInputBorder = (value: string, isFocused: boolean, hasError: boolean) => {
+    if (hasError) return 'border-red-500';
+    return value || isFocused ? 'border-[#0077d4]' : 'border-[#dcd9d3]';
   };
 
-  const signInWithGoogle = async () => {
-    if (!isLoaded) return;
+  const validateField = useCallback(
+    (field: string, value: string) => {
+      const errors = { ...fieldErrors };
 
-    setIsLoading(true);
-    try {
-      await signIn.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: `/signin/sso-callback`,
-        redirectUrlComplete: `/home`,
-      });
-    } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error) || 'Google sign-in failed';
-      setFormError(errorMessage);
-      setAnnounceError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Real-time validation
-  const validateField = useCallback((field: string, value: string) => {
-    const errors = { ...fieldErrors };
-
-    if (field === 'email') {
-      if (value && !validateEmail(value)) {
-        errors.email = 'Please enter a valid email address';
-      } else {
-        delete errors.email;
+      if (field === 'email') {
+        if (value && !validateEmail(value)) {
+          errors.email = 'Please enter a valid email address';
+        } else {
+          delete errors.email;
+        }
       }
-    }
 
-    if (field === 'password') {
-      if (value && !validatePassword(value)) {
-        errors.password = 'Password must be at least 8 characters long';
-      } else {
-        delete errors.password;
+      if (field === 'password') {
+        if (value && !validatePassword(value)) {
+          errors.password = 'Password must be at least 8 characters long';
+        } else {
+          delete errors.password;
+        }
       }
-    }
 
-    setFieldErrors(errors);
-  }, [fieldErrors]);
+      setFieldErrors(errors);
+    },
+    [fieldErrors]
+  );
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -216,9 +82,36 @@ export default function SignIn() {
     if (formError) setFormError('');
   };
 
+  const isFormValid =
+    email.trim() &&
+    password &&
+    validateEmail(email) &&
+    validatePassword(password) &&
+    Object.keys(fieldErrors).length === 0;
+
+  const signInWithCredentials = async (email: string, password: string, remember: boolean) => {
+    setIsLoading(true);
+    try {
+      // Call Go backend: POST /auth/signin (sets httpOnly cookie)
+      const { authSignin } = await import('@/lib/api');
+      await authSignin({ username_or_email: email.trim().toLowerCase(), password });
+
+      // Optionally set a non-auth preference cookie
+      if (remember) {
+        document.cookie = `remember_me=true; max-age=${30 * 24 * 60 * 60}; path=/; samesite=lax`;
+      }
+      router.push('/home');
+    } catch (error: any) {
+      const msg = error?.message || 'Sign In failed. Please try again.';
+      setFormError(msg);
+      setAnnounceError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (isLoading) return;
 
     // Validate all fields
@@ -250,30 +143,11 @@ export default function SignIn() {
     await signInWithCredentials(email, password, rememberMe);
   };
 
-  const handleGoogleSignIn = async () => {
-    if (isLoading) return;
-
-    setFormError('');
-    await signInWithGoogle();
-  };
-
-  const getInputBorder = (value: string, isFocused: boolean, hasError: boolean) => {
-    if (hasError) return 'border-red-500';
-    return value || isFocused ? 'border-[#0077d4]' : 'border-[#dcd9d3]';
-  };
-
-  const isFormValid = email.trim() && password && validateEmail(email) && validatePassword(password) && Object.keys(fieldErrors).length === 0;
-
   return (
-    <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1] 
+    <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1] \
     bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
       {/* Screen reader announcements */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announceError}
       </div>
 
@@ -285,58 +159,18 @@ export default function SignIn() {
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
           <div className="flex justify-start items-start">
-            <Link
-              href="/get-started"
-              className="flex flex-row justify-start items-start relative -inset-2"
-              aria-label="Go back to get started page"
-            >
+            <Link href="/get-started" className="flex flex-row justify-start items-start relative -inset-2" aria-label="Go back to get started page">
               <Image className="w-7" src={logo} alt="Yapp Logo" priority />
             </Link>
           </div>
 
           <section className="flex flex-col justify-center m-8 mt-2">
-            <p className="text-xl font-medium font-MyFont mt-4 text-[#1e1e1e]">
-              Yapp — Connect. Collaborate. Communicate.
-            </p>
-            <p className="text-xl font-base text-[#B6B09F] mb-8 tracking-wide">
-              Sign In to your Yapp account
-            </p>
+            <p className="text-xl font-medium font-MyFont mt-4 text-[#1e1e1e]">Yapp — Connect. Collaborate. Communicate.</p>
+            <p className="text-xl font-base text-[#B6B09F] mb-8 tracking-wide">Sign In to your Yapp account</p>
 
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col justify-center text-[#1e1e1e] font-[SF_Pro_Rounded]"
-              noValidate
-            >
-              <div className="flex flex-col mb-4 gap-5">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="bg-white text-black py-3 text-base w-full cursor-pointer rounded-lg border-3 border-[#dcd9d3] hover:border-[#0077d4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Sign in with Google"
-                >
-                  <div className="flex flex-row justify-start gap-2 ml-4">
-                    <span className="flex justify-center items-center">
-                      {isLoading ? <FaSpinner className="animate-spin" size={20} /> : <FcGoogle size={28} />}
-                    </span>
-                    <p className="justify-center items-center text-lg ml-19">
-                      {isLoading ? 'Signing in...' : 'Continue with Google'}
-                    </p>
-                  </div>
-                </button>
-
-                <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
-                  <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                  <span className="px-2 text-gray-500 text-sm">or</span>
-                  <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                </div>
-              </div>
-
+            <form onSubmit={handleSubmit} className="flex flex-col justify-center text-[#1e1e1e] font-[SF_Pro_Rounded]" noValidate>
               <div className="flex flex-col gap-1 mb-4">
-                <label
-                  htmlFor="email"
-                  className="text-sm text-[#73726e] font-medium"
-                >
+                <label htmlFor="email" className="text-sm text-[#73726e] font-medium">
                   Email {!email && <span className="text-red-600" aria-label="required">*</span>}
                 </label>
                 <input
@@ -363,17 +197,10 @@ export default function SignIn() {
 
               <div className="flex flex-col gap-1 mb-4">
                 <div className="flex flex-row items-center">
-                  <label
-                    htmlFor="password"
-                    className="text-sm font-medium text-[#73726e] flex-1"
-                  >
+                  <label htmlFor="password" className="text-sm font-medium text-[#73726e] flex-1">
                     Password {!password && <span className="text-red-600" aria-label="required">*</span>}
                   </label>
-                  <Link
-                    href="/forget-password"
-                    className="text-xs text-[#0077d4] hover:underline"
-                    tabIndex={isLoading ? -1 : 0}
-                  >
+                  <Link href="/forget-password" className="text-xs text-[#0077d4] hover:underline">
                     Forgot Password?
                   </Link>
                 </div>
@@ -399,7 +226,6 @@ export default function SignIn() {
                     className="absolute right-4 top-4 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     disabled={isLoading}
-                    tabIndex={isLoading ? -1 : 0}
                   >
                     {showPassword ? <FaEye size={20} /> : <FaEyeSlash size={20} />}
                   </button>
@@ -433,9 +259,6 @@ export default function SignIn() {
                 </div>
               )}
 
-              {/* CAPTCHA Widget - Clerk will inject the CAPTCHA */}
-              <div id="clerk-captcha" className="mb-4"></div>
-
               <div className="flex flex-col gap-2">
                 <button
                   type="submit"
@@ -459,11 +282,7 @@ export default function SignIn() {
 
               <p className="flex justify-center text-sm mt-4 text-[#1e1e1e]">
                 Don&apos;t have an account?{' '}
-                <Link
-                  href="/signup"
-                  className="text-[#0077d4] ml-2 hover:underline focus:underline"
-                  tabIndex={isLoading ? -1 : 0}
-                >
+                <Link href="/signup" className="text-[#0077d4] ml-2 hover:underline focus:underline">
                   Sign Up with email
                 </Link>
               </p>

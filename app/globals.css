@@ -67,3 +67,15 @@ h1{
 div, p{
   font-family: 'MyFont', Arial, Helvetica, sans-serif;
 }
+
+@layer base {
+  input[type="password"]::-ms-reveal {
+    display: none;
+  }
+  
+  input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}

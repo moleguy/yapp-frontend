@@ -174,7 +174,7 @@ export default function ForgetPassword(){
                         <Link href="/signin" className='w-full'>
                             <div className='flex justify-center items-center border-3 py-3 rounded-lg bg-white mt-2'>
                             <IoIosArrowBack size={24} color="#1e1e1e" />
-                            <p className='text-[#1e1e1e]'>Back to Login</p>
+                            <p className='text-[#1e1e1e]'>Back to Sign In</p>
                             </div>
                         </Link>    
                     </section>
