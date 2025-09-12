@@ -13,7 +13,7 @@ export default function HomePage() {
   const [username, setUsername] = useState("moleguy5");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Load profile from localStorage
+  // loading profile from localStorage
   const loadProfile = useCallback(() => {
     const saved = localStorage.getItem("userProfile");
     if (saved) {
@@ -37,13 +37,13 @@ export default function HomePage() {
   return (
     <div className="flex h-screen bg-white text-black font-MyFont">
       <div className="w-full flex m-4 bg-[#EAE4D5] rounded-lg">
-        <div className="flex flex-col justify-between w-[400px] bg-[#EBEBEB] rounded-l-lg">
+        <div className="flex flex-col justify-between items-center w-[350px] bg-[#EBEBEB] rounded-l-lg">
 
           {/* servers, channels etc... */}
           <ServerList />
 
           {/* call, profile and settings */}
-          <div className="flex m-3 border-3 py-3 px-3 bg-white border-[#D4C9BE] rounded-xl">
+          <div className="flex w-[320px] m-3 border-3 py-3 px-3 bg-white border-[#D4C9BE] rounded-xl select-none">
             <div className="w-1/2 flex items-center w-full hover:bg-[#ebebed] p-1 hover:rounded-lg cursor-pointer">
               <div className="flex justify-center items-center w-12 h-12 border border-[#B6B09F] rounded-full overflow-hidden">
                 {preview ? (
@@ -64,6 +64,18 @@ export default function HomePage() {
                 } transition-colors`}
                 onClick={() => setShowMicrophone(!showMicrophone)}
               >
+                <style>
+                  {`
+                    @keyframes sway {
+                      0%, 100% {transform: rotate(0deg); }
+                      25% {transform: rotate(-15deg); }
+                      75% {transform: rotate(15deg); }
+                    }
+                    .sway-hover:hover {
+                      animation: rotate 0.4s ease-in-out;
+                    }
+                  `}
+                </style>
                 {showMicrophone ? (
                   <BiSolidMicrophone size={28} className="sway-hover text-gray-500 hover:text-[#1e1e1e]" />
                 ) : (

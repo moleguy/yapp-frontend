@@ -72,6 +72,7 @@ export default function AddServerPopup({
                         </div>
                     </>  
                 )}
+
                 {step === "create" && (
                     <div className="flex flex-col flex-1 justify-center items-center">
                         <h2 className="text-lg font-semibold mb-4">Create Server</h2>

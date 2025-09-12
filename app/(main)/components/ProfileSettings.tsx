@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ChangeEvent, useEffect } from "react";
+import { useState, ChangeEvent, useEffect, useRef } from "react";
 import { FaPen, FaTrash, FaPlus } from "react-icons/fa";
 import { HiOutlineUser } from "react-icons/hi2";
 
@@ -17,17 +17,36 @@ const initialUser: UserProfile = {
   username: "moleguy5",
   email: "tamangmanish446@gmail.com",
   phone: "",
-  socials: ["https://www.instagram.com/lamadoesart/"],
+  socials: ["https://www.instagram.com/lamadoesart/"]
 };
 
 export default function ProfileSettings() {
   const [preview, setPreview] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [user, setUser] = useState<UserProfile>(initialUser);
-
+  const optionsRef = useRef<HTMLDivElement | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
 
-  // Load profile on mount
+  // profile pic handling when clicked outside the options is removed
+  useEffect(() => {
+    if(!showOptions) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if(
+        optionsRef.current &&
+        !optionsRef.current.contains(e.target as Node)
+      ) {
+        setShowOptions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showOptions]);
+
+  // loading profile on mount
   useEffect(() => {
     const saved = localStorage.getItem("userProfile");
     if (saved) {
@@ -37,16 +56,11 @@ export default function ProfileSettings() {
     }
   }, []);
 
-  // Save profile whenever changes
-  // useEffect(() => {
-  //   localStorage.setItem("userProfile", JSON.stringify({ user, preview }));
-  // }, [user, preview]);
-
   const saveProfile = (newUser = user, newPreview = preview) => {
     localStorage.setItem("userProfile", JSON.stringify({user: newUser, preview: newPreview}));
   }
 
-  // Profile pic handling
+  // handling profile picture
   const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -60,13 +74,14 @@ export default function ProfileSettings() {
     setShowOptions(false);
   };
 
+  // removing profile picture
   const handleRemovePic = () => {
     setPreview(null);
     saveProfile(user, null);
     setShowOptions(false);
   };
 
-  // Text field handling
+  // handling text fields
   const handleFieldChange = (field: keyof UserProfile, value: string) => {
     const newUser = { ...user, [field]: value };
     setUser(newUser);
@@ -77,7 +92,7 @@ export default function ProfileSettings() {
     setEditingField(null);
   };
 
-  // Social handling
+  // handline social medias
   const handleSocialChange = (index: number, value: string) => {
     const newSocials = [...user.socials];
     newSocials[index] = value;
@@ -86,12 +101,14 @@ export default function ProfileSettings() {
     saveProfile(newUser, preview);
   };
 
+  // adding a link in social fields
   const addSocial = () => {
     const newUser = { ...user, socials: [...user.socials, ""] };
     setUser(newUser);
     saveProfile(newUser, preview);
   };
 
+  // deleting social link from the field
   const removeSocial = (index: number) => {
     const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
     setUser(newUser);
@@ -99,7 +116,7 @@ export default function ProfileSettings() {
   };
 
   return (
-    <div className=" bg-white">
+    <div className="bg-white mt-4">
       {/* Profile Image */}
       <div className="flex flex-col items-center mb-6">
         <div
@@ -126,16 +143,19 @@ export default function ProfileSettings() {
         </div>
 
         {preview && showOptions && (
-          <div className="absolute mt-28 bg-white border shadow-lg rounded-lg w-32 text-sm z-50">
+          <div 
+            ref={optionsRef}
+            className="absolute mt-28 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50"
+          >
             <label
               htmlFor="fileUpload"
-              className="block px-4 py-2 cursor-pointer hover:bg-gray-100"
+              className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-md"
             >
               Change
             </label>
             <button
               onClick={handleRemovePic}
-              className="w-full text-left px-4 py-2 hover:bg-gray-100"
+              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md"
             >
               Remove
             </button>

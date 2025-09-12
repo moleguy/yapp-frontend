@@ -1,6 +1,6 @@
 'use client';
 
-import {  useState } from 'react';
+import {  useState, useEffect, useRef } from 'react';
 import classNames from 'classnames';
 import { IoSettings, IoSettingsOutline, IoLockClosed, IoLockClosedOutline, IoNotifications, IoNotificationsOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
@@ -21,8 +21,28 @@ interface Props {
 const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
 
-  const [activeTab, setActiveTab] = useState('Appearance');
+  const [activeTab, setActiveTab] = useState('General');
   const [selected, setSelected] = useState<string[]>([]);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if(!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if(
+        settingsRef.current &&
+        !settingsRef.current.contains(e.target as Node)
+      ){
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   const toggleOption = (option: string) => {
     setSelected((prev) => 
@@ -34,7 +54,9 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin">
-      <div className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible shadow-lg">
+      <div 
+        ref={settingsRef}
+        className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible">
         {/* Sidebar Contents */}
         <div className="w-1/4 border-r rounded-l-xl p-4 bg-[#f9f9f9]">
 
@@ -234,7 +256,13 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* Profile Tab */}
           {activeTab === 'Profile' && (
-            <ProfileSettings />
+            <>
+              <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
+                <div className="flex-grow h-px bg-gray-600 opacity-35" />
+              </div>
+              <ProfileSettings />
+            </>
+            
           )}
 
           {/* Notification Tab */}

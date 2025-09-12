@@ -26,7 +26,7 @@ const SettingsPopup: React.FC<Props> = ({isOpen, onClose, onOpen}) => {
             0%, 100% {transform: rotate(0deg); }
             25% {transform: rotate(-25deg); }
             75% {transform: rotate(25deg); }
-        
+          }
           .rotate-hover:hover {
             animation: rotate 0.4s ease-in-out;
           }
