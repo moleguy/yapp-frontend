@@ -119,11 +119,11 @@ export default function ServerList() {
                                     <img
                                         src={server.image}
                                         alt={server.name}
-                                        className="rounded-lg object-cover w-16 h-16"
+                                        className="rounded-lg object-cover w-12 h-12"
                                     />
                                 ) : (
-                                    <div className="w-12 h-12 rounded-lg bg-gray-500 text-white flex items-center justify-center text-xl">
-                                      {server.name[0]?.toUpperCase() ?? "?"}
+                                    <div className="w-12 h-12 rounded-lg bg-[#b6b09f] flex items-center justify-center text-xl">
+                                      {server.name.trim()[0]?.toUpperCase() ?? "?"}
                                     </div>
                                 )}
                               </div>
