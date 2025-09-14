@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from "react";
-import { FaPlus, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import React, { useEffect, useRef, useState } from "react";
+import { FaPlus } from "react-icons/fa";
 import AddServerPopup from "./AddServerPopup";
 
 type Server = {
@@ -10,28 +10,27 @@ type Server = {
   image?: string;
 };
 
-const SERVERS_PER_PAGE = 9;
-const CONTAINER_WIDTH = 320; // px, should match w-[320px]
+const ROW_SIZE = 3;
+const ROW_HEIGHT = 80;
+const VISIBLE_ROWS = 3;
 
 export default function ServerList() {
   const [servers, setServers] = useState<Server[]>([]);
   const [showPopup, setShowPopup] = useState(false);
-  const [page, setPage] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; serverId: number } | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // load / save
   useEffect(() => {
     const saved = localStorage.getItem("servers");
-    if (saved) {
-      setServers(JSON.parse(saved));
-    }
+    if (saved) setServers(JSON.parse(saved));
   }, []);
-
   useEffect(() => {
     localStorage.setItem("servers", JSON.stringify(servers));
   }, [servers]);
 
-  // Close on outside click — but don't close when clicking inside the menu
+  // close context menu
   useEffect(() => {
     if (!contextMenu) return;
     const handleOutside = (e: MouseEvent) => {
@@ -43,151 +42,127 @@ export default function ServerList() {
   }, [contextMenu]);
 
   const handleServer = () => setShowPopup(true);
-
   const handleCreateServer = (name: string, image?: string) => {
-    if (servers.length < 99) {
+    if (servers.length < 999) {
       const newServer: Server = { id: Date.now(), name, image };
       setServers(prev => [...prev, newServer]);
     }
   };
-
   const handleJoinServer = () => {
-    if (servers.length < 99) {
+    if (servers.length < 999) {
       const newServer: Server = { id: Date.now(), name: 'Joined Server' };
       setServers(prev => [...prev, newServer]);
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE));
-  const canGoLeft = page > 0;
-  const canGoRight = page < totalPages - 1;
+  const rows: (Server | null)[][] = [];
+  for (let i = 0; i < servers.length; i += ROW_SIZE) {
+    const row: (Server | null)[] = [];
+    for (let j = 0; j < ROW_SIZE; j++) {
+      row.push(servers[i + j] ?? null);
+    }
+    rows.push(row);
+  }
 
-  const pages = Array.from({ length: totalPages }).map((_, pageIndex) => {
-    const pageServers = servers.slice(
-      pageIndex * SERVERS_PER_PAGE,
-      (pageIndex + 1) * SERVERS_PER_PAGE
-    );
+  const neededRows = Math.max(1, Math.ceil(servers.length / ROW_SIZE));
+  const visibleRowsCount = Math.min(neededRows, VISIBLE_ROWS);
 
-    return (
-      <div
-        key={pageIndex}
-        className="grid grid-cols-3 gap-2 w-[310px] h-[272px] flex-shrink-0 mt-4"
-      >
-        {pageServers.map((server) => (
-          <div
-            key={server.id}
-            className="w-20 h-20 flex flex-col items-center justify-center bg-white rounded-lg border-[#b6b09f] cursor-pointer hover:bg-[#6265f4] relative"
-            onContextMenu={e => {
-              e.preventDefault();
-              setContextMenu({ x: e.clientX, y: e.clientY, serverId: server.id });
-            }}
-          >
-            {server.image ? (
-              <img
-                src={server.image}
-                alt={server.name}
-                width={48}
-                height={48}
-                className="rounded-lg object-cover w-16 h-16"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-[#b6b09f] flex items-center justify-center text-xl">
-                {server.name[0]?.toUpperCase() ?? "?"}
-              </div>
-            )}
-          </div>
-        ))}
+  const rowsToRender = rows.length <= VISIBLE_ROWS ? rows.slice(0, visibleRowsCount) : rows;
 
-        {Array.from({ length: SERVERS_PER_PAGE - pageServers.length }).map((_, idx) => (
-          <div key={`empty-${pageIndex}-${idx}`} className="w-20 h-20" />
-        ))}
-      </div>
-    );
-  });
+  // dynamic height
+  const containerHeight =
+      rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
 
   return (
-    <div className="flex flex-col justify-center items-start select-none w-80 mt-4">
-      {/* Add Server Button */}
-      <button
-        onClick={handleServer}
-        className="w-40 h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#b3aa9e] gap-2"
-      >
-        <p className="">Add a server</p>
-        <FaPlus />
-      </button>
-
-      <div className="relative w-[320px] flex flex-col items-center">
-        {canGoLeft && (
-          <button
-            onClick={() => setPage(p => Math.max(0, p - 1))}
-            className="absolute left-2 top-3 z-10 bg-transparent"
-            aria-label="Previous servers"
-          >
-            <FaChevronLeft />
-          </button>
-        )}
-
-        <div
-          className="overflow-hidden w-[320px] h-[320px] rounded-xl border border-[#b6b09f] bg-white p-4"
+      <div className="flex flex-col justify-center items-start select-none w-80 mt-4">
+        {/* Add Server Button */}
+        <button
+            onClick={handleServer}
+            className="w-40 h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#b3aa9e] gap-2"
         >
-          <div
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{
-              width: `${totalPages * CONTAINER_WIDTH}px`,
-              transform: `translateX(-${page * CONTAINER_WIDTH}px)`,
-            }}
-          >
-            {pages}
-          </div>
-        </div>
+          <p>Add a server</p>
+          <FaPlus />
+        </button>
 
-        {canGoRight && (
-          <button
-            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-            className="absolute right-2 top-3 z-10 bg-transparent"
-            aria-label="Next servers"
-          >
-            <FaChevronRight />
-          </button>
+        {/* Server Grid */}
+        {servers.length > 0 && (
+            <div
+                ref={containerRef}
+                className="w-full rounded-xl border border-[#b6b09f] bg-white overflow-y-auto"
+                style={{
+                  height: `${containerHeight}px`,
+                  scrollSnapType: rows.length > VISIBLE_ROWS ? "y mandatory" : "none",
+                  scrollBehavior: "smooth",
+                }}
+            >
+              <div className="flex flex-col">
+                {rowsToRender.map((row, rowIndex) => (
+                    <div
+                        key={rowIndex}
+                        className="flex justify-around items-center"
+                        style={{
+                          height: `${ROW_HEIGHT}px`,
+                          scrollSnapAlign: "start",
+                        }}
+                    >
+                      {row.map((server, index) =>
+                          server ? (
+                              <div
+                                  key={server.id}
+                                  className="w-12 h-12 flex items-center justify-center rounded-lg  cursor-pointer"
+                                  onContextMenu={e => {
+                                    e.preventDefault();
+                                    setContextMenu({ x: e.clientX, y: e.clientY, serverId: server.id });
+                                  }}
+                              >
+                                {server.image ? (
+                                    <img
+                                        src={server.image}
+                                        alt={server.name}
+                                        className="rounded-lg object-cover w-16 h-16"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-gray-500 text-white flex items-center justify-center text-xl">
+                                      {server.name[0]?.toUpperCase() ?? "?"}
+                                    </div>
+                                )}
+                              </div>
+                          ) : (
+                              <div key={`empty-${rowIndex}-${index}`} className="w-12 h-12" />
+                          )
+                      )}
+                    </div>
+                ))}
+              </div>
+            </div>
         )}
+
+        {/* Context Menu */}
+        {contextMenu && (
+            <div
+                ref={menuRef}
+                className="fixed z-50 bg-white border border-gray-300 rounded shadow-lg py-2 px-4"
+                style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
+            >
+              <button
+                  className="text-red-600 hover:underline w-full text-left"
+                  onClick={() => {
+                    const idToRemove = contextMenu.serverId;
+                    setServers(prev => prev.filter(s => s.id !== idToRemove));
+                    setContextMenu(null);
+                  }}
+              >
+                Leave Server
+              </button>
+            </div>
+        )}
+
+        <AddServerPopup
+            isOpen={showPopup}
+            onClose={() => setShowPopup(false)}
+            onCreate={handleCreateServer}
+            onJoin={handleJoinServer}
+        />
       </div>
-
-      {/* Context Menu for Leave Server */}
-      {contextMenu && (
-        <div
-          ref={menuRef}
-          className="fixed z-50 bg-white border border-gray-300 rounded shadow-lg py-2 px-4"
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
-        >
-          <button
-            className="text-red-600 hover:underline w-full text-left"
-            onClick={e => {
-              e.stopPropagation();
-              const idToRemove = contextMenu.serverId;
-
-              setServers(prevServers => {
-                const updated = prevServers.filter(s => s.id !== idToRemove);
-                const newTotalPages = Math.max(1, Math.ceil(updated.length / SERVERS_PER_PAGE));
-                if (page >= newTotalPages) {
-                  setPage(newTotalPages - 1);
-                }
-                return updated;
-              });
-
-              setContextMenu(null);
-            }}
-          >
-            Leave Server
-          </button>
-        </div>
-      )}
-
-      <AddServerPopup
-        isOpen={showPopup}
-        onClose={() => setShowPopup(false)}
-        onCreate={handleCreateServer}
-        onJoin={handleJoinServer}
-      />
-    </div>
   );
 }

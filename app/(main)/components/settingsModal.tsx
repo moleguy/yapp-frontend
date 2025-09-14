@@ -20,7 +20,6 @@ interface Props {
 
 const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
-
   const [activeTab, setActiveTab] = useState('General');
   const [selected, setSelected] = useState<string[]>([]);
   const settingsRef = useRef<HTMLDivElement | null>(null);

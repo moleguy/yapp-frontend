@@ -149,13 +149,14 @@ export default function ProfileSettings() {
           >
             <label
               htmlFor="fileUpload"
-              className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-md"
+              className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-t-lg"
             >
               Change
             </label>
+            <div className="flex-grow h-px bg-gray-600 opacity-35" />
             <button
               onClick={handleRemovePic}
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md"
+              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
             >
               Remove
             </button>

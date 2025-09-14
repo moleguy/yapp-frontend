@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import { RiUser6Fill } from "react-icons/ri";
+import { IoIosSearch, IoIosClose } from "react-icons/io";
 import SettingsPopup from "../components/SettingsPopup";
 import ServerList from "../components/ServerList";
 
@@ -12,6 +13,8 @@ export default function HomePage() {
   const [displayName, setDisplayName] = useState("Manish");
   const [username, setUsername] = useState("moleguy5");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  // const [selectedServer, setSelectedServer] = useState<Server | null>(null);
 
   // loading profile from localStorage
   const loadProfile = useCallback(() => {
@@ -35,15 +38,19 @@ export default function HomePage() {
   }, [settingsOpen, loadProfile]);
 
   return (
-    <div className="flex h-screen bg-white text-black font-MyFont">
+    <div className="flex h-screen bg-black text-black font-MyFont">
       <div className="w-full flex m-4 bg-[#EAE4D5] rounded-lg">
+        {/* Server Side*/}
         <div className="flex flex-col justify-between items-center w-[350px] bg-[#EBEBEB] rounded-l-lg">
 
           {/* servers, channels etc... */}
           <ServerList />
 
+          <div className={`h-full w-full m-6 border rounded-xl border-[#dcd9d3]`}>
+
+          </div>
           {/* call, profile and settings */}
-          <div className="flex w-[320px] m-3 border-3 py-3 px-3 bg-white border-[#D4C9BE] rounded-xl select-none">
+          <div className="flex w-[320px] m-3 border-3 py-2 px-2 bg-white border-[#D4C9BE] rounded-xl select-none">
             <div className="w-1/2 flex items-center w-full hover:bg-[#ebebed] p-1 hover:rounded-lg cursor-pointer">
               <div className="flex justify-center items-center w-12 h-12 border border-[#B6B09F] rounded-full overflow-hidden">
                 {preview ? (
@@ -90,12 +97,43 @@ export default function HomePage() {
         </div>
 
         {/* main section */}
-        <div className="flex flex-2 flex-col">
+        <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-gray-300 ">
+          <div></div>
           <p>iaubsiub</p>
-          <p>iaubsiub</p>
+          <div className={`flex`}>
+            <input
+              className={` w-full py-6 px-4 m-4 focus:outline-none rounded-xl bottom-10 border border-[#dcd9d3]`}
+            />
+          </div>
         </div>
 
-        <div className="flex w-[400px] bg-[#F2F2F2] rounded-r-lg"><p>iaubsiub</p></div>
+        {/* Search and Server Members Group*/}
+        <div className="relative flex flex-col w-[400px] bg-white rounded-r-lg p-4 ">
+          <div className={`relative flex justify-center items-center`}>
+            <input
+                className={`w-full border bg-[#e7e7e7] border-[#dcd9d3] rounded-xl py-2 px-2 focus:outline-none`}
+                placeholder={`Search...`}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+            />
+
+            <button
+                onClick={() => {
+                  if (query) setQuery("");
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+            >
+              {query ? (
+                  <IoIosClose className="w-7 h-7" />
+              ) : (
+                  <IoIosSearch className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+          <div className="flex items-center my-2 w-full" role="separator" aria-label="or">
+            <div className="flex-grow h-px bg-gray-600 opacity-35 mt-2 mb-2" />
+          </div>
+        </div>
       </div>
     </div>
   );
