@@ -10,7 +10,7 @@ type Server = {
   image?: string;
 };
 
-const ROW_SIZE = 3;
+const ROW_SIZE = 4;
 const ROW_HEIGHT = 80;
 const VISIBLE_ROWS = 3;
 
@@ -74,21 +74,26 @@ export default function ServerList() {
       rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
 
   return (
-      <div className="flex flex-col justify-center items-start select-none w-80 mt-4">
+      <div className="flex flex-col justify-center items-center select-none w-80 mt-4">
         {/* Add Server Button */}
-        <button
-            onClick={handleServer}
-            className="w-40 h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#b3aa9e] gap-2"
-        >
-          <p>Add a server</p>
-          <FaPlus />
-        </button>
+        <div className={`flex w-full justify-between items-center gap-2`}>
+          <button
+              onClick={handleServer}
+              className="w-full h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none gap-2 hover:text-white"
+          >
+            <FaPlus />
+            <p>Add a server</p>
+          </button>
+          <button className={`flex justify-center items-center w-full h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none mb-4`}>
+            <p className={`hover:text-white`}>Direct Messages</p>
+          </button>
+        </div>
 
         {/* Server Grid */}
         {servers.length > 0 && (
             <div
                 ref={containerRef}
-                className="w-full rounded-xl border border-[#b6b09f] bg-white overflow-y-auto"
+                className="w-full rounded-xl border border-[#b6b09f] bg-white overflow-y-auto scrollbar-hide"
                 style={{
                   height: `${containerHeight}px`,
                   scrollSnapType: rows.length > VISIBLE_ROWS ? "y mandatory" : "none",
