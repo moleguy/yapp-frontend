@@ -1,8 +1,11 @@
 'use client';
 
+import { authSignout } from "@/lib/api";
 import { useState, ChangeEvent, useEffect, useRef } from "react";
 import { FaPen, FaTrash, FaPlus } from "react-icons/fa";
 import { HiOutlineUser } from "react-icons/hi2";
+import { useRouter } from 'next/navigation';
+import { useAuth } from "../../contexts/AuthContext";
 
 interface UserProfile {
   displayName: string;
@@ -21,18 +24,22 @@ const initialUser: UserProfile = {
 };
 
 export default function ProfileSettings() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [preview, setPreview] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
-  const [user, setUser] = useState<UserProfile>(initialUser);
+  // const [user, setUser] = useState<UserProfile>(initialUser);
   const optionsRef = useRef<HTMLDivElement | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [displayName] = useState(user?.display_name);
+
 
   // profile pic handling when clicked outside the options is removed
   useEffect(() => {
-    if(!showOptions) return;
+    if (!showOptions) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if(
+      if (
         optionsRef.current &&
         !optionsRef.current.contains(e.target as Node)
       ) {
@@ -57,7 +64,7 @@ export default function ProfileSettings() {
   }, []);
 
   const saveProfile = (newUser = user, newPreview = preview) => {
-    localStorage.setItem("userProfile", JSON.stringify({user: newUser, preview: newPreview}));
+    localStorage.setItem("userProfile", JSON.stringify({ user: newUser, preview: newPreview }));
   }
 
   // handling profile picture
@@ -115,6 +122,24 @@ export default function ProfileSettings() {
     saveProfile(newUser, preview);
   };
 
+  const signOut = async () => {
+    try {
+      // Call signout API
+      await authSignout();
+      // Clear user profile from localStorage
+      localStorage.removeItem("userProfile");
+      // Clear remember_me cookie
+      if (document.cookie.split('; ').find(row => row.startsWith('remember_me='))) {
+        document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
+      }
+      router.push('/signin');
+    } catch (error: any) {
+      const msg = error?.message || (typeof error === 'string' ? error : 'Sign out failed');
+      console.error(msg);
+    }
+  };
+
+
   return (
     <div className="bg-white mt-4">
       {/* Profile Image */}
@@ -143,7 +168,7 @@ export default function ProfileSettings() {
         </div>
 
         {preview && showOptions && (
-          <div 
+          <div
             ref={optionsRef}
             className="absolute mt-28 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50"
           >
@@ -182,7 +207,7 @@ export default function ProfileSettings() {
               <input
                 autoFocus
                 type="text"
-                value={user[field as keyof UserProfile] || ""}
+                value={displayName}
                 onChange={(e) =>
                   handleFieldChange(field as keyof UserProfile, e.target.value)
                 }
@@ -196,7 +221,7 @@ export default function ProfileSettings() {
                 onClick={() => setEditingField(field)}
               >
                 <p className="text-gray-800">
-                  {user[field as keyof UserProfile] || "Not set"}
+                  {/* {user[field as keyof UserProfile] || "Not set"} */}
                 </p>
                 <FaPen className="text-black opacity-0 group-hover:opacity-100" />
               </div>
@@ -207,7 +232,7 @@ export default function ProfileSettings() {
         {/* Social Links */}
         <div>
           <label className="block text-sm text-gray-500">Social Links</label>
-          {user.socials.map((link, index) => (
+          {/* {user.socials.map((link, index) => (
             <div key={index} className="flex items-center gap-2 mb-2">
               <input
                 type="url"
@@ -224,7 +249,7 @@ export default function ProfileSettings() {
                 <FaTrash />
               </button>
             </div>
-          ))}
+          ))} */}
           <button
             onClick={addSocial}
             className="flex items-center gap-1 text-blue-600 mt-2"
@@ -238,6 +263,7 @@ export default function ProfileSettings() {
       <div className="mt-6">
         <button
           onClick={() => {
+            signOut();
             console.log("Sign out clicked");
           }}
           className="flex items-center gap-2 text-red-600 font-base border py-1 px-4 border-[#dcd9d3] rounded-md cursor-pointer"
