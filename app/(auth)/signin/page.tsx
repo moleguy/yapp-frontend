@@ -33,8 +33,10 @@ export default function SignIn() {
     const rememberMeCookie = document.cookie
       .split('; ')
       .find((row) => row.startsWith('remember_me='));
-    if (rememberMeCookie) {
+    if (rememberMeCookie && rememberMeCookie.split('=')[1] === 'true') {
       setRememberMe(true);
+    } else {
+      setRememberMe(false);
     }
   }, []);
 
@@ -92,14 +94,22 @@ export default function SignIn() {
   const signInWithCredentials = async (email: string, password: string, remember: boolean) => {
     setIsLoading(true);
     try {
-      // Call Go backend: POST /auth/signin (sets httpOnly cookie)
-      const { authSignin } = await import('@/lib/api');
+      const { authSignin, getCurrentUser } = await import('@/lib/api');
+
       await authSignin({ username_or_email: email.trim().toLowerCase(), password });
 
-      // Optionally set a non-auth preference cookie
+      // Wait for user info to confirm JWT works
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('Failed to fetch user profile');
+      }
+
       if (remember) {
         document.cookie = `remember_me=true; max-age=${30 * 24 * 60 * 60}; path=/; samesite=lax`;
+      } else {
+        document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
       }
+
       router.push('/home');
     } catch (error: any) {
       const msg = error?.message || 'Sign In failed. Please try again.';
@@ -109,6 +119,7 @@ export default function SignIn() {
       setIsLoading(false);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

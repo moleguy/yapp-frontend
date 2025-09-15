@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import { RiUser6Fill } from "react-icons/ri";
 // import { IoIosSearch, IoIosClose } from "react-icons/io";
 // import { FiPlus } from "react-icons/fi";
 import SettingsPopup from "../components/SettingsPopup";
 import ServerList from "../components/ServerList";
+import { useAuth } from "../../contexts/AuthContext";
+import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
-import {keyframes} from "motion-dom";
+import { keyframes } from "motion-dom";
 
 type Server = {
   id: number;
@@ -17,11 +19,13 @@ type Server = {
 };
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState("Manish");
-  const [username, setUsername] = useState("moleguy5");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.display_name);
+  const [username, setUsername] = useState(user?.username);
+
   // const [query, setQuery] = useState("");
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
@@ -56,33 +60,39 @@ export default function HomePage() {
     if (saved) {
       const parsed = JSON.parse(saved);
       setPreview(parsed.preview || null);
-      setDisplayName(parsed.user?.displayName || "Manish");
-      setUsername(parsed.user?.username || "moleguy5");
     }
-  }, []);
+    setDisplayName(user?.display_name);
+    setUsername(user?.username);
+  }, [user?.username, user?.display_name]);
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
 
+  // useEffect(() => {
+  //     console.log("user from context:", user);
+  //     loadProfile();
+  // }, [loadProfile, user]);
+
   useEffect(() => {
-    if(!settingsOpen) {
+    if (!settingsOpen) {
       loadProfile();
     }
   }, [settingsOpen, loadProfile]);
 
   return (
+    <ProtectedRoute>
       <div className="flex h-screen bg-black text-black font-MyFont">
         <div className="w-full flex m-4 bg-[#EAE4D5] rounded-lg">
           {/* Sidebar */}
           <div className="flex flex-col h-full w-[350px] bg-[#f3f3f4] rounded-l-lg">
             {/* Server list */}
             <ServerList
-                servers={servers}
-                setServers={setServers}
-                activeServer={activeServer}
-                onServerClick={handleServerClick}
-                onLeaveServer={handleLeaveServer}
+              servers={servers}
+              setServers={setServers}
+              activeServer={activeServer}
+              onServerClick={handleServerClick}
+              onLeaveServer={handleLeaveServer}
             />
 
             {/* Channels → scrollable */}
@@ -95,9 +105,9 @@ export default function HomePage() {
               <div className="w-full flex items-center hover:bg-[#ebebed] p-1 hover:rounded-lg cursor-pointer">
                 <div className="flex justify-center items-center w-12 h-12 border border-[#B6B09F] rounded-full overflow-hidden">
                   {preview ? (
-                      <img src={preview} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={preview} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                      <RiUser6Fill size={32} />
+                    <RiUser6Fill size={32} />
                   )}
                 </div>
                 <div className="ml-2 font-MyFont text-[#393E46]">
@@ -107,10 +117,9 @@ export default function HomePage() {
               </div>
               <div className="flex items-center justify-around gap-2">
                 <div
-                    className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${
-                        showMicrophone ? "hover:bg-[#dfdfe1]" : "bg-[#ebc8ca] text-[#cb3b40]"
+                  className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${showMicrophone ? "hover:bg-[#dfdfe1]" : "bg-[#ebc8ca] text-[#cb3b40]"
                     }`}
-                    onClick={() => setShowMicrophone(!showMicrophone)}
+                  onClick={() => setShowMicrophone(!showMicrophone)}
                 >
                   <style>
                     {`
@@ -124,16 +133,16 @@ export default function HomePage() {
                     `}
                   </style>
                   {showMicrophone ? (
-                      <BiSolidMicrophone size={28} className="text-gray-500 hover:text-[#1e1e1e] sway-hover" />
+                    <BiSolidMicrophone size={28} className="text-gray-500 hover:text-[#1e1e1e] sway-hover" />
                   ) : (
-                      <BiSolidMicrophoneOff size={28} className={`sway-hover`}/>
+                    <BiSolidMicrophoneOff size={28} className={`sway-hover`} />
                   )}
                 </div>
                 <div className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1]">
                   <SettingsPopup
-                      isOpen={settingsOpen}
-                      onClose={() => setSettingsOpen(false)}
-                      onOpen={() => setSettingsOpen(true)}
+                    isOpen={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    onOpen={() => setSettingsOpen(true)}
                   />
                 </div>
               </div>
@@ -153,6 +162,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
+    </ProtectedRoute>
   );
 }
