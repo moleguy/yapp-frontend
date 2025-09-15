@@ -1,6 +1,6 @@
 'use client';
 
-import {  useState, useEffect, useRef } from 'react';
+import React, {  useState, useEffect, useRef } from 'react';
 import classNames from 'classnames';
 import { IoSettings, IoSettingsOutline, IoLockClosed, IoLockClosedOutline, IoNotifications, IoNotificationsOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
@@ -20,7 +20,6 @@ interface Props {
 
 const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
-
   const [activeTab, setActiveTab] = useState('General');
   const [selected, setSelected] = useState<string[]>([]);
   const settingsRef = useRef<HTMLDivElement | null>(null);
