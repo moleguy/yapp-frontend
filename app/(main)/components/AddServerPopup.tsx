@@ -62,7 +62,7 @@ export default function AddServerPopup({
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            {/* STEP = CHOICE */}
+            {/* choosing an option over create and join */}
             {step === "choice" && (
                 <div
                     ref={serverRef}
@@ -81,7 +81,7 @@ export default function AddServerPopup({
                         <div className="flex flex-col w-full">
                             <button
                                 onClick={() => setStep("create")}
-                                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center"
+                                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center cursor-pointer"
                             >
                                 Create My Own
                                 <FaChevronRight className="w-4 h-4" />
@@ -96,7 +96,7 @@ export default function AddServerPopup({
                             </p>
                             <button
                                 onClick={() => setStep("join")}
-                                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center mt-2"
+                                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center mt-2 cursor-pointer"
                             >
                                 Join a server
                                 <FaChevronRight className="w-4 h-4" />
@@ -106,69 +106,75 @@ export default function AddServerPopup({
                 </div>
             )}
 
-            {/* STEP = CREATE */}
+            {/* creating a server */}
             {step === "create" && (
                 <div
                     ref={serverRef}
-                    className="relative flex flex-col bg-white rounded-xl p-6 w-[450px] h-[400px] text-center">
-                    <h2 className="text-lg font-semibold mb-2">Create Server</h2>
-                    <p className="text-gray-600 mb-4">
-                        Configure your new server with a name and an icon.
-                    </p>
+                    className="relative flex flex-col bg-white rounded-xl p-6 w-[450px] h-[400px] text-center"
+                >
+                    <div className={`h-full flex flex-col justify-between`}>
+                        <div>
+                            <h2 className="text-xl font-medium tracking-wide mb-2">Modify Your Server</h2>
+                            <p className="text-[#73726e] mb-4">
+                                Configure your new server with a name and an icon.
+                            </p>
 
-                    <div className="relative mt-2 mb-3">
-                        {serverImage ? (
-                            <img
-                                src={serverImage}
-                                alt="Server Preview"
-                                className="w-20 h-20 rounded-full object-cover mx-auto cursor-pointer"
-                                onClick={() => setServerImage(undefined)}
-                                title="Click to remove/change"
+                            <div className="relative mt-2 mb-3">
+                                {serverImage ? (
+                                    <img
+                                        src={serverImage}
+                                        alt="Server Preview"
+                                        className="w-20 h-20 rounded-full object-cover mx-auto cursor-pointer"
+                                        onClick={() => setServerImage(undefined)}
+                                        title="Click to remove/change"
+                                    />
+                                ) : (
+                                    <label className="w-20 h-20 bg-gray-500 rounded-full flex items-center justify-center cursor-pointer mx-auto">
+                                        <span className="text-white text-2xl">+</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                            <p className={`text-left font-light tracking-wide`}>Server Name</p>
+                            <input
+                                type="text"
+                                placeholder="Server Name"
+                                value={serverName}
+                                onChange={(e) => setServerName(e.target.value)}
+                                className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb]"
                             />
-                        ) : (
-                            <label className="w-20 h-20 bg-gray-500 rounded-full flex items-center justify-center cursor-pointer mx-auto">
-                                <span className="text-white text-2xl">+</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                />
-                            </label>
-                        )}
+                            <p className={`font-thin text-sm text-left mt-2 text-[#73726e]`}>Craft a unique name for your server</p>
+                        </div>
+                        <div className="flex gap-2 justify-between">
+                            <button
+                                onClick={() => setStep("choice")}
+                                className="py-2 px-4 rounded-lg text-gray-600 cursor-pointer"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (serverName.trim()) {
+                                        onCreate(serverName, serverImage);
+                                        onClose();
+                                    }
+                                }}
+                                className="py-2 px-6 rounded-lg bg-[#6164f2] hover:bg-[#4c52bd] text-white cursor-pointer"
+                            >
+                                Create
+                            </button>
+                        </div>
                     </div>
-                    <p className={`text-left mt-3 tracking-wide`}>Server Name</p>
-                    <input
-                        type="text"
-                        placeholder="Server Name"
-                        value={serverName}
-                        onChange={(e) => setServerName(e.target.value)}
-                        className="w-full border rounded-lg py-2 px-4 mt-1 border-[#dcd9d3] focus:outline-none"
-                    />
 
-                    <div className="flex gap-2 mt-6 justify-between">
-                        <button
-                            onClick={() => setStep("choice")}
-                            className="py-2 px-4 rounded-lg bg-gray-300 text-gray-600"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (serverName.trim()) {
-                                    onCreate(serverName, serverImage);
-                                    onClose();
-                                }
-                            }}
-                            className="py-2 px-4 rounded-lg bg-[#b6b09f] hover:bg-[#a19a87] text-white"
-                        >
-                            Create
-                        </button>
-                    </div>
                 </div>
             )}
 
-            {/* STEP = JOIN */}
+            {/* joining a server */}
             {step === "join" && (
                 <div
                     ref={serverRef}

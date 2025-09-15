@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import {useState, useRef, useEffect} from "react";
 import { MdDarkMode } from "react-icons/md";
 import { IoMdSunny } from "react-icons/io";
 import { IoColorPaletteOutline } from "react-icons/io5";
@@ -9,6 +9,7 @@ import { FaChevronDown } from "react-icons/fa";
 const ThemeDropDown: React.FC = () => {
     const [selected, setSelected] = useState("System Default");
     const [isDropDownOpen, setIsDropDownOpen] = useState(false);
+    const themeRef = useRef<HTMLDivElement | null>(null);
 
     const options = [
         { label: "System Default", icon: <IoColorPaletteOutline className="w-5 h-5" /> },
@@ -16,9 +17,30 @@ const ThemeDropDown: React.FC = () => {
         { label: "Dark", icon: <MdDarkMode className="w-5 h-5 text-gray-700" /> },
     ];
 
+    useEffect(() => {
+        if(!isDropDownOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if(
+                themeRef.current &&
+                !themeRef.current.contains(e.target as Node)
+            ){
+                setIsDropDownOpen(false);
+            }
+        }
+
+        window.addEventListener("mousedown", handleClickOutside);
+
+        return () => window.removeEventListener("mousedown", handleClickOutside);
+    }, [isDropDownOpen]);
+
     return (
-        <div className='relative w-64 mt-1'>
-            <button 
+        <div
+            ref={themeRef}
+            className='relative w-64 mt-1'
+        >
+            <button
+
               onClick={() => setIsDropDownOpen((prev) => !prev)}
               className='relative flex items-center justify-start w-[240px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2'
             >

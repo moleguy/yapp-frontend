@@ -1,3 +1,5 @@
+// ServerList.tsx
+
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
@@ -10,12 +12,19 @@ type Server = {
   image?: string;
 };
 
-const ROW_SIZE = 4;
-const ROW_HEIGHT = 80;
+const ROW_SIZE = 3;
+const ROW_HEIGHT = 90;
 const VISIBLE_ROWS = 3;
 
-export default function ServerList() {
-  const [servers, setServers] = useState<Server[]>([]);
+interface ServerListProps {
+  servers: Server[];
+  setServers: React.Dispatch<React.SetStateAction<Server[]>>;
+  activeServer: Server | null;
+  onServerClick: (server: Server) => void;
+  onLeaveServer: (serverId: number) => void;
+}
+
+export default function ServerList({ servers, setServers, activeServer, onServerClick, onLeaveServer }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; serverId: number } | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -25,12 +34,13 @@ export default function ServerList() {
   useEffect(() => {
     const saved = localStorage.getItem("servers");
     if (saved) setServers(JSON.parse(saved));
-  }, []);
+  }, [setServers]);
+
   useEffect(() => {
     localStorage.setItem("servers", JSON.stringify(servers));
   }, [servers]);
 
-  // close context menu
+  // clicking outside logic handling for leave server button
   useEffect(() => {
     if (!contextMenu) return;
     const handleOutside = (e: MouseEvent) => {
@@ -66,17 +76,12 @@ export default function ServerList() {
 
   const neededRows = Math.max(1, Math.ceil(servers.length / ROW_SIZE));
   const visibleRowsCount = Math.min(neededRows, VISIBLE_ROWS);
-
   const rowsToRender = rows.length <= VISIBLE_ROWS ? rows.slice(0, visibleRowsCount) : rows;
-
-  // dynamic height
-  const containerHeight =
-      rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
+  const containerHeight = rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
 
   return (
-      <div className="flex flex-col justify-center items-center select-none w-80 mt-4">
-        {/* Add Server Button */}
-        <div className={`flex w-full justify-between items-center gap-2`}>
+      <div className="flex flex-col justify-center items-center select-none w-full mt-4">
+        <div className={`flex w-74 gap-2 items-center `}>
           <button
               onClick={handleServer}
               className="w-full h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none gap-2 hover:text-white"
@@ -84,16 +89,15 @@ export default function ServerList() {
             <FaPlus />
             <p>Add a server</p>
           </button>
-          <button className={`flex justify-center items-center w-full h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none mb-4`}>
-            <p className={`hover:text-white`}>Direct Messages</p>
+          <button className={`flex justify-center items-center w-full h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none mb-4 hover:text-white`} >
+            <p className={``}>Direct Messages</p>
           </button>
         </div>
 
-        {/* Server Grid */}
         {servers.length > 0 && (
             <div
                 ref={containerRef}
-                className="w-full rounded-xl border border-[#b6b09f] bg-white overflow-y-auto scrollbar-hide"
+                className="w-74 rounded-xl mb-4 overflow-y-auto scrollbar-hide"
                 style={{
                   height: `${containerHeight}px`,
                   scrollSnapType: rows.length > VISIBLE_ROWS ? "y mandatory" : "none",
@@ -104,7 +108,7 @@ export default function ServerList() {
                 {rowsToRender.map((row, rowIndex) => (
                     <div
                         key={rowIndex}
-                        className="flex justify-around items-center"
+                        className="flex justify-between items-center"
                         style={{
                           height: `${ROW_HEIGHT}px`,
                           scrollSnapAlign: "start",
@@ -114,26 +118,32 @@ export default function ServerList() {
                           server ? (
                               <div
                                   key={server.id}
-                                  className="w-12 h-12 flex items-center justify-center rounded-lg  cursor-pointer"
+                                  className="w-16 h-16 flex items-center justify-center rounded-xl cursor-pointer hover:bg-[#6164f2]"
                                   onContextMenu={e => {
                                     e.preventDefault();
                                     setContextMenu({ x: e.clientX, y: e.clientY, serverId: server.id });
                                   }}
+                                  onClick={() => onServerClick(server)}
                               >
                                 {server.image ? (
                                     <img
                                         src={server.image}
                                         alt={server.name}
-                                        className="rounded-lg object-cover w-12 h-12"
+                                        className="rounded-lg object-cover w-16 h-16"
                                     />
                                 ) : (
-                                    <div className="w-12 h-12 rounded-lg bg-[#b6b09f] flex items-center justify-center text-xl">
-                                      {server.name.trim()[0]?.toUpperCase() ?? "?"}
+                                    <div className={`w-16 h-16 rounded-lg text-[#eeeffe] bg-[#6164f2] flex items-center justify-center text-xl ${activeServer?.id === server.id ? 'text-white' : ''}`}>
+                                      {server.name
+                                          .trim()
+                                          .split(/\s+/)
+                                          .map(word => word[0].toUpperCase())
+                                          .join("") ?? '?'
+                                      }
                                     </div>
                                 )}
                               </div>
                           ) : (
-                              <div key={`empty-${rowIndex}-${index}`} className="w-12 h-12" />
+                              <div key={`empty-${rowIndex}-${index}`} className="w-16 h-16" />
                           )
                       )}
                     </div>
@@ -142,18 +152,17 @@ export default function ServerList() {
             </div>
         )}
 
-        {/* Context Menu */}
         {contextMenu && (
             <div
                 ref={menuRef}
-                className="fixed z-50 bg-white border border-gray-300 rounded shadow-lg py-2 px-4"
+                className="fixed z-50 bg-white rounded-lg shadow-lg py-2 px-4 hover:bg-[#ebc8ca]"
                 style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
             >
               <button
-                  className="text-red-600 hover:underline w-full text-left"
+                  className="text-[#cb3b40] w-full text-left "
                   onClick={() => {
-                    const idToRemove = contextMenu.serverId;
-                    setServers(prev => prev.filter(s => s.id !== idToRemove));
+                    // Call the onLeaveServer prop
+                    onLeaveServer(contextMenu.serverId);
                     setContextMenu(null);
                   }}
               >

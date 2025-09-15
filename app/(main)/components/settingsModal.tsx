@@ -1,6 +1,6 @@
 'use client';
 
-import {  useState, useEffect, useRef } from 'react';
+import React, {  useState, useEffect, useRef } from 'react';
 import classNames from 'classnames';
 import { IoSettings, IoSettingsOutline, IoLockClosed, IoLockClosedOutline, IoNotifications, IoNotificationsOutline } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";

@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FaChevronDown } from "react-icons/fa";
 
 const sizes = [80, 90, 100, 110, 120, 130, 140, 150];
 
 const TextSizeDropDown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [selectedSize, setSelectedSize] = useState(100); // default
+    const [selectedSize, setSelectedSize] = useState(100);
+    const textSizeRef = useRef<HTMLDivElement | null>(null);
   
     const toggleDropdown = () => setIsOpen(!isOpen);
     const handleSelect = (size: number) => {
@@ -15,8 +16,28 @@ const TextSizeDropDown: React.FC = () => {
         setIsOpen(false);
     };
 
+    useEffect(() => {
+        if(!isOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if(
+                textSizeRef.current &&
+                !textSizeRef.current.contains(e.target as Node)
+            ){
+                setIsOpen(false);
+            }
+        }
+
+        window.addEventListener("mousedown", handleClickOutside);
+
+        return ()=> window.removeEventListener("mousedown", handleClickOutside);
+    }, [isOpen]);
+
     return (
-        <div className='relative w-64 mt-1'>
+        <div
+            ref={textSizeRef}
+            className='relative w-64 mt-1'
+        >
             <button
               onClick={toggleDropdown}
               className='relative flex items-center justify-start w-[240px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2'
