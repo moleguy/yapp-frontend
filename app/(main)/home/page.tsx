@@ -19,6 +19,13 @@ type Server = {
   image?: string;
 };
 
+type Friend = {
+  id: number;
+  name: string;
+  status?: string;
+};
+
+
 export default function HomePage() {
   const { user } = useAuth();
   const [showMicrophone, setShowMicrophone] = useState(true);
@@ -26,6 +33,13 @@ export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [displayName, setDisplayName] = useState(user?.display_name);
   const [username, setUsername] = useState(user?.username);
+  const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
+  // const [friends, setFriends] = useState<Friend[]>([]);
+
+  const [friends, setFriends] = useState<Friend[]>([
+  { id: 1, name: "Alice", status: "online" },
+  { id: 2, name: "Bob", status: "offline" },
+]);
 
   // const [query, setQuery] = useState("");
   const [activeServer, setActiveServer] = useState<Server | null>(null);
@@ -33,6 +47,7 @@ export default function HomePage() {
 
   const handleServerClick = (server: Server) => {
     setActiveServer(server);
+    setActiveView("server");
   };
 
   const handleLeaveServer = (serverId: number) => {
@@ -77,7 +92,8 @@ export default function HomePage() {
   }, [settingsOpen, loadProfile]);
 
   const handleDirectMessageClick = () => {
-
+    setActiveServer(null);
+    setActiveView("dm");
   }
 
   return (
@@ -98,7 +114,12 @@ export default function HomePage() {
 
             {/* Channels → scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto border-t border-b border-[#dcd9d3]">
-              <ServerDetails activeServer={activeServer} />
+              {activeView === "server" && activeServer && (
+                <ServerDetails activeServer={activeServer} />
+              )}
+              {activeView === "dm" && (
+                <DirectMessages friends={friends} />
+              )}
             </div>
 
             {/* Profile (pinned at bottom) */}
