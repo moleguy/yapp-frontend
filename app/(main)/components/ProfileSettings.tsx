@@ -24,14 +24,14 @@ const initialUser: UserProfile = {
 };
 
 export default function ProfileSettings() {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const router = useRouter();
   const [preview, setPreview] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
-  // const [user, setUser] = useState<UserProfile>(initialUser);
+  const [user, setUser] = useState<UserProfile>(initialUser);
   const optionsRef = useRef<HTMLDivElement | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [displayName] = useState(user?.display_name);
+  // const [displayName] = useState(user?.display_name);
 
 
   // profile pic handling when clicked outside the options is removed
@@ -208,7 +208,7 @@ export default function ProfileSettings() {
               <input
                 autoFocus
                 type="text"
-                value={displayName}
+                value={initialUser.displayName}
                 onChange={(e) =>
                   handleFieldChange(field as keyof UserProfile, e.target.value)
                 }
