@@ -83,9 +83,9 @@ export default function ServerList({ servers, setServers, activeServer, onServer
   const containerHeight = rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
 
   return (
-      <div className="flex flex-row justify-center items-center select-none w-full">
-        <div className={`flex flex-col flex-1 h-full justify-around items-center border-r border-[#dcd9d3]`}>
-          <div className={`h-full flex justify-center items-center`}>
+      <div className="flex flex-col justify-center items-center select-none w-full">
+        <div className={`flex w-full justify-around items-center mt-4`}>
+          <div className={`flex justify-center items-center`}>
             <button
                 onClick={handleServer}
                 className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none gap-2 hover:text-white"
@@ -93,9 +93,7 @@ export default function ServerList({ servers, setServers, activeServer, onServer
               <FaPlus className={`w-6 h-6`}/>
             </button>
           </div>
-          <div className="flex items-center w-full" role="separator" aria-label="or">
-            <div className="flex-grow h-px bg-gray-400 opacity-35" />
-          </div>
+          
           <div className={`h-full flex justify-center items-center`}>
             <button
                 onClick={onDirectMessagesClick}
@@ -103,6 +101,8 @@ export default function ServerList({ servers, setServers, activeServer, onServer
               <RiMessage3Fill className={`w-8 h-8`}/>
             </button>
           </div>
+
+          
 
           {/*<div className="flex items-center w-full" role="separator" aria-label="or">*/}
           {/*  <div className="flex-grow h-px bg-gray-400 opacity-35" />*/}
@@ -113,6 +113,9 @@ export default function ServerList({ servers, setServers, activeServer, onServer
           {/*  <IoHelpCircle className={`w-8 h-8`}/>*/}
           {/*</button>*/}
         </div>
+        <div className="flex items-center w-full" role="separator" aria-label="or">
+            <div className="flex-grow h-px bg-gray-400 opacity-35" />
+          </div>
 
         {servers.length > 0 && (
             <div
