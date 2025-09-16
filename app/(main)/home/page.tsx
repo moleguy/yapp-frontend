@@ -10,7 +10,8 @@ import ServerList from "../components/ServerList";
 import { useAuth } from "../../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
-import { keyframes } from "motion-dom";
+import DirectMessages from "../components/DirectMessages";
+// import { keyframes } from "motion-dom";
 
 type Server = {
   id: number;
@@ -69,16 +70,15 @@ export default function HomePage() {
     loadProfile();
   }, [loadProfile]);
 
-  // useEffect(() => {
-  //     console.log("user from context:", user);
-  //     loadProfile();
-  // }, [loadProfile, user]);
-
   useEffect(() => {
     if (!settingsOpen) {
       loadProfile();
     }
   }, [settingsOpen, loadProfile]);
+
+  const handleDirectMessageClick = () => {
+
+  }
 
   return (
     <ProtectedRoute>
@@ -93,6 +93,7 @@ export default function HomePage() {
               activeServer={activeServer}
               onServerClick={handleServerClick}
               onLeaveServer={handleLeaveServer}
+              onDirectMessagesClick={handleDirectMessageClick}
             />
 
             {/* Channels → scrollable */}

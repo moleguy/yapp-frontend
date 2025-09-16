@@ -5,7 +5,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import AddServerPopup from "./AddServerPopup";
-
+// import { IoHelpCircle } from "react-icons/io5";
+// import { FaMessage} from "react-icons/fa6";
+import { RiMessage3Fill } from "react-icons/ri";
 type Server = {
   id: number;
   name: string;
@@ -22,9 +24,10 @@ interface ServerListProps {
   activeServer: Server | null;
   onServerClick: (server: Server) => void;
   onLeaveServer: (serverId: number) => void;
+  onDirectMessagesClick: () => void;
 }
 
-export default function ServerList({ servers, setServers, activeServer, onServerClick, onLeaveServer }: ServerListProps) {
+export default function ServerList({ servers, setServers, activeServer, onServerClick, onLeaveServer, onDirectMessagesClick }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; serverId: number } | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -80,24 +83,41 @@ export default function ServerList({ servers, setServers, activeServer, onServer
   const containerHeight = rows.length <= VISIBLE_ROWS ? visibleRowsCount * ROW_HEIGHT : VISIBLE_ROWS * ROW_HEIGHT;
 
   return (
-      <div className="flex flex-col justify-center items-center select-none w-full mt-4">
-        <div className={`flex w-74 gap-2 items-center `}>
-          <button
-              onClick={handleServer}
-              className="w-full h-10 mb-4 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none gap-2 hover:text-white"
-          >
-            <FaPlus />
-            <p>Add a server</p>
-          </button>
-          <button className={`flex justify-center items-center w-full h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none mb-4 hover:text-white`} >
-            <p className={``}>Direct Messages</p>
-          </button>
+      <div className="flex flex-row justify-center items-center select-none w-full">
+        <div className={`flex flex-col flex-1 h-full justify-around items-center border-r border-[#dcd9d3]`}>
+          <div className={`h-full flex justify-center items-center`}>
+            <button
+                onClick={handleServer}
+                className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none gap-2 hover:text-white"
+            >
+              <FaPlus className={`w-6 h-6`}/>
+            </button>
+          </div>
+          <div className="flex items-center w-full" role="separator" aria-label="or">
+            <div className="flex-grow h-px bg-gray-400 opacity-35" />
+          </div>
+          <div className={`h-full flex justify-center items-center`}>
+            <button
+                onClick={onDirectMessagesClick}
+                className={`flex justify-center items-center w-10 h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none hover:text-white`} >
+              <RiMessage3Fill className={`w-8 h-8`}/>
+            </button>
+          </div>
+
+          {/*<div className="flex items-center w-full" role="separator" aria-label="or">*/}
+          {/*  <div className="flex-grow h-px bg-gray-400 opacity-35" />*/}
+          {/*</div>*/}
+          {/*<button*/}
+          {/*    className={`flex justify-center items-center w-10 h-10 bg-white rounded-lg border border-[#b6b09f] cursor-pointer hover:bg-[#6164f2] hover:border-none hover:text-white`}*/}
+          {/*>*/}
+          {/*  <IoHelpCircle className={`w-8 h-8`}/>*/}
+          {/*</button>*/}
         </div>
 
         {servers.length > 0 && (
             <div
                 ref={containerRef}
-                className="w-74 rounded-xl mb-4 overflow-y-auto scrollbar-hide"
+                className="w-68 rounded-xl mb-4 overflow-y-auto scrollbar-hide"
                 style={{
                   height: `${containerHeight}px`,
                   scrollSnapType: rows.length > VISIBLE_ROWS ? "y mandatory" : "none",
@@ -108,7 +128,7 @@ export default function ServerList({ servers, setServers, activeServer, onServer
                 {rowsToRender.map((row, rowIndex) => (
                     <div
                         key={rowIndex}
-                        className="flex justify-between items-center"
+                        className="flex justify-around items-center"
                         style={{
                           height: `${ROW_HEIGHT}px`,
                           scrollSnapAlign: "start",
@@ -118,13 +138,39 @@ export default function ServerList({ servers, setServers, activeServer, onServer
                           server ? (
                               <div
                                   key={server.id}
-                                  className="w-16 h-16 flex items-center justify-center rounded-xl cursor-pointer hover:bg-[#6164f2]"
+                                  className="relative w-16 h-16 flex items-center justify-center rounded-xl cursor-pointer hover:bg-[#6164f2]"
                                   onContextMenu={e => {
                                     e.preventDefault();
                                     setContextMenu({ x: e.clientX, y: e.clientY, serverId: server.id });
                                   }}
                                   onClick={() => onServerClick(server)}
                               >
+                                <style>
+                                  {`
+                                    @keyframes bar-center {
+                                        0% {
+                                          transform: scaleY(0);
+                                          opacity: 0;
+                                        }
+                                        100% {
+                                          transform: scaleY(1);
+                                          opacity: 1;
+                                        }
+                                      }
+                                      
+                                      .animate-bar-center {
+                                        animation: bar-center 0.3s ease-out forwards;
+                                      }
+                                  `}
+                                </style>
+
+                                {activeServer?.id === server.id && (
+                                    <div
+                                        className="absolute left-[-8px] w-1 h-8 rounded-full bg-[#6164f2]
+                                        origin-center animate-bar-center"
+                                    />
+                                )}
+
                                 {server.image ? (
                                     <img
                                         src={server.image}
