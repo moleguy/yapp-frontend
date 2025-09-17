@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import { RiUser6Fill } from "react-icons/ri";
 // import { IoIosSearch, IoIosClose } from "react-icons/io";
@@ -12,6 +12,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
+import { IoIosSearch, IoIosClose } from "react-icons/io";
+import FriendsProfile from "../components/FriendsProfile";
 // import { keyframes } from "motion-dom";
 
 type Server = {
@@ -26,13 +28,11 @@ type Friend = {
   status?: string;
 };
 
-
 export default function HomePage() {
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
-  // const [friends, setFriends] = useState<Friend[]>([]);
 
   const { user } = useAuth();
   const [username, setUsername] = useState(user?.username);
@@ -42,16 +42,28 @@ export default function HomePage() {
     { id: 1, name: "Alice", status: "online" },
     { id: 2, name: "Bob", status: "offline" },
   ]);
-
-  // const [query, setQuery] = useState("");
+    
+  const [query, setQuery] = useState("");
+  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [showServersOnly, setShowServersOnly] = useState(false);
   const [activeServer, setActiveServer] = useState<Server | null>(null);
+  const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // const serverPopupRef = useRef<HTMLDivElement | null>(null);
+
+  const [friends, setFriends] = useState<Friend[]>([
+    { id: 1, name: "Alice", status: "online" },
+    { id: 2, name: "Bob", status: "offline" },
+  ]);
 
   const handleServerClick = (server: Server) => {
     setActiveServer(server);
     setActiveView("server");
+    setLastActiveServer(server);
   };
 
+  // handling leaving a server and showing a server next to it or the server before it
   const handleLeaveServer = (serverId: number) => {
     // Find the index of the server to be removed
     const serverIndex = servers.findIndex(s => s.id === serverId);
@@ -83,25 +95,47 @@ export default function HomePage() {
     setUsername(user?.username);
   }, [user?.username, user?.displayName]);
 
+  // loading a profile on mount
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
 
+  // loading profile icon when settings isn't open
   useEffect(() => {
     if (!settingsOpen) {
       loadProfile();
     }
   }, [settingsOpen, loadProfile]);
 
+  // handling dm button click
   const handleDirectMessageClick = () => {
     setActiveServer(null);
     setActiveView("dm");
+    setShowServersOnly(false);
+  }
+
+  // handling focus on the search input field
+  const handleClear = () =>{
+    setQuery("");
+    inputRef.current?.focus();
+  }
+
+  // handling server tab click for the last active server
+  const handleServersTabClick = () => {
+    setActiveView("server");
+    setShowServersOnly(true);
+
+    if(lastActiveServer){
+      setActiveServer(lastActiveServer);
+    } else if(servers.length > 0){
+      setActiveServer(servers[0]);
+    }
   }
 
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-black text-black font-MyFont">
-        <div className="w-full flex m-4 bg-[#EAE4D5] rounded-lg">
+        <div className="relative w-full flex m-4 bg-[#EAE4D5] rounded-lg">
           {/* Sidebar */}
           <div className="flex flex-col h-full w-[350px] bg-[#f3f3f4] rounded-l-lg">
             {/* Server list */}
@@ -112,17 +146,18 @@ export default function HomePage() {
               onServerClick={handleServerClick}
               onLeaveServer={handleLeaveServer}
               onDirectMessagesClick={handleDirectMessageClick}
+              onServersToggle={handleServersTabClick}
+              activeView={activeView}
             />
 
-            {/* Channels → scrollable */}
+            {/* Channels and Friends Section To Be Displayed */}
             <div className="flex-1 min-h-0 overflow-y-auto border-t border-b border-[#dcd9d3]">
-              {activeView === "server" && activeServer && (
+              {showServersOnly && activeView === "server" && activeServer ? (
                 <ServerDetails activeServer={activeServer} />
-              )}
-              {activeView === "dm" && (
-                <DirectMessages friends={friends} />
-              )}
-            </div>
+              ) : activeView === "dm" ? (
+                <DirectMessages friends={friends} onSelectFriend={setSelectedFriend} />
+              ) : null}
+            </div>        
 
             {/* Profile with controls */}
             <div className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between">
@@ -177,8 +212,34 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative flex flex-col w-[400px] bg-white rounded-r-lg p-4 ">
+          <div className="relative flex flex-col w-[400px] bg-white rounded-r-lg">
             {/* search and friends who are online and offline */}
+
+            <div className="relative border-b border-[#d4c9be] p-4">
+              <input 
+                value={query}
+                ref={inputRef}
+                onChange={(e) => setQuery(e.target.value)}
+                className="relative py-2 px-3 border border-[#D4C9BE] text-[#222831] rounded-lg w-full focus:outline-none"
+              />
+              {query ? (
+                <button 
+                  onClick={handleClear}
+                >
+                  <IoIosClose className="absolute w-8 h-8 top-1/2 right-7 -translate-y-1/2 cursor-pointer"/>
+                </button>
+              ):(
+                <button>
+                  <IoIosSearch className="absolute w-7 h-7 top-1/2 right-7 -translate-y-1/2"/>
+                </button>
+              )}
+            </div>
+            {/* Friends Section */}
+            <div>
+              {!showServersOnly && activeView === "dm" && (
+                <FriendsProfile friend={selectedFriend} />
+              )}
+          </div>
           </div>
 
         </div>
