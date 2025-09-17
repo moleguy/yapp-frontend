@@ -94,12 +94,13 @@ export default function SignIn() {
   const signInWithCredentials = async (email: string, password: string, remember: boolean) => {
     setIsLoading(true);
     try {
-      const { authSignin, getCurrentUser } = await import('@/lib/api');
+      const { authSignin, getUser } = await import('@/lib/api');
 
-      await authSignin({ username_or_email: email.trim().toLowerCase(), password });
+      await authSignin({ email: email.trim().toLowerCase(), password });
 
       // Wait for user info to confirm JWT works
-      const user = await getCurrentUser();
+      const user = await getUser();
+      console.log('Fetched user after signin:', user);
       if (!user) {
         throw new Error('Failed to fetch user profile');
       }

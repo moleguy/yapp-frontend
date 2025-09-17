@@ -5,33 +5,36 @@ import { useState, ChangeEvent, useEffect, useRef } from "react";
 import { FaPen, FaTrash, FaPlus } from "react-icons/fa";
 import { HiOutlineUser } from "react-icons/hi2";
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
 import { useAuth } from "../../contexts/AuthContext";
 
-interface UserProfile {
-  displayName: string;
-  username: string;
-  email: string;
-  phone?: string;
-  socials: string[];
-}
+// interface UserProfile {
+//   displayName: string;
+//   username: string;
+//   email: string;
+//   phone?: string;
+//   socials: string[];
+// }
 
-const initialUser: UserProfile = {
-  displayName: "Manish Lama",
-  username: "moleguy5",
-  email: "tamangmanish446@gmail.com",
-  phone: "",
-  socials: ["https://www.instagram.com/lamadoesart/"]
-};
+// const initialUser: UserProfile = {
+//   displayName: "Manish Lama",
+//   username: "moleguy5",
+//   email: "tamangmanish446@gmail.com",
+//   phone: "",
+//   socials: ["https://www.instagram.com/lamadoesart/"]
+// };
 
 export default function ProfileSettings() {
-  // const { user } = useAuth();
   const router = useRouter();
   const [preview, setPreview] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
-  const [user, setUser] = useState<UserProfile>(initialUser);
   const optionsRef = useRef<HTMLDivElement | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
-  // const [displayName] = useState(user?.display_name);
+
+  const { user } = useAuth();
+  const [username, setUsername] = useState(user?.username);
+  const [displayName, setDisplayName] = useState(user?.displayName);
 
 
   // profile pic handling when clicked outside the options is removed
@@ -54,14 +57,14 @@ export default function ProfileSettings() {
   }, [showOptions]);
 
   // loading profile on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("userProfile");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setUser(parsed.user || initialUser);
-      setPreview(parsed.preview || null);
-    }
-  }, []);
+  // useEffect(() => {
+  //   const saved = localStorage.getItem("userProfile");
+  //   if (saved) {
+  //     const parsed = JSON.parse(saved);
+  //     setUser(parsed.user || initialUser);
+  //     setPreview(parsed.preview || null);
+  //   }
+  // }, []);
 
   const saveProfile = (newUser = user, newPreview = preview) => {
     localStorage.setItem("userProfile", JSON.stringify({ user: newUser, preview: newPreview }));
@@ -89,38 +92,38 @@ export default function ProfileSettings() {
   };
 
   // handling text fields
-  const handleFieldChange = (field: keyof UserProfile, value: string) => {
-    const newUser = { ...user, [field]: value };
-    setUser(newUser);
-    saveProfile(newUser, preview);
-  };
+  // const handleFieldChange = (field: keyof UserProfile, value: string) => {
+  //   const newUser = { ...user, [field]: value };
+  //   setUser(newUser);
+  //   saveProfile(newUser, preview);
+  // };
 
   const handleBlur = () => {
     setEditingField(null);
   };
 
   // handline social medias
-  const handleSocialChange = (index: number, value: string) => {
-    const newSocials = [...user.socials];
-    newSocials[index] = value;
-    const newUser = { ...user, socials: newSocials };
-    setUser(newUser);
-    saveProfile(newUser, preview);
-  };
+  // const handleSocialChange = (index: number, value: string) => {
+  //   const newSocials = [...user.socials];
+  //   newSocials[index] = value;
+  //   const newUser = { ...user, socials: newSocials };
+  //   setUser(newUser);
+  //   saveProfile(newUser, preview);
+  // };
 
-  // adding a link in social fields
-  const addSocial = () => {
-    const newUser = { ...user, socials: [...user.socials, ""] };
-    setUser(newUser);
-    saveProfile(newUser, preview);
-  };
+  // // adding a link in social fields
+  // const addSocial = () => {
+  //   const newUser = { ...user, socials: [...user.socials, ""] };
+  //   setUser(newUser);
+  //   saveProfile(newUser, preview);
+  // };
 
-  // deleting social link from the field
-  const removeSocial = (index: number) => {
-    const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
-    setUser(newUser);
-    saveProfile(newUser, preview);
-  };
+  // // deleting social link from the field
+  // const removeSocial = (index: number) => {
+  //   const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
+  //   setUser(newUser);
+  //   saveProfile(newUser, preview);
+  // };
 
   const signOut = async () => {
     try {
@@ -152,16 +155,19 @@ export default function ProfileSettings() {
           }}
         >
           {preview ? (
-            <img
+            <Image
               src={preview}
               alt="Profile"
               className="w-full h-full object-cover"
+              fill
+              style={{ objectFit: "cover" }}
             />
           ) : (
             <div className="flex items-center justify-center w-full h-full bg-gray-200">
               <HiOutlineUser size={40} className="text-gray-500" />
             </div>
           )}
+
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
             <FaPen className="text-white text-lg" />
           </div>
@@ -208,10 +214,10 @@ export default function ProfileSettings() {
               <input
                 autoFocus
                 type="text"
-                value={initialUser.displayName}
-                onChange={(e) =>
-                  handleFieldChange(field as keyof UserProfile, e.target.value)
-                }
+                value={displayName}
+                // onChange={(e) =>
+                //   handleFieldChange(field as keyof UserProfile, e.target.value)
+                // }
                 onBlur={handleBlur}
                 onKeyDown={(e) => e.key === "Enter" && handleBlur()}
                 className="w-full border-b border-blue-500 focus:outline-none"
@@ -252,7 +258,7 @@ export default function ProfileSettings() {
             </div>
           ))} */}
           <button
-            onClick={addSocial}
+            // onClick={addSocial}
             className="flex items-center gap-1 text-blue-600 mt-2"
           >
             <FaPlus /> Add Social Link
