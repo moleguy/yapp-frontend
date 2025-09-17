@@ -12,7 +12,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
-import { sign } from "crypto";
 // import { keyframes } from "motion-dom";
 
 type Server = {
