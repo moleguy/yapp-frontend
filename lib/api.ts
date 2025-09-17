@@ -36,14 +36,13 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 }
 
 // Auth Types
-export type SigninReq = { username_or_email: string; password: string };
-export type SigninRes = { id?: string; username?: string; display_name?: string; success?: boolean } | { message?: string };
+export type SigninReq = { email: string; password: string };
+export type SigninRes = { id?: string; username?: string; success?: boolean } | { message?: string };
 
 export type SignupReq = {
     username: string;
     password: string;
     email: string;
-    phone_number?: string;
     display_name: string;
 };
 export type SignupRes = {
@@ -54,10 +53,11 @@ export type SignupRes = {
 
 // User Profile Type
 export type UserProfile = {
-    id: string;
     username: string;
-    display_name: string;
-    success?: boolean;
+    displayName: string;
+    email: string;
+    avatarUrl?: string;
+    active: boolean;
 };
 
 // Auth Functions
@@ -88,7 +88,7 @@ export async function authSignout(): Promise<{ message?: string } | undefined> {
 }
 
 // Get current user from JWT cookie
-export async function getCurrentUser(): Promise<UserProfile | null> {
+export async function getUser(): Promise<UserProfile | null> {
     try {
         // Backend path: GET /auth/me (protected with AuthMiddleware)
         return await request<UserProfile>(`${apiBase}/auth/me`);

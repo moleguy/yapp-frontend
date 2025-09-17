@@ -1,24 +1,32 @@
 'use client';
-
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     authSignin,
     authSignup,
     authSignout,
-    getCurrentUser,
+    getUser,
     SigninReq,
     SignupReq,
-    UserProfile
+    UserProfile,
 } from '../../lib/api';
+
+export interface AuthError {
+    message: string;
+    code?: string;
+    statusCode?: number;
+}
 
 interface AuthContextType {
     user: UserProfile | null;
     loading: boolean;
-    signin: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
-    signup: (userData: Omit<SignupReq, 'username_or_email'>) => Promise<{ success: boolean; error?: string }>;
+    isAuthenticated: boolean;
+    error: AuthError | null;
+    signin: (email: string, password: string) => Promise<{ success: boolean; error?: AuthError }>;
+    signup: (userData: SignupReq) => Promise<{ success: boolean; error?: AuthError }>;
     signout: () => Promise<void>;
     refetch: () => Promise<void>;
+    clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,104 +34,205 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<AuthError | null>(null);
     const router = useRouter();
 
-    // Check authentication status on mount
-    useEffect(() => {
-        fetchUser();
+    const clearError = useCallback(() => {
+        setError(null);
     }, []);
 
-    const fetchUser = async () => {
+    const handleError = useCallback((error: unknown, defaultMessage: string): AuthError => {
+        if (error instanceof Error) {
+            return {
+                message: error.message,
+                code: 'UNKNOWN_ERROR'
+            };
+        }
+
+        if (typeof error === 'object' && error !== null) {
+            const apiError = error as any;
+            return {
+                message: apiError.message || defaultMessage,
+                code: apiError.code,
+                statusCode: apiError.statusCode
+            };
+        }
+
+        return {
+            message: defaultMessage,
+            code: 'UNKNOWN_ERROR'
+        };
+    }, []);
+
+    // Fetch user
+    const fetchUser = useCallback(async (showLoading = true) => {
         try {
-            const userData = await getCurrentUser();
+            if (showLoading) setLoading(true);
+            clearError();
+
+            const userData = await getUser();
             setUser(userData);
         } catch (error) {
             console.error('Error fetching user:', error);
+            const authError = handleError(error, 'Failed to fetch user data');
+            setError(authError);
             setUser(null);
         } finally {
             setLoading(false);
         }
-    };
+    }, [handleError, clearError]);
 
-    const signin = async (usernameOrEmail: string, password: string) => {
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
+
+    // Signin
+    const signin = useCallback(async (email: string, password: string) => {
         try {
             setLoading(true);
+            clearError();
+
+            if (!email?.trim() || !password?.trim()) {
+                const validationError: AuthError = {
+                    message: 'Email and password are required',
+                    code: 'VALIDATION_ERROR'
+                };
+                setError(validationError);
+                return { success: false, error: validationError };
+            }
 
             const payload: SigninReq = {
-                username_or_email: usernameOrEmail,
+                email: email.trim(),
                 password: password
             };
 
             const result = await authSignin(payload);
 
-            // Check if signin was successful
             if ('success' in result && result.success) {
-                // After successful signin, fetch user data
-                await fetchUser();
+                await fetchUser(false);
+                console.log('User after signin:', user); //NOTE: Debug log, remove in production
                 return { success: true };
             } else {
-                return { success: false, error: 'Signin failed' };
+                const errorMessage = 'message' in result ? result.message : 'Invalid credentials';
+                const authError: AuthError = {
+                    message: errorMessage ?? 'Invalid credentials',
+                    code: 'SIGNIN_FAILED',
+                    statusCode: 'statusCode' in result && typeof result.statusCode === 'number' ? result.statusCode : undefined
+                };
+                setError(authError);
+                return { success: false, error: authError };
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Signin failed';
-            return { success: false, error: message };
+            const authError = handleError(error, 'Signin failed');
+            setError(authError);
+            return { success: false, error: authError };
         } finally {
             setLoading(false);
         }
-    };
+    }, [fetchUser, handleError, clearError, user]);
 
-    const signup = async (userData: Omit<SignupReq, 'username_or_email'>) => {
+    // Signup
+    const signup = useCallback(async (userData: SignupReq) => {
         try {
             setLoading(true);
+            clearError();
+
+            if (!userData.email?.trim()) {
+                const validationError: AuthError = {
+                    message: 'Email is required',
+                    code: 'VALIDATION_ERROR'
+                };
+                setError(validationError);
+                return { success: false, error: validationError };
+            }
 
             const result = await authSignup(userData);
 
             if ('success' in result && result.success) {
-                // After successful signup, you might want to automatically sign in
-                // or redirect to signin page
                 return { success: true };
             } else {
-                return { success: false, error: 'Signup failed' };
+                const errorMessage = 'message' in result ? result.message : 'Signup failed';
+                const authError: AuthError = {
+                    message: errorMessage ?? 'Invalid credentials',
+                    code: 'SIGNUP_FAILED',
+                    statusCode: 'statusCode' in result && typeof result.statusCode === 'number' ? result.statusCode : undefined
+                };
+                setError(authError);
+                return { success: false, error: authError };
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Signup failed';
-            return { success: false, error: message };
+            const authError = handleError(error, 'Signup failed');
+            setError(authError);
+            return { success: false, error: authError };
         } finally {
             setLoading(false);
         }
-    };
+    }, [handleError, clearError]);
 
-    const signout = async () => {
+    // Signout
+    const signout = useCallback(async () => {
         try {
             setLoading(true);
+            clearError();
+
             await authSignout();
         } catch (error) {
             console.error('Signout error:', error);
+            // Don't show error to user for signout - just log it
         } finally {
             setUser(null);
             setLoading(false);
             router.push('/signin');
         }
+    }, [router, clearError]);
+
+    // Refetch user data
+    const refetch = useCallback(() => fetchUser(true), [fetchUser]);
+
+    const value: AuthContextType = {
+        user,
+        loading,
+        isAuthenticated: !!user,
+        error,
+        signin,
+        signup,
+        signout,
+        refetch,
+        clearError
     };
 
     return (
-        <AuthContext.Provider value={{
-            user,
-            loading,
-            signin,
-            signup,
-            signout,
-            refetch: fetchUser
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
 
+// Custom hook to use auth context
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
         throw new Error('useAuth must be used within AuthProvider');
     }
     return context;
+};
+
+// Custom hook for auth status only 
+export const useAuthStatus = () => {
+    const { isAuthenticated, loading } = useAuth();
+    return { isAuthenticated, loading };
+};
+
+//  Custom hook for protected routes
+export const useRequireAuth = (redirectTo = '/signin') => {
+    const { isAuthenticated, loading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push(redirectTo);
+        }
+    }, [isAuthenticated, loading, router, redirectTo]);
+
+    return { isAuthenticated, loading };
 };
