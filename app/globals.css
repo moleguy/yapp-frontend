@@ -89,3 +89,16 @@ div, p{
   display: none;             /* Chrome, Safari, Opera */
 }
 
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-grow-x {
+  animation: grow-x 0.3s ease-out forwards;
+}
