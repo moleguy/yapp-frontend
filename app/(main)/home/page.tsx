@@ -38,11 +38,6 @@ export default function HomePage() {
   const [username, setUsername] = useState(user?.username);
   const [displayName, setDisplayName] = useState(user?.displayName);
 
-  const [friends, setFriends] = useState<Friend[]>([
-    { id: 1, name: "Alice", status: "online" },
-    { id: 2, name: "Bob", status: "offline" },
-  ]);
-    
   const [query, setQuery] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<any>(null);
   const [showServersOnly, setShowServersOnly] = useState(false);
@@ -115,7 +110,7 @@ export default function HomePage() {
   }
 
   // handling focus on the search input field
-  const handleClear = () =>{
+  const handleClear = () => {
     setQuery("");
     inputRef.current?.focus();
   }
@@ -125,9 +120,9 @@ export default function HomePage() {
     setActiveView("server");
     setShowServersOnly(true);
 
-    if(lastActiveServer){
+    if (lastActiveServer) {
       setActiveServer(lastActiveServer);
-    } else if(servers.length > 0){
+    } else if (servers.length > 0) {
       setActiveServer(servers[0]);
     }
   }
@@ -157,7 +152,7 @@ export default function HomePage() {
               ) : activeView === "dm" ? (
                 <DirectMessages friends={friends} onSelectFriend={setSelectedFriend} />
               ) : null}
-            </div>        
+            </div>
 
             {/* Profile with controls */}
             <div className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between">
@@ -188,11 +183,15 @@ export default function HomePage() {
                   onClick={() => setShowMicrophone(!showMicrophone)}
                 >
                   {showMicrophone ? (
-                    <BiSolidMicrophone size={24} className="text-gray-500 hover:text-[#1e1e1e]" />
+                    <BiSolidMicrophone
+                      size={24}
+                      className="text-gray-500 hover:text-[#1e1e1e] sway-hover"
+                    />
                   ) : (
-                    <BiSolidMicrophoneOff size={24} />
+                    <BiSolidMicrophoneOff size={24} className="sway-hover" />
                   )}
                 </div>
+
                 <div className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1]">
                   <SettingsPopup
                     isOpen={settingsOpen}
@@ -216,21 +215,21 @@ export default function HomePage() {
             {/* search and friends who are online and offline */}
 
             <div className="relative border-b border-[#d4c9be] p-4">
-              <input 
+              <input
                 value={query}
                 ref={inputRef}
                 onChange={(e) => setQuery(e.target.value)}
                 className="relative py-2 px-3 border border-[#D4C9BE] text-[#222831] rounded-lg w-full focus:outline-none"
               />
               {query ? (
-                <button 
+                <button
                   onClick={handleClear}
                 >
-                  <IoIosClose className="absolute w-8 h-8 top-1/2 right-7 -translate-y-1/2 cursor-pointer"/>
+                  <IoIosClose className="absolute w-8 h-8 top-1/2 right-7 -translate-y-1/2 cursor-pointer" />
                 </button>
-              ):(
+              ) : (
                 <button>
-                  <IoIosSearch className="absolute w-7 h-7 top-1/2 right-7 -translate-y-1/2"/>
+                  <IoIosSearch className="absolute w-7 h-7 top-1/2 right-7 -translate-y-1/2" />
                 </button>
               )}
             </div>
@@ -239,7 +238,7 @@ export default function HomePage() {
               {!showServersOnly && activeView === "dm" && (
                 <FriendsProfile friend={selectedFriend} />
               )}
-          </div>
+            </div>
           </div>
 
         </div>
