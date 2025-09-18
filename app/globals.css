@@ -102,3 +102,7 @@ div, p{
 .animate-grow-x {
   animation: grow-x 0.3s ease-out forwards;
 }
+
+.color-primary-button{
+  background-color: #447D9B;
+}

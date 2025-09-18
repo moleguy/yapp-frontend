@@ -104,7 +104,7 @@ export default function ServerList({
       <div className="flex justify-around w-full bg-gray-200 rounded-lg p-2 mb-3">
         <button
           onClick={onServersToggle}
-          className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "bg-[#6164f2] text-white" : "hover:bg-gray-300"}`}
+          className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "color-primary-button text-white" : "hover:bg-gray-300"}`}
         >
           <BsGridFill className="w-8 h-8" />
         </button>
@@ -147,7 +147,7 @@ export default function ServerList({
             {server.image ? (
               <img src={server.image} alt={server.name} className="w-16 h-16 rounded-lg object-cover" />
             ) : (
-              <div className="w-16 h-16 rounded-lg bg-[#6164f2] text-white flex items-center justify-center">
+              <div className="w-16 h-16 rounded-lg text-white flex items-center justify-center color-primary-button">
                 {server.name.trim().charAt(0).toUpperCase()}
               </div>
             )}
@@ -184,6 +184,7 @@ export default function ServerList({
             Leave Server
           </button>
         </div>
+        
       )}
 
       {/* Popup with extra servers */}
