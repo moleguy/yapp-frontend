@@ -68,12 +68,19 @@ export default function ProfileSettings() {
 
   const saveProfile = (newUser = user, newPreview = preview) => {
     localStorage.setItem("userProfile", JSON.stringify({ user: newUser, preview: newPreview }));
+
   }
 
   // handling profile picture
   const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    
     if (file) {
+      if(file.size > 5000){
+        console.log("Error, Image size is too large!");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -215,9 +222,6 @@ export default function ProfileSettings() {
                 autoFocus
                 type="text"
                 value={displayName}
-                // onChange={(e) =>
-                //   handleFieldChange(field as keyof UserProfile, e.target.value)
-                // }
                 onBlur={handleBlur}
                 onKeyDown={(e) => e.key === "Enter" && handleBlur()}
                 className="w-full border-b border-blue-500 focus:outline-none"
