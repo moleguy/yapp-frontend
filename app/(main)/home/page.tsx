@@ -204,7 +204,7 @@ export default function HomePage() {
           </div>
 
           {/* main section to be edited */}
-          <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-gray-300 ">
+          <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-[#dcd9d3]">
             <p>iaubsiub</p>
             <div className="flex relative">
               <input className="w-full py-6 pl-18 m-4 focus:outline-none rounded-xl border border-[#dcd9d3]" />
