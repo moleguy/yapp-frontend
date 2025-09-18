@@ -85,11 +85,13 @@ export default function ServerList({
   const handleCreateServer = (name: string, image?: string) => {
     const newServer: Server = { id: Date.now(), name, image };
     setServers(prev => [...prev, newServer]);
+    onServerClick(newServer); // logic for when opening a server when createing a new one
   };
 
   const handleJoinServer = () => {
     const newServer: Server = { id: Date.now(), name: 'Joined Server' };
     setServers(prev => [...prev, newServer]);
+    onServerClick(newServer); // logic for always opening a server when joining a new one
   };
 
   // servers to show initially and the extra ones for "more"
@@ -115,7 +117,9 @@ export default function ServerList({
       </div>
 
       {/* Server Grid */}
-      <div className="grid grid-cols-3 gap-8 p-4">
+      {/* handling opening server container wen only server tab is clicked otherwise hides UI */}
+      {activeView === "server" && (
+        <div className="grid grid-cols-3 gap-8 p-4">
         {/* Add server button */}
         <button
           onClick={() => setShowPopup(true)}
@@ -136,9 +140,8 @@ export default function ServerList({
             }}
           >
             <div
-              className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center
-                          transition-transform duration-300 ease-out
-                          ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
+              className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center transition-transform duration-300 ease-out
+              ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
             />
 
             {server.image ? (
@@ -161,7 +164,8 @@ export default function ServerList({
             <FaLayerGroup className="w-6 h-6 text-[#6164f2]"/>
           </button>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Context menu for leaving a server */}
       {contextMenu && (
@@ -186,7 +190,7 @@ export default function ServerList({
       {showMorePopup && (
         <div
         ref={serverPopupRef}
-        className="absolute top-80 left-70 bg-white border border-[#d4c9be] shadow-lg rounded-lg p-2 grid grid-cols-3 gap-2 z-50">
+        className="absolute top-82 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
           {extraServers.map(server => (
             <div
               key={server.id}

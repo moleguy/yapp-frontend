@@ -144,7 +144,7 @@ export default function ProfileSettings() {
 
 
   return (
-    <div className="bg-white mt-4">
+    <div className="flex flex-col justify-between gap-8 bg-white mt-4">
       {/* Profile Image */}
       <div className="flex flex-col items-center mb-6">
         <div
@@ -237,7 +237,7 @@ export default function ProfileSettings() {
         ))}
 
         {/* Social Links */}
-        <div>
+        <div className="gap-5">
           <label className="block text-sm text-gray-500">Social Links</label>
           {/* {user.socials.map((link, index) => (
             <div key={index} className="flex items-center gap-2 mb-2">
@@ -267,15 +267,20 @@ export default function ProfileSettings() {
       </div>
 
       {/* Sign Out logic here */}
-      <div className="mt-6">
+      <div className="mt-6 flex justify-between items-center">
         <button
           onClick={() => {
             signOut();
             console.log("Sign out clicked");
           }}
-          className="flex items-center gap-2 text-red-600 font-base border py-1 px-4 border-[#dcd9d3] rounded-md cursor-pointer"
+          className="flex items-center gap-2 text-[#cb3b40] font-base border py-1 px-4 border-[#dcd9d3] hover:bg-[#ebc8ca] hover:border-none rounded-lg cursor-pointer"
         >
           Sign Out
+        </button>
+        <button
+          className="flex justify-end items-center border mr-4 py-1 px-4 rounded-lg border-[#dcd9d3] text-[#222831] hover:bg-[#78C841] hover:text-[#F0F0F0] hover:border-none cursor-pointer"
+        >
+          Save Changes
         </button>
       </div>
     </div>
