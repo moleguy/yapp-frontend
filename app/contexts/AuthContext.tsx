@@ -1,15 +1,15 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import {createContext, useContext, useState, useEffect, ReactNode, useCallback} from 'react';
+import {useRouter} from 'next/navigation';
 import {
-    authSignin,
-    authSignup,
-    authSignout,
+    authSignIn,
+    authSignUp,
+    authSignOut,
     getUser,
-    SigninReq,
-    SignupReq,
+    SignInReq,
+    SignUpReq,
     UserProfile,
-} from '../../lib/api';
+} from '@/lib/api';
 
 export interface AuthError {
     message: string;
@@ -23,7 +23,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     error: AuthError | null;
     signin: (email: string, password: string) => Promise<{ success: boolean; error?: AuthError }>;
-    signup: (userData: SignupReq) => Promise<{ success: boolean; error?: AuthError }>;
+    signup: (userData: SignUpReq) => Promise<{ success: boolean; error?: AuthError }>;
     signout: () => Promise<void>;
     refetch: () => Promise<void>;
     clearError: () => void;
@@ -31,7 +31,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const AuthProvider = ({children}: { children: ReactNode }) => {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<AuthError | null>(null);
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fetchUser();
     }, [fetchUser]);
 
-    // Signin
+    // SignIn
     const signin = useCallback(async (email: string, password: string) => {
         try {
             setLoading(true);
@@ -98,20 +98,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     code: 'VALIDATION_ERROR'
                 };
                 setError(validationError);
-                return { success: false, error: validationError };
+                return {success: false, error: validationError};
             }
 
-            const payload: SigninReq = {
+            const payload: SignInReq = {
                 email: email.trim(),
                 password: password
             };
 
-            const result = await authSignin(payload);
+            const result = await authSignIn(payload);
 
             if ('success' in result && result.success) {
                 await fetchUser(false);
                 console.log('User after signin:', user); //NOTE: Debug log, remove in production
-                return { success: true };
+                return {success: true};
             } else {
                 const errorMessage = 'message' in result ? result.message : 'Invalid credentials';
                 const authError: AuthError = {
@@ -120,19 +120,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     statusCode: 'statusCode' in result && typeof result.statusCode === 'number' ? result.statusCode : undefined
                 };
                 setError(authError);
-                return { success: false, error: authError };
+                return {success: false, error: authError};
             }
         } catch (error) {
-            const authError = handleError(error, 'Signin failed');
+            const authError = handleError(error, 'SignIn failed');
             setError(authError);
-            return { success: false, error: authError };
+            return {success: false, error: authError};
         } finally {
             setLoading(false);
         }
     }, [fetchUser, handleError, clearError, user]);
 
-    // Signup
-    const signup = useCallback(async (userData: SignupReq) => {
+    // SignUp
+    const signup = useCallback(async (userData: SignUpReq) => {
         try {
             setLoading(true);
             clearError();
@@ -143,27 +143,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     code: 'VALIDATION_ERROR'
                 };
                 setError(validationError);
-                return { success: false, error: validationError };
+                return {success: false, error: validationError};
             }
 
-            const result = await authSignup(userData);
+            const result = await authSignUp(userData);
 
             if ('success' in result && result.success) {
-                return { success: true };
+                return {success: true};
             } else {
-                const errorMessage = 'message' in result ? result.message : 'Signup failed';
+                const errorMessage = 'message' in result ? result.message : 'SignUp failed';
                 const authError: AuthError = {
                     message: errorMessage ?? 'Invalid credentials',
                     code: 'SIGNUP_FAILED',
                     statusCode: 'statusCode' in result && typeof result.statusCode === 'number' ? result.statusCode : undefined
                 };
                 setError(authError);
-                return { success: false, error: authError };
+                return {success: false, error: authError};
             }
         } catch (error) {
-            const authError = handleError(error, 'Signup failed');
+            const authError = handleError(error, 'SignUp failed');
             setError(authError);
-            return { success: false, error: authError };
+            return {success: false, error: authError};
         } finally {
             setLoading(false);
         }
@@ -175,7 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(true);
             clearError();
 
-            await authSignout();
+            await authSignOut();
         } catch (error) {
             console.error('Signout error:', error);
             // Don't show error to user for signout - just log it
@@ -219,13 +219,13 @@ export const useAuth = () => {
 
 // Custom hook for auth status only 
 export const useAuthStatus = () => {
-    const { isAuthenticated, loading } = useAuth();
-    return { isAuthenticated, loading };
+    const {isAuthenticated, loading} = useAuth();
+    return {isAuthenticated, loading};
 };
 
 //  Custom hook for protected routes
 export const useRequireAuth = (redirectTo = '/signin') => {
-    const { isAuthenticated, loading } = useAuth();
+    const {isAuthenticated, loading} = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -234,5 +234,5 @@ export const useRequireAuth = (redirectTo = '/signin') => {
         }
     }, [isAuthenticated, loading, router, redirectTo]);
 
-    return { isAuthenticated, loading };
+    return {isAuthenticated, loading};
 };

@@ -1,5 +1,7 @@
 // Centralized REST client for calling the Go backend from the Next.js frontend
+
 export const apiBase = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, '') || 'http://localhost:8080';
+export const protectedApiBase = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, '') || 'http://localhost:8080/api';
 
 // Generic helpers
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
@@ -36,16 +38,16 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 }
 
 // Auth Types
-export type SigninReq = { email: string; password: string };
-export type SigninRes = { id?: string; username?: string; success?: boolean } | { message?: string };
+export type SignInReq = { email: string; password: string };
+export type SignInRes = { id?: string; username?: string; success?: boolean } | { message?: string };
 
-export type SignupReq = {
+export type SignUpReq = {
     username: string;
     password: string;
     email: string;
     display_name: string;
 };
-export type SignupRes = {
+export type SignUpRes = {
     id: string;
     username: string;
     success?: boolean;
@@ -60,10 +62,23 @@ export type UserProfile = {
     active: boolean;
 };
 
+// Hall type
+
+export type Hall = {
+    id: string;
+    name: string;
+    IconURL?: string;
+    BannerColor?: string;
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdById?: string;
+}
+
 // Auth Functions
-export async function authSignin(payload: SigninReq): Promise<SigninRes> {
+export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
     // Backend path: POST /auth/signin (sets httpOnly cookie)
-    return request<SigninRes>(`${apiBase}/auth/signin`, {
+    return request<SignInRes>(`${apiBase}/auth/signin`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -72,15 +87,15 @@ export async function authSignin(payload: SigninReq): Promise<SigninRes> {
     });
 }
 
-export async function authSignup(payload: SignupReq): Promise<SignupRes> {
+export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
     // Backend path: POST /auth/signup
-    return request<SignupRes>(`${apiBase}/auth/signup`, {
+    return request<SignUpRes>(`${apiBase}/auth/signup`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
 }
 
-export async function authSignout(): Promise<{ message?: string } | undefined> {
+export async function authSignOut(): Promise<{ message?: string } | undefined> {
     // Backend path: GET /auth/signout (clears cookie)
     return request<{ message?: string }>(`${apiBase}/auth/signout`, {
         method: 'GET',
@@ -90,11 +105,27 @@ export async function authSignout(): Promise<{ message?: string } | undefined> {
 // Get current user from JWT cookie
 export async function getUser(): Promise<UserProfile | null> {
     try {
-        // Backend path: GET /auth/me (protected with AuthMiddleware)
-        return await request<UserProfile>(`${apiBase}/auth/me`);
+        // Backend path: GET /me/ (protected with AuthMiddleware)
+        return await request<UserProfile>(`${protectedApiBase}/me/`, {
+            method: 'GET'
+        });
     } catch (error) {
         // If request fails (401, etc.), user is not authenticated
         console.log('User not authenticated:', error);
+        return null;
+    }
+}
+
+// Hall functions
+export async function createServer(payload: Hall) {
+    try {
+        // Backend path: POSt /hall/create (protected with AuthMiddleware)
+        return await request<UserProfile>(`${protectedApiBase}/halls/create`, {
+            method: 'POST', body: JSON.stringify(payload)
+        });
+    } catch (error) {
+        // If request fails (401, etc.), Hall not created.
+        console.log('Hall creation failed.', error);
         return null;
     }
 }
