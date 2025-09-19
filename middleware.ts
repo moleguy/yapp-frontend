@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(_req: NextRequest) {
-  // No-op middleware after removing Clerk
   return NextResponse.next();
 }
 
