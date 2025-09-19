@@ -1,13 +1,14 @@
 'use client';
 
-import { authSignout } from "@/lib/api";
-import { useState, ChangeEvent, useEffect, useRef } from "react";
-import { FaPen, FaTrash, FaPlus } from "react-icons/fa";
-import { HiOutlineUser } from "react-icons/hi2";
-import { useRouter } from 'next/navigation';
+import {authSignOut} from "@/lib/api";
+import {useState, ChangeEvent, useEffect, useRef} from "react";
+import {FaPen, FaTrash, FaPlus} from "react-icons/fa";
+import {HiOutlineUser} from "react-icons/hi2";
+import {useRouter} from 'next/navigation';
 import Image from 'next/image';
 
-import { useAuth } from "../../contexts/AuthContext";
+import {useAuth} from "../../contexts/AuthContext";
+import {useUserStore} from "@/app/store/useUserStore";
 
 // interface UserProfile {
 //   displayName: string;
@@ -26,131 +27,130 @@ import { useAuth } from "../../contexts/AuthContext";
 // };
 
 export default function ProfileSettings() {
-  const router = useRouter();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [showOptions, setShowOptions] = useState(false);
-  const optionsRef = useRef<HTMLDivElement | null>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
+    const router = useRouter();
+    const [preview, setPreview] = useState<string | null>(null);
+    const [showOptions, setShowOptions] = useState(false);
+    const optionsRef = useRef<HTMLDivElement | null>(null);
+    const [editingField, setEditingField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<String | null>(null);
 
-  const { user } = useAuth();
-  const [username, setUsername] = useState(user?.username);
-  const [displayName, setDisplayName] = useState(user?.displayName);
+    const {user} = useAuth();
+    const [username, setUsername] = useState(user?.username);
+    const [displayName, setDisplayName] = useState(user?.displayName);
 
+    const {clearUser} = useUserStore();
 
-  // profile pic handling when clicked outside the options is removed
-  useEffect(() => {
-    if (!showOptions) return;
+    // profile pic handling when clicked outside the options is removed
+    useEffect(() => {
+        if (!showOptions) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        optionsRef.current &&
-        !optionsRef.current.contains(e.target as Node)
-      ) {
-        setShowOptions(false);
-      }
-    };
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                optionsRef.current &&
+                !optionsRef.current.contains(e.target as Node)
+            ) {
+                setShowOptions(false);
+            }
+        };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showOptions]);
+
+    // loading profile on mount
+    // useEffect(() => {
+    //   const saved = localStorage.getItem("userProfile");
+    //   if (saved) {
+    //     const parsed = JSON.parse(saved);
+    //     setUser(parsed.user || initialUser);
+    //     setPreview(parsed.preview || null);
+    //   }
+    // }, []);
+
+    const saveProfile = (newUser = user, newPreview = preview) => {
+        localStorage.setItem("userProfile", JSON.stringify({user: newUser, preview: newPreview}));
     }
-  }, [showOptions]);
 
-  // loading profile on mount
-  // useEffect(() => {
-  //   const saved = localStorage.getItem("userProfile");
-  //   if (saved) {
-  //     const parsed = JSON.parse(saved);
-  //     setUser(parsed.user || initialUser);
-  //     setPreview(parsed.preview || null);
-  //   }
-  // }, []);
-
-  const saveProfile = (newUser = user, newPreview = preview) => {
-    localStorage.setItem("userProfile", JSON.stringify({ user: newUser, preview: newPreview }));
-
-  }
-
-  // handling profile picture
-  const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (file) {
+    // handling profile picture
+    const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
       // handling logic for error message when size > 5MB
       if (file.size > 5 * 1024 * 1024) { // 5MB
         setErrorMessage("File size too big! Please select an image under 5MB.");
-        setTimeout(() => setErrorMessage(null), 3000); 
+        setTimeout(() => setErrorMessage(null), 3000);
         return;
       }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreview(reader.result as string);
+                saveProfile(user, reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+        setShowOptions(false);
+    };
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-        saveProfile(user, reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    setShowOptions(false);
-  };
+    // removing profile picture
+    const handleRemovePic = () => {
+        setPreview(null);
+        saveProfile(user, null);
+        setShowOptions(false);
+    };
 
-  // removing profile picture
-  const handleRemovePic = () => {
-    setPreview(null);
-    saveProfile(user, null);
-    setShowOptions(false);
-  };
+    // handling text fields
+    // const handleFieldChange = (field: keyof UserProfile, value: string) => {
+    //   const newUser = { ...user, [field]: value };
+    //   setUser(newUser);
+    //   saveProfile(newUser, preview);
+    // };
 
-  // handling text fields
-  // const handleFieldChange = (field: keyof UserProfile, value: string) => {
-  //   const newUser = { ...user, [field]: value };
-  //   setUser(newUser);
-  //   saveProfile(newUser, preview);
-  // };
+    const handleBlur = () => {
+        setEditingField(null);
+    };
 
-  const handleBlur = () => {
-    setEditingField(null);
-  };
+    // handline social medias
+    // const handleSocialChange = (index: number, value: string) => {
+    //   const newSocials = [...user.socials];
+    //   newSocials[index] = value;
+    //   const newUser = { ...user, socials: newSocials };
+    //   setUser(newUser);
+    //   saveProfile(newUser, preview);
+    // };
 
-  // handline social medias
-  // const handleSocialChange = (index: number, value: string) => {
-  //   const newSocials = [...user.socials];
-  //   newSocials[index] = value;
-  //   const newUser = { ...user, socials: newSocials };
-  //   setUser(newUser);
-  //   saveProfile(newUser, preview);
-  // };
+    // // adding a link in social fields
+    // const addSocial = () => {
+    //   const newUser = { ...user, socials: [...user.socials, ""] };
+    //   setUser(newUser);
+    //   saveProfile(newUser, preview);
+    // };
 
-  // // adding a link in social fields
-  // const addSocial = () => {
-  //   const newUser = { ...user, socials: [...user.socials, ""] };
-  //   setUser(newUser);
-  //   saveProfile(newUser, preview);
-  // };
+    // // deleting social link from the field
+    // const removeSocial = (index: number) => {
+    //   const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
+    //   setUser(newUser);
+    //   saveProfile(newUser, preview);
+    // };
 
-  // // deleting social link from the field
-  // const removeSocial = (index: number) => {
-  //   const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
-  //   setUser(newUser);
-  //   saveProfile(newUser, preview);
-  // };
-
-  const signOut = async () => {
-    try {
-      // Call signout API
-      await authSignout();
-      // Clear user profile from localStorage
-      localStorage.removeItem("userProfile");
-      // Clear remember_me cookie
-      if (document.cookie.split('; ').find(row => row.startsWith('remember_me='))) {
-        document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
-      }
-      router.push('/signin');
-    } catch (error: any) {
-      const msg = error?.message || (typeof error === 'string' ? error : 'Sign out failed');
-      console.error(msg);
-    }
-  };
+    const signOut = async () => {
+        try {
+            // Call signout API
+            await authSignOut();
+            // Clear user profile from localStorage
+            localStorage.removeItem("userProfile");
+            clearUser();
+            // Clear remember_me cookie
+            if (document.cookie.split('; ').find(row => row.startsWith('remember_me='))) {
+                document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
+            }
+            router.push('/signin');
+        } catch (error: any) {
+            const msg = error?.message || (typeof error === 'string' ? error : 'Sign out failed');
+            console.error(msg);
+        }
+    };
 
 
   return (
@@ -177,12 +177,12 @@ export default function ProfileSettings() {
               <HiOutlineUser size={40} className="text-gray-500" />
             </div>
           )}
-      
+
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
             <FaPen className="text-white text-lg" />
           </div>
         </div>
-        
+
         {preview && showOptions && (
           <div
             ref={optionsRef}
@@ -203,7 +203,7 @@ export default function ProfileSettings() {
             </button>
           </div>
         )}
-      
+
         <input
           type="file"
           accept="image/*"
@@ -211,7 +211,7 @@ export default function ProfileSettings() {
           onChange={handlePicChange}
           className="hidden"
         />
-      
+
         {/* error message for file size being over 5MB */}
         {errorMessage && (
           <div className="mt-3 text-red-500 text-sm bg-red-100 px-3 py-1 rounded-md animate-fadeIn">
@@ -220,40 +220,41 @@ export default function ProfileSettings() {
         )}
       </div>
 
-      {/* Editable Fields */}
-      <div className="space-y-4">
-        {["display name", "username", "email", "phone number"].map((field) => (
-          <div key={field}>
-            <label className="block text-sm text-gray-500 capitalize">
-              {field === "username" ? "@username" : field}
-            </label>
-            {editingField === field ? (
-              <input
-                autoFocus
-                type="text"
-                value={displayName}
-                onBlur={handleBlur}
-                onKeyDown={(e) => e.key === "Enter" && handleBlur()}
-                className="w-full border-b border-blue-500 focus:outline-none"
-              />
-            ) : (
-              <div
-                className="flex justify-between items-center cursor-pointer group"
-                onClick={() => setEditingField(field)}
-              >
-                <p className="text-gray-800">
-                  {/* {user[field as keyof UserProfile] || "Not set"} */}
-                </p>
-                <FaPen className="text-black opacity-0 group-hover:opacity-100" />
-              </div>
-            )}
-          </div>
-        ))}
+            {/* Editable Fields */}
+            <div className="space-y-4">
+                {["display name", "username", "email", "phone number"].map((field) => (
+                    <div key={field}>
+                        <label className="block text-sm text-gray-500 capitalize">
+                            {field === "username" ? "@username" : field}
+                        </label>
+                        {editingField === field ? (
+                            <input
+                                autoFocus
+                                type="text"
+                                value={displayName}
 
-        {/* Social Links */}
-        <div className="gap-5">
-          <label className="block text-sm text-gray-500">Social Links</label>
-          {/* {user.socials.map((link, index) => (
+                                onBlur={handleBlur}
+                                onKeyDown={(e) => e.key === "Enter" && handleBlur()}
+                                className="w-full border-b border-blue-500 focus:outline-none"
+                            />
+                        ) : (
+                            <div
+                                className="flex justify-between items-center cursor-pointer group"
+                                onClick={() => setEditingField(field)}
+                            >
+                                <p className="text-gray-800">
+                                    {/* {user[field as keyof UserProfile] || "Not set"} */}
+                                </p>
+                                <FaPen className="text-black opacity-0 group-hover:opacity-100"/>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {/* Social Links */}
+                <div className="gap-5">
+                    <label className="block text-sm text-gray-500">Social Links</label>
+                    {/* {user.socials.map((link, index) => (
             <div key={index} className="flex items-center gap-2 mb-2">
               <input
                 type="url"
@@ -271,32 +272,32 @@ export default function ProfileSettings() {
               </button>
             </div>
           ))} */}
-          <button
-            // onClick={addSocial}
-            className="flex items-center gap-1 text-blue-600 mt-2"
-          >
-            <FaPlus /> Add Social Link
-          </button>
-        </div>
-      </div>
+                    <button
+                        // onClick={addSocial}
+                        className="flex items-center gap-1 text-blue-600 mt-2"
+                    >
+                        <FaPlus/> Add Social Link
+                    </button>
+                </div>
+            </div>
 
-      {/* Sign Out logic here */}
-      <div className="mt-6 flex justify-between items-center">
-        <button
-          onClick={() => {
-            signOut();
-            console.log("Sign out clicked");
-          }}
-          className="flex items-center gap-2 text-[#cb3b40] font-base border py-1 px-4 border-[#dcd9d3] hover:bg-[#ebc8ca] hover:border-none rounded-lg cursor-pointer"
-        >
-          Sign Out
+            {/* Sign Out logic here */}
+            <div className="mt-6 flex justify-between items-center">
+                <button
+                    onClick={() => {
+                        signOut();
+                        console.log("Sign out clicked");
+                    }}
+                    className="flex items-center gap-2 text-[#cb3b40] font-base border py-1 px-4 border-[#dcd9d3] hover:bg-[#ebc8ca] hover:border-none rounded-lg cursor-pointer"
+                >
+                    Sign Out
         </button>
         <button
           className="flex justify-end items-center border mr-4 py-1 px-4 rounded-lg border-[#dcd9d3] text-[#222831] hover:bg-[#78C841] hover:text-[#F0F0F0] hover:border-none cursor-pointer"
         >
           Save Changes
-        </button>
-      </div>
-    </div>
-  );
+                </button>
+            </div>
+        </div>
+    );
 }

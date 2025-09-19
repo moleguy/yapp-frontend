@@ -1,4 +1,4 @@
-# Yapp User Signup Script
+# Yapp User SignUp Script
 # Requires: PowerShell 5+ and the Yapp backend running at http://localhost:8080
 # Usage:
 #   1) Start the backend server (Yapp)
@@ -13,23 +13,27 @@ param(
 )
 
 # Set API base URL
-if (-not $ApiBase -or $ApiBase.Trim() -eq "") {
+if (-not $ApiBase -or $ApiBase.Trim() -eq "")
+{
     $ApiBase = $env:NEXT_PUBLIC_API_BASE
-    if (-not $ApiBase -or $ApiBase.Trim() -eq "") {
+    if (-not $ApiBase -or $ApiBase.Trim() -eq "")
+    {
         $ApiBase = "http://localhost:8080"
     }
 }
 
 # Generate username if not provided
-if (-not $Username -or $Username.Trim() -eq "") {
+if (-not $Username -or $Username.Trim() -eq "")
+{
     $usernameBase = $Email.Split('@')[0].Trim()
-    if ($usernameBase.Length -lt 3) {
+    if ($usernameBase.Length -lt 3)
+    {
         $usernameBase = ($usernameBase + "___").Substring(0, 3)
     }
     $Username = $usernameBase
 }
 
-Write-Host "=== Yapp User Signup Script ===" -ForegroundColor Cyan
+Write-Host "=== Yapp User SignUp Script ===" -ForegroundColor Cyan
 Write-Host "API Base: $ApiBase"
 Write-Host "Email: $Email"
 Write-Host "Username: $Username"
@@ -38,12 +42,15 @@ Write-Host ""
 
 # Test basic connectivity first
 Write-Host "Testing server connectivity..." -ForegroundColor Yellow
-try {
+try
+{
     $testResponse = Invoke-WebRequest -Uri "$ApiBase/" -Method GET -TimeoutSec 10
-    Write-Host "✓ Server is responding (Status: $($testResponse.StatusCode))" -ForegroundColor Green
-} catch {
+    Write-Host "✓ Server is responding (Status: $( $testResponse.StatusCode ))" -ForegroundColor Green
+}
+catch
+{
     Write-Host "✗ Server connectivity test failed:" -ForegroundColor Red
-    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  Error: $( $_.Exception.Message )" -ForegroundColor Red
     Write-Host "  Make sure your backend is running with: docker compose up" -ForegroundColor Yellow
     exit 1
 }
@@ -62,54 +69,75 @@ Write-Host ""
 # Make the signup request
 Write-Host "Sending signup request to $ApiBase/auth/signup" -ForegroundColor Yellow
 
-try {
+try
+{
     $response = Invoke-WebRequest -Method Post -Uri "$ApiBase/auth/signup" -Body $payload -ContentType 'application/json' -TimeoutSec 30
 
     Write-Host "✓ User created successfully!" -ForegroundColor Green
-    Write-Host "Status Code: $($response.StatusCode)" -ForegroundColor Green
+    Write-Host "Status Code: $( $response.StatusCode )" -ForegroundColor Green
     Write-Host "Response:" -ForegroundColor Green
 
-    if ($response.Content) {
-        try {
+    if ($response.Content)
+    {
+        try
+        {
             $jsonResponse = $response.Content | ConvertFrom-Json
             $jsonResponse | ConvertTo-Json -Depth 5 | Write-Host -ForegroundColor Green
-        } catch {
+        }
+        catch
+        {
             Write-Host $response.Content -ForegroundColor Green
         }
-    } else {
+    }
+    else
+    {
         Write-Host "(Empty response body)" -ForegroundColor Yellow
     }
 
-} catch {
+}
+catch
+{
     Write-Host "✗ Failed to create user" -ForegroundColor Red
-    Write-Host "Exception: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Exception: $( $_.Exception.Message )" -ForegroundColor Red
 
-    if ($_.Exception.Response) {
+    if ($_.Exception.Response)
+    {
         $statusCode = $_.Exception.Response.StatusCode
         $statusDescription = $_.Exception.Response.StatusDescription
 
         Write-Host "Status Code: $statusCode ($statusDescription)" -ForegroundColor Red
 
-        try {
+        try
+        {
             $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
             $errorBody = $reader.ReadToEnd()
             $reader.Close()
 
-            if ($errorBody -and $errorBody.Trim() -ne "") {
+            if ($errorBody -and $errorBody.Trim() -ne "")
+            {
                 Write-Host "Server Response:" -ForegroundColor Red
-                try {
+                try
+                {
                     $jsonError = $errorBody | ConvertFrom-Json
                     $jsonError | ConvertTo-Json -Depth 3 | Write-Host -ForegroundColor Red
-                } catch {
+                }
+                catch
+                {
                     Write-Host $errorBody -ForegroundColor Red
                 }
-            } else {
+            }
+            else
+            {
                 Write-Host "Server returned empty response body" -ForegroundColor Red
             }
-        } catch {
-            Write-Host "Could not read response body: $($_.Exception.Message)" -ForegroundColor Red
         }
-    } else {
+        catch
+        {
+            Write-Host "Could not read response body: $( $_.Exception.Message )" -ForegroundColor Red
+        }
+    }
+    else
+    {
         Write-Host "No HTTP response received" -ForegroundColor Red
     }
 
