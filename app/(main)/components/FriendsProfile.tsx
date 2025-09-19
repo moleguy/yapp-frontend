@@ -1,22 +1,21 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
+import { GoDotFill } from "react-icons/go";
 
 type Friend = {
-  id: string;          // unique identifier
-  name: string;        // display name
-  avatarUrl?: string;  // optional profile picture
-  status: "online" | "offline" | "away" | "busy"; // presence
-  bio?: string;        // short description
-  mutualFriends?: number; // optional extra
+  id: string;
+  name: string;
+  username?: string;
+  avatarUrl?: string;
+  status: "online" | "offline" | "away" | "busy";
+  mutualFriends?: number;
+  mutualServers?: number;
+  memberSince?: string; // format: "10 Jan 2019"
 };
 
-
-interface FriendProfileProps {
-  friend: Friend | null; // null when no friend is selected
-}
-
-const FriendsProfile: React.FC<FriendProfileProps> = ({ friend }) => {
+const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
   if (!friend) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
@@ -26,10 +25,64 @@ const FriendsProfile: React.FC<FriendProfileProps> = ({ friend }) => {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <h2 className="text-2xl font-bold">{friend.name}</h2>
-      <p className="text-gray-600">Status: {friend.status || "Unknown"}</p>
-      {/* Add more friend details here later (avatar, bio, etc.) */}
+    <div className="max-w-lg w-full mx-auto bg-white">
+      {/* Backgroudn banner for image */}
+      <div className="relative">
+        <div className="h-32 bg-[#3A6F43]" />
+        <div className="absolute -bottom-12 left-4">
+          <div className="relative">
+            {/* User's Avatar */}
+            <Image
+              src={friend.avatarUrl || "/icons/default-avatar.png"}
+              alt={friend.name}
+              width={100}
+              height={100}
+              className="rounded-full bg-[#DCDCDC] m-3 object-cover"
+            />
+            {/* Status icon: Online or Offline status */}
+            <span className="absolute bottom-1 right-3 w-7 h-7 rounded-full bg-white flex items-center justify-center">
+              <GoDotFill className="w-10 h-10 text-[#08CB00]" />
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Details for user's profile */}
+      <div className="px-4 pt-14 pb-6">
+        <h2 className="text-xl font-medium text-[#1e1e1e]">{friend.name}</h2>
+        {friend.username && (
+          <p className="text-sm text-[#222831]">{friend.username}</p>
+        )}
+
+        {friend.memberSince && (
+          <div className="mt-4 border rounded-lg border-[#dcd9d3] p-3">
+            <h3 className="text-sm font-medium text-gray-700">Member Since</h3>
+            <p className="text-sm text-gray-600">{friend.memberSince}</p>
+          </div>
+        )}
+
+        {friend.mutualServers !== undefined && (
+          <div className="mt-3 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
+            <span className="text-sm font-medium text-gray-700">
+              Mutual Servers
+            </span>
+            <span className="text-sm text-[#1e1e1e]">
+              {friend.mutualServers} →
+            </span>
+          </div>
+        )}
+
+        {friend.mutualFriends !== undefined && (
+          <div className="mt-2 gap-2 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
+            <span className="text-sm font-medium text-[#1e1e1e] tracking-wide">
+              Mutual Friends
+            </span>
+            <span className="text-sm text-[#222831]">
+              {friend.mutualFriends} →
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

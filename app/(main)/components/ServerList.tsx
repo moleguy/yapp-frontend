@@ -106,13 +106,13 @@ export default function ServerList({
             <div className="flex justify-around w-full bg-gray-200 rounded-lg p-2 mb-3">
                 <button
                     onClick={onServersToggle}
-                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "color-primary-button text-white" : "hover:bg-gray-300"}`}
+                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "color-primary-button text-black" : "hover:bg-gray-300"}`}
                 >
                     <BsGridFill className="w-8 h-8"/>
                 </button>
                 <button
                     onClick={onDirectMessagesClick}
-                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "dm" ? "bg-[#6164f2] text-white" : "hover:bg-gray-300"}`}
+                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "dm" ? "color-primary-button text-black" : "hover:bg-gray-300"}`}
                 >
                     <RiMessage3Fill className="w-8 h-8"/>
                 </button>
@@ -133,7 +133,7 @@ export default function ServerList({
                 {visibleServers.map(server => (
                     <div
                         key={server.id}
-                        className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer hover:bg-[#6164f2]`}
+                        className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer `}
                         onClick={() => onServerClick(server)}
                         onContextMenu={e => {
                             e.preventDefault();
@@ -146,10 +146,10 @@ export default function ServerList({
                         />
 
                         {server.image ? (
-                            <img src={server.image} alt={server.name} className="w-16 h-16 rounded-lg object-cover"/>
+                            <img src={server.image} alt={server.name} className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]`: `border-none`}`}/>
                         ) : (
                             <div
-                                className="w-16 h-16 rounded-lg text-white flex items-center justify-center color-primary-button">
+                                className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]`: `border-none`}`}>
                                 {server.name.trim().charAt(0).toUpperCase()}
                             </div>
                         )}
