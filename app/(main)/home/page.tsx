@@ -26,6 +26,10 @@ type Friend = {
   id: number;
   name: string;
   status?: string;
+  mutualFriends?: number;
+  username?: string;
+  memberSince?: string;
+  mutualServers?: number;
 };
 
 export default function HomePage() {
@@ -48,8 +52,14 @@ export default function HomePage() {
   // const serverPopupRef = useRef<HTMLDivElement | null>(null);
 
   const [friends, setFriends] = useState<Friend[]>([
-    { id: 1, name: "Alice", status: "online" },
-    { id: 2, name: "Bob", status: "offline" },
+    { id: 1, 
+      name: "Alice", 
+      username:"alice123", 
+      status: "online", 
+      mutualFriends: 2, 
+      memberSince: "2 Jan 2014",
+      mutualServers: 3, 
+    },
   ]);
 
   const handleServerClick = (server: Server) => {

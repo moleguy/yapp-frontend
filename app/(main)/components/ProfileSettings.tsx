@@ -31,6 +31,7 @@ export default function ProfileSettings() {
   const [showOptions, setShowOptions] = useState(false);
   const optionsRef = useRef<HTMLDivElement | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<String | null>(null);
 
   const { user } = useAuth();
   const [username, setUsername] = useState(user?.username);
@@ -76,8 +77,10 @@ export default function ProfileSettings() {
     const file = e.target.files?.[0];
     
     if (file) {
-      if(file.size > 5000){
-        console.log("Error, Image size is too large!");
+      // handling logic for error message when size > 5MB
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        setErrorMessage("File size too big! Please select an image under 5MB.");
+        setTimeout(() => setErrorMessage(null), 3000); 
         return;
       }
 
@@ -174,12 +177,12 @@ export default function ProfileSettings() {
               <HiOutlineUser size={40} className="text-gray-500" />
             </div>
           )}
-
+      
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
             <FaPen className="text-white text-lg" />
           </div>
         </div>
-
+        
         {preview && showOptions && (
           <div
             ref={optionsRef}
@@ -200,7 +203,7 @@ export default function ProfileSettings() {
             </button>
           </div>
         )}
-
+      
         <input
           type="file"
           accept="image/*"
@@ -208,6 +211,13 @@ export default function ProfileSettings() {
           onChange={handlePicChange}
           className="hidden"
         />
+      
+        {/* error message for file size being over 5MB */}
+        {errorMessage && (
+          <div className="mt-3 text-red-500 text-sm bg-red-100 px-3 py-1 rounded-md animate-fadeIn">
+            {errorMessage}
+          </div>
+        )}
       </div>
 
       {/* Editable Fields */}
