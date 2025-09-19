@@ -85,14 +85,16 @@ export default function ServerList({
     const handleCreateServer = (name: string, image?: string) => {
         const newServer: Server = {id: Date.now(), name, image};
         console.log(newServer);
-        
+
         setServers(prev => [...prev, newServer]);
-    };
+    onServerClick(newServer); // logic for when opening a server when createing a new one
+  };
 
     const handleJoinServer = () => {
         const newServer: Server = {id: Date.now(), name: 'Joined Server'};
         setServers(prev => [...prev, newServer]);
-    };
+    onServerClick(newServer); // logic for always opening a server when joining a new one
+  };
 
     // servers to show initially and the extra ones for "more"
     const visibleServers = servers.slice(0, MAX_VISIBLE);
@@ -104,7 +106,7 @@ export default function ServerList({
             <div className="flex justify-around w-full bg-gray-200 rounded-lg p-2 mb-3">
                 <button
                     onClick={onServersToggle}
-                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "bg-[#6164f2] text-white" : "hover:bg-gray-300"}`}
+                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "color-primary-button text-white" : "hover:bg-gray-300"}`}
                 >
                     <BsGridFill className="w-8 h-8"/>
                 </button>
@@ -117,7 +119,8 @@ export default function ServerList({
             </div>
 
             {/* Server Grid */}
-            <div className="grid grid-cols-3 gap-8 p-4">
+            {/* handling opening server container wen only server tab is clicked otherwise hides UI */}
+      {activeView === "server" && (<div className="grid grid-cols-3 gap-8 p-4">
                 {/* Add server button */}
                 <button
                     onClick={() => setShowPopup(true)}
@@ -138,16 +141,15 @@ export default function ServerList({
                         }}
                     >
                         <div
-                            className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center
-                          transition-transform duration-300 ease-out
-                          ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
+                            className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center transition-transform duration-300 ease-out
+              ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
                         />
 
                         {server.image ? (
                             <img src={server.image} alt={server.name} className="w-16 h-16 rounded-lg object-cover"/>
                         ) : (
                             <div
-                                className="w-16 h-16 rounded-lg bg-[#6164f2] text-white flex items-center justify-center">
+                                className="w-16 h-16 rounded-lg text-white flex items-center justify-center color-primary-button">
                                 {server.name.trim().charAt(0).toUpperCase()}
                             </div>
                         )}
@@ -164,7 +166,7 @@ export default function ServerList({
                         <FaLayerGroup className="w-6 h-6 text-[#6164f2]"/>
                     </button>
                 )}
-            </div>
+            </div>)}
 
             {/* Context menu for leaving a server */}
             {contextMenu && (
@@ -189,7 +191,7 @@ export default function ServerList({
             {showMorePopup && (
                 <div
                     ref={serverPopupRef}
-                    className="absolute top-80 left-70 bg-white border border-[#d4c9be] shadow-lg rounded-lg p-2 grid grid-cols-3 gap-2 z-50">
+                    className="absolute top-82 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
                     {extraServers.map(server => (
                         <div
                             key={server.id}

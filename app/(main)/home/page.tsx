@@ -211,7 +211,7 @@ export default function HomePage() {
                     </div>
 
                     {/* main section to be edited */}
-                    <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-gray-300 ">
+                    <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-[#dcd9d3]">
                         <div>
                             Username: {username}
                             <br/>
