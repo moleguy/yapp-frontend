@@ -32,7 +32,7 @@ export default function ProfileSettings() {
     const [showOptions, setShowOptions] = useState(false);
     const optionsRef = useRef<HTMLDivElement | null>(null);
     const [editingField, setEditingField] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<String | null>(null);
+    const [errorMessage, setErrorMessage] = useState<String | null>(null);
 
     const {user} = useAuth();
     const [username, setUsername] = useState(user?.username);
@@ -78,11 +78,11 @@ export default function ProfileSettings() {
         const file = e.target.files?.[0];
         if (file) {
       // handling logic for error message when size > 5MB
-      if (file.size > 5 * 1024 * 1024) { // 5MB
-        setErrorMessage("File size too big! Please select an image under 5MB.");
-        setTimeout(() => setErrorMessage(null), 3000);
-        return;
-      }
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+            setErrorMessage("File size too big! Please select an image under 5MB.");
+            setTimeout(() => setErrorMessage(null), 3000);
+            return;
+        }
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPreview(reader.result as string);

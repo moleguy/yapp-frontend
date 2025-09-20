@@ -49,6 +49,13 @@ export default function AddChannelPopup({
         onClose();
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if(e.key === "Enter"){
+            e.preventDefault();
+            handleSubmit();
+        }
+    }
+
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
             <div
@@ -121,6 +128,7 @@ export default function AddChannelPopup({
                         <input
                             type="text"
                             value={name}
+                            onKeyDown={handleKeyDown}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="new-channel"
                             className="w-full p-2 outline-none text"

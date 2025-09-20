@@ -38,8 +38,10 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState({x: 0, y:0});
   const channelsAreaRef = useRef<HTMLDivElement | null>(null);
+  const categoryPopupRef = useRef<HTMLDivElement | null>(null);
 
-  // default categories (used to initialize a server)
+
+    // default categories (used to initialize a server)
     const initialCategories: Category[] = [
         {
             id: "cat1",
@@ -82,6 +84,22 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
         window.addEventListener("click", handleClickOutside);
         return () => window.removeEventListener("click", handleClickOutside);
     }, [showContextMenu]);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (categoryPopupRef.current && !categoryPopupRef.current.contains(e.target as Node)) {
+                setShowCategoryPopup(false);
+            }
+        }
+
+        if (showCategoryPopup) {
+            document.addEventListener("mousedown", handleClickOutside);
+        } else {
+            document.removeEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showCategoryPopup]);
 
 
     // If any server isn't open then default message is shown.
@@ -173,14 +191,21 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
         setShowContextMenu(true);
     };
 
-    const handleClick = () =>{
-        if(showContextMenu) setShowContextMenu(false);
-    }
+    // const handleClick = () =>{
+    //     if(showContextMenu) setShowContextMenu(false);
+    // }
 
     const handleCreateCategoryClick = () =>{
         setShowContextMenu(false);
         setShowCategoryPopup(true);
     }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if(e.key === "Enter"){
+            e.preventDefault();
+            handleCreateCategory();
+        }
+    };
 
     return (
         <div className="h-full w-full p-4 flex flex-col">
@@ -208,7 +233,7 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                 </h2>
             </div>
 
-            {/* separaor */}
+            {/* separator */}
             <div className="flex items-center my-2 w-full" role="separator">
                 <div className="flex-grow h-px bg-gray-600 opacity-35" />
             </div>
@@ -241,7 +266,7 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                                 }}
                             >
                                 <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-medium tracking-wide text-[#222831]">{cat.name}</h3>
+                                    <p className="text-sm font-medium tracking-wide text-[#222831]">{cat.name}</p>
                                     <FiChevronRight
                                         className={`transition-transform ${open ? "rotate-90" : ""}`}
                                     />
@@ -260,18 +285,18 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                                 </button>
                             </div>
 
-                            <ul>
+                            <ul className={`flex flex-col gap-1 tracking-wide`}>
                                 {open ? (
                                   // expanded -> show all channels
                                     cat.channels.map((ch) => (
                                         <li
                                             key={ch.id}
                                             className={`channel-item flex items-center gap-3 p-2 rounded-lg cursor-pointer
-                                            ${selectedChannelId === ch.id ? "bg-[#e7eefb] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
+                                            ${selectedChannelId === ch.id ? "bg-[#dddde0] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
                                             onClick={() => setSelectedChannelId(ch.id)}
                                             onContextMenu={(ev) => ev.stopPropagation()}
                                         >
-                                        {ch.type === "text" ? <FaHashtag /> : <HiSpeakerWave />}
+                                        {ch.type === "text" ? <FaHashtag className={`w-6 h-6`} /> : <HiSpeakerWave className={`w-6 h-6`}/>}
                                         <span className="text-base">{ch.name}</span>
                                         </li>
                                     ))
@@ -280,10 +305,10 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                                         selectedInThisCat ? (
                                         <li
                                             key={selectedInThisCat.id}
-                                            className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dcd9d3] text-[#222831]"
+                                            className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dddde0] text-[#222831]"
                                             onContextMenu={(ev) => ev.stopPropagation()}
                                         >
-                                        {selectedInThisCat.type === "text" ? <FaHashtag /> : <HiSpeakerWave />}
+                                        {selectedInThisCat.type === "text" ? <FaHashtag className={`w-6 h-6`}/> : <HiSpeakerWave className={`w-6 h-6`}/>}
                                         <span className="text-base">{selectedInThisCat.name}</span>
                                         </li>
                                     ) : null
@@ -310,15 +335,15 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
 
             {showContextMenu && (
                 <div
-                    className="absolute bg-white border rounded shadow-md z-50"
+                    className="absolute bg-white border rounded-lg z-50 border-[#dcd9d3]"
                     style={{
-                    top: contextMenu.y,
-                    left: contextMenu.x,
+                        top: contextMenu.y,
+                        left: contextMenu.x,
                     }}
                 >
                     <button
                         onClick={handleCreateCategoryClick}
-                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 hover:rounded-lg"
                     >
                         Create Category
                     </button>
@@ -328,27 +353,29 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
             {/* creating category popup when right click in empty space of channels */}
             {showCategoryPopup && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-80">
-                        <h2 className="text-lg font-bold mb-3">Create Category</h2>
+                    <div ref={categoryPopupRef} className="bg-white p-6 rounded-lg w-100">
+                        <h2 className="text-xl text-[#323339] font-medium mb-3 tracking-wide">Create Category</h2>
+                        <label className={`text-lg text-[#404146] tracking-wide`}>Category Name</label>
                         <input
                             type="text"
                             value={newCategoryName}
+                            onKeyDown={handleKeyDown}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder="Enter category name"
-                            className="w-full border rounded p-2 mb-4"
+                            placeholder="New Category"
+                            className="w-full border rounded-lg py-2 px-3 mt-2 mb-4 border-[#cdcccf] focus:outline-none focus:border-[#6090eb]"
                         />
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-between gap-2">
                             <button
                                 onClick={() => setShowCategoryPopup(false)}
-                                className="px-4 py-2 rounded bg-gray-300"
+                                className="px-4 py-2 border rounded-lg bg-[#eeeef0] border-[#dcdce0] cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleCreateCategory}
-                                className="px-4 py-2 rounded bg-blue-500 text-white"
+                                className="px-4 py-2 rounded-lg bg-[#6164f2] text-[#FAF7F3] cursor-pointer hover:bg-[#4c52bd]"
                             >
-                                Create
+                                Create Category
                             </button>
                         </div>
                     </div>
