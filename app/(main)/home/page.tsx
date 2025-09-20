@@ -12,10 +12,8 @@ import {useAuth} from "../../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
-import {IoIosSearch, IoIosClose} from "react-icons/io";
 import FriendsProfile from "../components/FriendsProfile";
 import {useUserStore} from "@/app/store/useUserStore";
-// import { keyframes } from "motion-dom";
 
 type Server = {
     id: number;
@@ -27,10 +25,10 @@ type Friend = {
     id: number;
     name: string;
     status?: string;
-  mutualFriends?: number;
-  username?: string;
-  memberSince?: string;
-  mutualServers?: number;
+    mutualFriends?: number;
+    username?: string;
+    memberSince?: string;
+    mutualServers?: number;
 };
 
 export default function HomePage() {
@@ -45,25 +43,24 @@ export default function HomePage() {
         const [displayName, setDisplayName] = useState(user?.displayName);
     */
 
-    const [query, setQuery] = useState("");
     const [selectedFriend, setSelectedFriend] = useState<any>(null);
     const [showServersOnly, setShowServersOnly] = useState(false);
     const [activeServer, setActiveServer] = useState<Server | null>(null);
     const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
     const [servers, setServers] = useState<Server[]>([]);
-    const inputRef = useRef<HTMLInputElement>(null);
     // const serverPopupRef = useRef<HTMLDivElement | null>(null);
 
     const {username, displayName, email, avatarUrl, active} = useUserStore();const [friends, setFriends] = useState<Friend[]>([
-    { id: 1,
-      name: "Alice",
-      username:"alice123",
-      status: "online",
-      mutualFriends: 2,
-      memberSince: "2 Jan 2014",
-      mutualServers: 3,
+    {
+        id: 1,
+        name: "Alice",
+        username:"alice123",
+        status: "online",
+        mutualFriends: 2,
+        memberSince: "2 Jan 2014",
+        mutualServers: 3,
     },
-  ]);
+    ]);
 
     const handleServerClick = (server: Server) => {
         setActiveServer(server);
@@ -121,12 +118,6 @@ export default function HomePage() {
         setActiveServer(null);
         setActiveView("dm");
         setShowServersOnly(false);
-    }
-
-    // handling focus on the search input field
-    const handleClear = () => {
-        setQuery("");
-        inputRef.current?.focus();
     }
 
     // handling server tab click for the last active server
@@ -219,7 +210,7 @@ export default function HomePage() {
                     </div>
 
                     {/* main section to be edited */}
-                    <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-[#dcd9d3]">
+                    <div className="relative flex flex-2 flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3]">
                         <div>
                             Username: {username}
                             <br/>
@@ -237,29 +228,10 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    <div className="relative flex flex-col w-[400px] bg-white rounded-r-lg">
+                    <div className="relative flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
                         {/* search and friends who are online and offline */}
 
-                        <div className="relative border-b border-[#d4c9be] p-4">
-                            <input
-                                value={query}
-                                ref={inputRef}
-                                onChange={(e) => setQuery(e.target.value)}
-                                className="relative py-2 px-3 border border-[#D4C9BE] text-[#222831] rounded-lg w-full focus:outline-none"
-                            />
-                            {query ? (
-                                <button
-                                    onClick={handleClear}
-                                >
-                                    <IoIosClose
-                                        className="absolute w-8 h-8 top-1/2 right-7 -translate-y-1/2 cursor-pointer"/>
-                                </button>
-                            ) : (
-                                <button>
-                                    <IoIosSearch className="absolute w-7 h-7 top-1/2 right-7 -translate-y-1/2"/>
-                                </button>
-                            )}
-                        </div>
+
                         {/* Friends Section */}
                         <div>
                             {!showServersOnly && activeView === "dm" && (
