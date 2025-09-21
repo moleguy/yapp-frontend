@@ -38,8 +38,15 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 }
 
 // Auth Types
-export type SignInReq = { email: string; password: string };
-export type SignInRes = { id?: string; username?: string; success?: boolean } | { message?: string };
+export type SignInReq = {
+    email: string;
+    password: string
+};
+export type SignInRes = {
+    id?: string;
+    username?: string;
+    success?: boolean
+} | { message?: string };
 
 export type SignUpReq = {
     username: string;
@@ -53,27 +60,41 @@ export type SignUpRes = {
     success?: boolean;
 } | { message?: string };
 
-// User Profile Type
+export type UserMeReq = {
+    username: string;
+}
+
+export type UserMeRes = {
+    username: string;
+    display_name: string;
+    email: string;
+    phone_number: string | null;
+    avatar_url: string | null;
+    description: string | null;
+    friend_policy: string;
+    active: boolean;
+    last_seen: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export type UserProfile = {
     username: string;
-    displayName: string;
+    display_name: string;
     email: string;
-    avatarUrl?: string;
+    avatar_url: string | null;
     active: boolean;
 };
 
+
+export type UpdateUserProfileReq = {
+    display_name: string;
+    avatar_url: string | null;
+};
+
+
 // Hall type
 
-export type Hall = {
-    id: string;
-    name: string;
-    IconURL?: string;
-    BannerColor?: string;
-    description?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdById?: string;
-}
 
 // Auth Functions
 export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
@@ -102,11 +123,13 @@ export async function authSignOut(): Promise<{ message?: string } | undefined> {
     });
 }
 
+// User functions
+
 // Get current user from JWT cookie
-export async function getUser(): Promise<UserProfile | null> {
+export async function getUserMe(): Promise<UserMeRes | null> {
     try {
         // Backend path: GET /me/ (protected with AuthMiddleware)
-        return await request<UserProfile>(`${protectedApiBase}/me/`, {
+        return await request<UserMeRes>(`${protectedApiBase}/me/`, {
             method: 'GET'
         });
     } catch (error) {
@@ -116,16 +139,17 @@ export async function getUser(): Promise<UserProfile | null> {
     }
 }
 
-// Hall functions
-export async function createServer(payload: Hall) {
+export async function updateUserMe(payload: UpdateUserProfileReq | null): Promise<UserProfile | null> {
     try {
-        // Backend path: POSt /hall/create (protected with AuthMiddleware)
-        return await request<UserProfile>(`${protectedApiBase}/halls/create`, {
-            method: 'POST', body: JSON.stringify(payload)
-        });
+        return await request<UserProfile>(`${protectedApiBase}/me/`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        })
     } catch (error) {
-        // If request fails (401, etc.), Hall not created.
-        console.log('Hall creation failed.', error);
+        // If request fails (401, etc.), user is not authenticated
+        console.log('User update failed.:', error);
         return null;
     }
 }
+
+// Hall functions

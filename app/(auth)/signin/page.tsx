@@ -6,7 +6,7 @@ import Image from 'next/image';
 import logo from '../../assets/images/yappLogo.png';
 import {FaEye, FaSpinner, FaEyeSlash} from 'react-icons/fa';
 import {useRouter} from 'next/navigation';
-import {useUserStore} from "@/app/store/useUserStore";
+import {useSetUser, useSetActive} from "@/app/store/useUserStore";
 
 const validateEmail = (email: string): boolean => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -29,7 +29,8 @@ export default function SignIn() {
     const [announceError, setAnnounceError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const {setUser} = useUserStore();
+    const setUser = useSetUser();
+    const setActive = useSetActive();
 
     // Load remember me preference on component mount
     useEffect(() => {
@@ -97,21 +98,24 @@ export default function SignIn() {
     const signInWithCredentials = async (email: string, password: string, remember: boolean) => {
         setIsLoading(true);
         try {
-            const {authSignIn, getUser} = await import('@/lib/api');
+            const {authSignIn, getUserMe} = await import('@/lib/api');
 
+            // First, sign in
             await authSignIn({email: email.trim().toLowerCase(), password});
 
-            // Wait for user info to confirm JWT works
-            const user = await getUser();
+            // Then fetch user info
+            const user = await getUserMe();
             if (!user) {
                 throw new Error('Failed to fetch user profile');
             }
 
-            console.log('Fetched user after signin:', user); //Remove in production
-            user.active = true;
+            console.log('Fetched user after signin:', user); // Remove in production
 
+            // Update store with user data (Fixed: pass user directly, not a promise)
             setUser(user);
+            setActive(true);
 
+            // Handle remember me cookie
             if (remember) {
                 document.cookie = `remember_me=true; max-age=${30 * 24 * 60 * 60}; path=/; samesite=lax`;
             } else {
@@ -127,7 +131,6 @@ export default function SignIn() {
             setIsLoading(false);
         }
     };
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -163,7 +166,7 @@ export default function SignIn() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1] \
+        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1]
     bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
             {/* Screen reader announcements */}
             <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
@@ -213,8 +216,8 @@ export default function SignIn() {
                                 />
                                 {fieldErrors.email && (
                                     <span id="email-error" className="text-red-600 text-sm mt-1" role="alert">
-                    {fieldErrors.email}
-                  </span>
+                                        {fieldErrors.email}
+                                    </span>
                                 )}
                             </div>
 
@@ -256,8 +259,8 @@ export default function SignIn() {
                                 </div>
                                 {fieldErrors.password && (
                                     <span id="password-error" className="text-red-600 text-sm mt-1" role="alert">
-                    {fieldErrors.password}
-                  </span>
+                                        {fieldErrors.password}
+                                    </span>
                                 )}
                             </div>
 
@@ -288,7 +291,7 @@ export default function SignIn() {
                                     type="submit"
                                     disabled={isLoading || !isFormValid}
                                     className="bg-[#2383E2] text-white py-3 rounded-lg text-base w-full cursor-pointer hover:bg-[#0077d4] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#0077d4] focus:ring-offset-2"
-                                    aria-describedby="Sign-In-button-description"
+                                    aria-describedby="signin-button-description"
                                 >
                                     {isLoading ? (
                                         <div className="flex items-center justify-center gap-2">
@@ -299,7 +302,7 @@ export default function SignIn() {
                                         'Sign In'
                                     )}
                                 </button>
-                                <div id="Sign In-button-description" className="sr-only">
+                                <div id="signin-button-description" className="sr-only">
                                     {!isFormValid && 'Please fill out all required fields correctly to enable Sign In'}
                                 </div>
                             </div>
