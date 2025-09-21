@@ -5,7 +5,7 @@ import {
     authSignIn,
     authSignUp,
     authSignOut,
-    getUser,
+    getUserMe,
     SignInReq,
     SignUpReq,
     UserProfile,
@@ -70,7 +70,7 @@ export const AuthProvider = ({children}: { children: ReactNode }) => {
             if (showLoading) setLoading(true);
             clearError();
 
-            const userData = await getUser();
+            const userData = await getUserMe();
             setUser(userData);
         } catch (error) {
             console.error('Error fetching user:', error);

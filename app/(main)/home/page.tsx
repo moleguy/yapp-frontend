@@ -3,21 +3,16 @@
 import React, {useState, useRef, useEffect} from "react";
 import {BiSolidMicrophone, BiSolidMicrophoneOff} from "react-icons/bi";
 import {RiUser6Fill} from "react-icons/ri";
-
-
-
-
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
 import ServerList from "../components/ServerList";
-import {useAuth} from "../../contexts/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import PollPopup from "@/app/(main)/components/PollPopup";
 import ChatArea from "@/app/(main)/components/ChatArea";
-import {useUserStore} from "@/app/store/useUserStore";
+import { useAvatar, useUser } from "@/app/store/useUserStore";
 
 type Server = {
     id: number;
@@ -37,34 +32,30 @@ type Friend = {
 
 export default function HomePage() {
     const [showMicrophone, setShowMicrophone] = useState(true);
-    const [preview, setPreview] = useState<string | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
+    const [query, setQuery] = useState("");
     const [selectedChannel, setSelectedChannel] = useState<{id: string, name: string} | null>(null);
-
-    const {user} = useAuth();
-    /*
-        const [username, setUsername] = useState(user?.username);
-        const [displayName, setDisplayName] = useState(user?.displayName);
-    */
-
     const [selectedFriend, setSelectedFriend] = useState<any>(null);
     const [showServersOnly, setShowServersOnly] = useState(false);
     const [activeServer, setActiveServer] = useState<Server | null>(null);
     const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
     const [servers, setServers] = useState<Server[]>([]);
-    // const serverPopupRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const {username, displayName, email, avatarUrl, active} = useUserStore();const [friends, setFriends] = useState<Friend[]>([
-    {
-        id: 1,
-        name: "Alice",
-        username:"alice123",
-        status: "online",
-        mutualFriends: 2,
-        memberSince: "2 Jan 2014",
-        mutualServers: 3,
-    },
+    const user = useUser();
+    const { avatarUrl, fallback, hasAvatar } = useAvatar();
+
+    const [friends, setFriends] = useState<Friend[]>([
+        {
+            id: 1,
+            name: "Alice",
+            username: "alice123",
+            status: "online",
+            mutualFriends: 2,
+            memberSince: "2 Jan 2014",
+            mutualServers: 3,
+        },
     ]);
 
     const handleServerClick = (server: Server) => {
@@ -93,30 +84,6 @@ export default function HomePage() {
             }
         }
     };
-
-    /*    // loading profile from localStorage
-        const loadProfile = useCallback(() => {
-            const saved = localStorage.getItem("userProfile");
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                setPreview(parsed.preview || null);
-            }
-            setDisplayName(user?.displayName);
-            setUsername(user?.username);
-        }, [user?.username, user?.displayName]);
-
-        // loading a profile on mount
-        useEffect(() => {
-            loadProfile();
-        }, [loadProfile]);
-
-        // loading profile icon when settings isn't open
-        useEffect(() => {
-            if (!settingsOpen) {
-                loadProfile();
-            }
-        }, [settingsOpen, loadProfile])*/
-    ;
 
     // handling dm button click
     const handleDirectMessageClick = () => {
@@ -160,7 +127,7 @@ export default function HomePage() {
                             {showServersOnly && activeView === "server" && activeServer ? (
                                 <ServerDetails activeServer={activeServer} onSelectChannel={setSelectedChannel}/>
                             ) : activeView === "dm" ? (
-                                <DirectMessages friends={friends} onSelectFriend={setSelectedFriend}/>
+                                <DirectMessages friends={friends} onSelectFriend={setSelectedFriend} />
                             ) : null}
                         </div>
 
@@ -169,20 +136,26 @@ export default function HomePage() {
                             className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between">
                             {/* Left: avatar + names */}
                             <div className="flex items-center">
-                                {preview ? (
+                                {hasAvatar ? (
                                     <Image
-                                        src={preview}
+                                        src={avatarUrl}
                                         alt="Profile"
-                                        className="w-12 h-12 object-cover rounded"
+                                        className="w-12 h-12 object-cover rounded-full"
                                         width={48}
                                         height={48}
+                                        onError={() => {
+                                            console.error('Avatar image failed to load:', avatarUrl);
+                                        }}
                                     />
                                 ) : (
-                                    <RiUser6Fill size={32}/>
+                                    <div
+                                        className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-medium">
+                                        {fallback}
+                                    </div>
                                 )}
                                 <div className="ml-2 font-MyFont text-[#393E46]">
-                                    <p className="text-sm font-medium">{displayName}</p>
-                                    <p className="text-sm">#{username}</p>
+                                    <p className="text-sm font-medium">{user?.display_name || 'No Name'}</p>
+                                    <p className="text-sm">@{user?.username || 'no-username'}</p>
                                 </div>
                             </div>
 
@@ -190,7 +163,7 @@ export default function HomePage() {
                             <div className="flex items-center gap-2">
                                 <div
                                     className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${showMicrophone ? "hover:bg-[#dfdfe1]" : "bg-[#ebc8ca] text-[#cb3b40]"
-                                    }`}
+                                        }`}
                                     onClick={() => setShowMicrophone(!showMicrophone)}
                                 >
                                     {showMicrophone ? (
@@ -199,7 +172,7 @@ export default function HomePage() {
                                             className="text-gray-500 hover:text-[#1e1e1e] sway-hover"
                                         />
                                     ) : (
-                                        <BiSolidMicrophoneOff size={24} className="sway-hover"/>
+                                        <BiSolidMicrophoneOff size={24} className="sway-hover" />
                                     )}
                                 </div>
 
@@ -217,15 +190,15 @@ export default function HomePage() {
                     {/* main section to be edited */}
                     <div className="relative flex flex-2 flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3]">
                         <div>
-                            Username: {username}
-                            <br/>
-                            Display name: {displayName}
-                            <br/>
-                            Email: {email}
-                            <br/>
-                            Avatar URL: {avatarUrl ? avatarUrl : "Not Set"}
-                            <br/>
-                            Active : {active ? "True" : "False"}
+                            Username: {user?.username}
+                            <br />
+                            Display name: {user?.display_name}
+                            <br />
+                            Email: {user?.email}
+                            <br />
+                            Avatar URL: {user?.avatar_url ? user?.avatar_url : "Not Set"}
+                            <br />
+                            Active : {user?.active ? "True" : "False"}
                         </div>
                         {activeServer && selectedChannel ? (
                             <ChatArea
@@ -242,11 +215,10 @@ export default function HomePage() {
                     <div className="flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
                         {/* search and friends who are online and offline */}
 
-
                         {/* Friends Section */}
                         <div>
                             {!showServersOnly && activeView === "dm" && (
-                                <FriendsProfile friend={selectedFriend}/>
+                                <FriendsProfile friend={selectedFriend} />
                             )}
                         </div>
                     </div>

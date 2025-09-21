@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@edgestore/react": "^0.5.4",
+    "@edgestore/server": "^0.5.4",
     "@mui/icons-material": "^7.3.2",
     "classnames": "^2.5.1",
     "framer-motion": "^12.23.12",
@@ -17,6 +19,7 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.1",
+    "zod": "^4.1.9",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

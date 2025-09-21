@@ -1,301 +1,307 @@
 'use client';
 
-import {authSignOut} from "@/lib/api";
-import {useState, ChangeEvent, useEffect, useRef} from "react";
-import {FaPen, FaTrash, FaPlus} from "react-icons/fa";
-import {HiOutlineUser} from "react-icons/hi2";
+import React, {useState, useEffect, useRef, ChangeEvent} from "react";
 import {useRouter} from 'next/navigation';
 import Image from 'next/image';
+import {FaPen, FaPlus, FaCopy} from "react-icons/fa";
+import {HiOutlineUser} from "react-icons/hi2";
 
-import {useAuth} from "../../contexts/AuthContext";
-import {useUserStore} from "@/app/store/useUserStore";
-
-// interface UserProfile {
-//   displayName: string;
-//   username: string;
-//   email: string;
-//   phone?: string;
-//   socials: string[];
-// }
-
-// const initialUser: UserProfile = {
-//   displayName: "Manish Lama",
-//   username: "moleguy5",
-//   email: "tamangmanish446@gmail.com",
-//   phone: "",
-//   socials: ["https://www.instagram.com/lamadoesart/"]
-// };
+import {useEdgeStore} from "@/lib/edgestore";
+import {useUserStore, useUpdateUser, useSetUser} from "@/app/store/useUserStore";
+import {authSignOut, updateUserMe, UpdateUserProfileReq, UserMeRes} from "@/lib/api";
 
 export default function ProfileSettings() {
     const router = useRouter();
-    const [preview, setPreview] = useState<string | null>(null);
-    const [showOptions, setShowOptions] = useState(false);
     const optionsRef = useRef<HTMLDivElement | null>(null);
+
+    const user = useUserStore((state) => state.user);
+    const setUser = useSetUser();
+    const updateUser = useUpdateUser();
+    const {edgestore} = useEdgeStore();
+
+    const [showOptions, setShowOptions] = useState(false);
     const [editingField, setEditingField] = useState<string | null>(null);
-    const [errorMessage, setErrorMessage] = useState<String | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [fields, setFields] = useState({
+        "display name": user?.display_name || "",
+        username: user?.username || "",
+        email: user?.email || "",
+    });
+    const [hasChanges, setHasChanges] = useState(false);
 
-    const {user} = useAuth();
-    const [username, setUsername] = useState(user?.username);
-    const [displayName, setDisplayName] = useState(user?.displayName);
-
-    const {clearUser} = useUserStore();
-
-    // profile pic handling when clicked outside the options is removed
+    // Close profile pic options when clicking outside
     useEffect(() => {
         if (!showOptions) return;
-
         const handleClickOutside = (e: MouseEvent) => {
-            if (
-                optionsRef.current &&
-                !optionsRef.current.contains(e.target as Node)
-            ) {
+            if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
                 setShowOptions(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showOptions]);
 
-    // loading profile on mount
-    // useEffect(() => {
-    //   const saved = localStorage.getItem("userProfile");
-    //   if (saved) {
-    //     const parsed = JSON.parse(saved);
-    //     setUser(parsed.user || initialUser);
-    //     setPreview(parsed.preview || null);
-    //   }
-    // }, []);
+    // Keep fields in sync with user
+    useEffect(() => {
+        setFields({
+            "display name": user?.display_name || "",
+            username: user?.username || "",
+            email: user?.email || "",
+        });
+        setHasChanges(false);
+    }, [user]);
 
-    const saveProfile = (newUser = user, newPreview = preview) => {
-        localStorage.setItem("userProfile", JSON.stringify({user: newUser, preview: newPreview}));
-    }
-
-    // handling profile picture
-    const handlePicChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Handle profile picture upload
+    const handlePicChange = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-      // handling logic for error message when size > 5MB
-        if (file.size > 5 * 1024 * 1024) { // 5MB
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
             setErrorMessage("File size too big! Please select an image under 5MB.");
             setTimeout(() => setErrorMessage(null), 3000);
             return;
         }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreview(reader.result as string);
-                saveProfile(user, reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-        setShowOptions(false);
-    };
 
-    // removing profile picture
-    const handleRemovePic = () => {
-        setPreview(null);
-        saveProfile(user, null);
-        setShowOptions(false);
-    };
-
-    // handling text fields
-    // const handleFieldChange = (field: keyof UserProfile, value: string) => {
-    //   const newUser = { ...user, [field]: value };
-    //   setUser(newUser);
-    //   saveProfile(newUser, preview);
-    // };
-
-    const handleBlur = () => {
-        setEditingField(null);
-    };
-
-    // handline social medias
-    // const handleSocialChange = (index: number, value: string) => {
-    //   const newSocials = [...user.socials];
-    //   newSocials[index] = value;
-    //   const newUser = { ...user, socials: newSocials };
-    //   setUser(newUser);
-    //   saveProfile(newUser, preview);
-    // };
-
-    // // adding a link in social fields
-    // const addSocial = () => {
-    //   const newUser = { ...user, socials: [...user.socials, ""] };
-    //   setUser(newUser);
-    //   saveProfile(newUser, preview);
-    // };
-
-    // // deleting social link from the field
-    // const removeSocial = (index: number) => {
-    //   const newUser = { ...user, socials: user.socials.filter((_, i) => i !== index) };
-    //   setUser(newUser);
-    //   saveProfile(newUser, preview);
-    // };
-
-    const signOut = async () => {
         try {
-            // Call signout API
+            if (user?.avatar_url) {
+                try {
+                    await edgestore.publicImages.delete({url: user.avatar_url});
+                    console.log("Old avatar deleted:", user.avatar_url); // REMOVE IN PRODUCTION
+                } catch (err) {
+                    console.warn("Failed to delete old avatar (ignored):", err);
+                }
+            }
+
+            const res = await edgestore.publicImages.upload({
+                file,
+                onProgressChange: (progress: number) => console.log("Upload progress:", progress)
+            });
+
+            // Update Zustand store
+            updateUser({avatar_url: res.url});
+
+            // Update backend
+            if (user) {
+                const updatedUser: UpdateUserProfileReq = {
+                    display_name: user.display_name,
+                    avatar_url: res.url,
+                };
+                await updateUserMe(updatedUser);
+            }
+
+        } catch (err) {
+            console.error("Image upload failed.", err);
+        }
+
+        setShowOptions(false);
+    };
+
+    const handleRemovePic = async () => {
+        try {
+            if (!user?.avatar_url) {
+                console.warn("No avatar to delete");
+                return;
+            }
+
+            console.log("Trying to delete:", user.avatar_url);
+
+            await edgestore.publicImages.delete({url: user.avatar_url});
+
+            // Update backend profile
+            const updatedUser: UpdateUserProfileReq = {
+                display_name: user.display_name,
+                avatar_url: null,
+            };
+            await updateUserMe(updatedUser);
+
+            console.log("Deleted file at:", user.avatar_url);
+        } catch (err: any) {
+            console.error("EdgeStore delete failed:", err.message ?? err);
+        } finally {
+            updateUser({avatar_url: null});
+            setShowOptions(false);
+        }
+    };
+
+    // Handle input change
+    const handleFieldChange = (field: keyof typeof fields, value: string) => {
+        setFields((prev) => ({...prev, [field]: value}));
+        setHasChanges(true);
+    };
+
+    // Save changes handler
+    const handleSave = async () => {
+        if (!user) return;
+        try {
+            const updatedUser: UpdateUserProfileReq = {
+                display_name: fields["display name"],
+                avatar_url: user.avatar_url ?? null,
+            };
+
+            await updateUserMe(updatedUser);
+            updateUser(updatedUser);
+            setHasChanges(false);
+            setEditingField(null);
+        } catch (err: any) {
+            setErrorMessage("Failed to save changes." + err.message);
+            setTimeout(() => setErrorMessage(null), 3000);
+        }
+    };
+
+    const handleBlur = () => setEditingField(null);
+
+    const handleSignOut = async () => {
+        try {
             await authSignOut();
-            // Clear user profile from localStorage
             localStorage.removeItem("userProfile");
-            clearUser();
-            // Clear remember_me cookie
+            setUser({} as UserMeRes);
+
             if (document.cookie.split('; ').find(row => row.startsWith('remember_me='))) {
                 document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
             }
+
             router.push('/signin');
-        } catch (error: any) {
-            const msg = error?.message || (typeof error === 'string' ? error : 'Sign out failed');
-            console.error(msg);
+        } catch (err: any) {
+            console.error(err?.message || "Sign out failed");
         }
     };
 
+    return (
+        <div className="flex flex-col justify-between gap-8 bg-white mt-4">
+            {/* Profile Image */}
+            <div className="flex flex-col items-center mb-6">
+                <div
+                    className="w-24 h-24 overflow-hidden rounded-full cursor-pointer group relative"
+                    onClick={() => {
+                        if (user?.avatar_url) setShowOptions(!showOptions);
+                        else document.getElementById("fileUpload")?.click();
+                    }}
+                >
+                    {user?.avatar_url ? (
+                        <Image
+                            src={user.avatar_url}
+                            alt="Profile"
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            style={{objectFit: "cover"}}
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                            <HiOutlineUser size={40} className="text-gray-500"/>
+                        </div>
+                    )}
 
-  return (
-    <div className="flex flex-col justify-between gap-8 bg-white mt-4">
-      {/* Profile Image */}
-      <div className="flex flex-col items-center mb-6">
-        <div
-          className="w-24 h-24 overflow-hidden rounded-full cursor-pointer group relative"
-          onClick={() => {
-            if (preview) setShowOptions(!showOptions);
-            else document.getElementById("fileUpload")?.click();
-          }}
-        >
-          {preview ? (
-            <Image
-              src={preview}
-              alt="Profile"
-              className="w-full h-full object-cover"
-              fill
-              style={{ objectFit: "cover" }}
-            />
-          ) : (
-            <div className="flex items-center justify-center w-full h-full bg-gray-200">
-              <HiOutlineUser size={40} className="text-gray-500" />
+                    <div
+                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
+                        <FaPen className="text-white text-lg"/>
+                    </div>
+                </div>
+
+                {user?.avatar_url && showOptions && (
+                    <div
+                        ref={optionsRef}
+                        className="absolute mt-28 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50"
+                    >
+                        <label
+                            htmlFor="fileUpload"
+                            className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-t-lg"
+                        >
+                            Change
+                        </label>
+                        <div className="flex-grow h-px bg-gray-600 opacity-35"/>
+                        <button
+                            onClick={handleRemovePic}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                )}
+
+                <input
+                    type="file"
+                    accept="image/*"
+                    id="fileUpload"
+                    className="hidden"
+                    onChange={handlePicChange}
+                />
+
+                {errorMessage && (
+                    <div className="mt-3 text-red-500 text-sm bg-red-100 px-3 py-1 rounded-md animate-fadeIn">
+                        {errorMessage}
+                    </div>
+                )}
             </div>
-          )}
-
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
-            <FaPen className="text-white text-lg" />
-          </div>
-        </div>
-
-        {preview && showOptions && (
-          <div
-            ref={optionsRef}
-            className="absolute mt-28 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50"
-          >
-            <label
-              htmlFor="fileUpload"
-              className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-t-lg"
-            >
-              Change
-            </label>
-            <div className="flex-grow h-px bg-gray-600 opacity-35" />
-            <button
-              onClick={handleRemovePic}
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
-            >
-              Remove
-            </button>
-          </div>
-        )}
-
-        <input
-          type="file"
-          accept="image/*"
-          id="fileUpload"
-          onChange={handlePicChange}
-          className="hidden"
-        />
-
-        {/* error message for file size being over 5MB */}
-        {errorMessage && (
-          <div className="mt-3 text-red-500 text-sm bg-red-100 px-3 py-1 rounded-md animate-fadeIn">
-            {errorMessage}
-          </div>
-        )}
-      </div>
 
             {/* Editable Fields */}
             <div className="space-y-4">
-                {["display name", "username", "email", "phone number"].map((field) => (
+                {(["display name", "username", "email"] as (keyof typeof fields)[]).map((field) => (
                     <div key={field}>
                         <label className="block text-sm text-gray-500 capitalize">
-                            {field === "username" ? "@username" : field}
+                            {field === "username" ? "username" : field}
                         </label>
-                        {editingField === field ? (
-                            <input
-                                autoFocus
-                                type="text"
-                                value={displayName}
-
-                                onBlur={handleBlur}
-                                onKeyDown={(e) => e.key === "Enter" && handleBlur()}
-                                className="w-full border-b border-blue-500 focus:outline-none"
-                            />
-                        ) : (
-                            <div
-                                className="flex justify-between items-center cursor-pointer group"
-                                onClick={() => setEditingField(field)}
-                            >
-                                <p className="text-gray-800">
-                                    {/* {user[field as keyof UserProfile] || "Not set"} */}
+                        <div
+                            className={`flex justify-between items-center group relative ${field === "display name" ? "cursor-pointer" : ""}`}
+                            onClick={() => {
+                                if (field === "display name") setEditingField(field);
+                            }}
+                        >
+                            {editingField === field && field === "display name" ? (
+                                <input
+                                    type="text"
+                                    value={fields[field]}
+                                    onChange={(e) => handleFieldChange(field, e.target.value)}
+                                    onBlur={handleBlur}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSave();
+                                    }}
+                                    autoFocus
+                                    className="border-b border-gray-300 focus:outline-none px-1"
+                                />
+                            ) : (
+                                <p className="text-gray-800 select-none">
+                                    {field === "username" ? `@${fields[field]}` : fields[field]}
                                 </p>
-                                <FaPen className="text-black opacity-0 group-hover:opacity-100"/>
-                            </div>
-                        )}
+                            )}
+                            {/* Display copy icon on hover */}
+                            <FaCopy
+                                className="ml-2 text-gray-400 opacity-0 group-hover:opacity-100 cursor-pointer transition"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // prevent triggering edit
+                                    navigator.clipboard.writeText(fields[field]);
+                                }}
+                                title="Copy to clipboard"
+                            />
+                            {field === "display name" && (
+                                <FaPen className="text-black opacity-0 group-hover:opacity-100 ml-2"/>
+                            )}
+                        </div>
                     </div>
                 ))}
 
                 {/* Social Links */}
                 <div className="gap-5">
                     <label className="block text-sm text-gray-500">Social Links</label>
-                    {/* {user.socials.map((link, index) => (
-            <div key={index} className="flex items-center gap-2 mb-2">
-              <input
-                type="url"
-                value={link}
-                onChange={(e) => handleSocialChange(index, e.target.value)}
-                onBlur={handleBlur}
-                placeholder="Your social link here ..."
-                className="flex-1 border-b border-gray-300 focus:border-blue-500 focus:outline-none mb-3"
-              />
-              <button
-                onClick={() => removeSocial(index)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <FaTrash />
-              </button>
-            </div>
-          ))} */}
-                    <button
-                        // onClick={addSocial}
-                        className="flex items-center gap-1 text-blue-600 mt-2"
-                    >
+                    <button className="flex items-center gap-1 text-blue-600 mt-2">
                         <FaPlus/> Add Social Link
                     </button>
                 </div>
             </div>
 
-            {/* Sign Out logic here */}
+            {/* Actions */}
             <div className="mt-6 flex justify-between items-center">
                 <button
-                    onClick={() => {
-                        signOut();
-                        console.log("Sign out clicked");
-                    }}
+                    onClick={handleSignOut}
                     className="flex items-center gap-2 text-[#cb3b40] font-base border py-1 px-4 border-[#dcd9d3] hover:bg-[#ebc8ca] hover:border-none rounded-lg cursor-pointer"
                 >
                     Sign Out
-        </button>
-        <button
-          className="flex justify-end items-center border mr-4 py-1 px-4 rounded-lg border-[#dcd9d3] text-[#222831] hover:bg-[#78C841] hover:text-[#F0F0F0] hover:border-none cursor-pointer"
-        >
-          Save Changes
+                </button>
+                <button
+                    className="flex justify-end items-center border mr-4 py-1 px-4 rounded-lg border-[#dcd9d3] text-[#222831] hover:bg-[#78C841] hover:text-[#F0F0F0] hover:border-none cursor-pointer disabled:opacity-50"
+                    onClick={handleSave}
+                    disabled={!hasChanges}
+                >
+                    Save Changes
                 </button>
             </div>
         </div>
