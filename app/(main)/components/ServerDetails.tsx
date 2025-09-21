@@ -26,9 +26,10 @@ type Category = {
 
 interface ServerDetailsProps {
   activeServer: Server | null;
+  onSelectChannel?: (channel: {id: string, name: string}) => void;
 }
 
-export default function ServerDetails({ activeServer }: ServerDetailsProps) {
+export default function ServerDetails({ activeServer, onSelectChannel }: ServerDetailsProps) {
   const [serverCategories, setServerCategories] = useState<Record<number, Category[]>>({});
   const [openCategories, setOpenCategories] = useState<Record<number, string[]>>({});
   const [popupCategoryId, setPopupCategoryId] = useState<string | null>(null);
@@ -48,7 +49,6 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
             name: "Text Channels",
             channels: [
                 { id: "1", name: "general", type: "text" },
-                { id: "2", name: "announcements", type: "text" },
             ],
         },
         {
@@ -56,7 +56,6 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
             name: "Voice Channels",
             channels: [
                 { id: "3", name: "voice-chat", type: "voice" },
-                { id: "4", name: "music-lounge", type: "voice" },
             ],
         },
     ];
@@ -210,15 +209,15 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
     return (
         <div className="h-full w-full p-4 flex flex-col">
             {/* server heder */}
-            <div className="flex items-center pb-2 gap-2">
+            <div className="flex items-center gap-2">
                 {activeServer.image ? (
                     <img
                         src={activeServer.image}
                         alt={activeServer.name}
-                        className="w-8 h-8 rounded-xl object-cover"
+                        className="w-10 h-10 rounded-xl object-cover"
                     />
                 ) : (
-                    <div className="w-8 h-8 rounded-xl bg-[#6164f2] text-[#eeeffe] flex items-center justify-center text-xl">
+                    <div className="w-10 h-10 rounded-xl bg-[#dcdcdc] text-[#1e1e1e] flex items-center justify-center text-xl">
                         {activeServer.name
                             .trim()
                             .split(/\s+/)
@@ -293,7 +292,12 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                                             key={ch.id}
                                             className={`channel-item flex items-center gap-3 p-2 rounded-lg cursor-pointer
                                             ${selectedChannelId === ch.id ? "bg-[#dddde0] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
-                                            onClick={() => setSelectedChannelId(ch.id)}
+                                            onClick={() => {
+                                                setSelectedChannelId(ch.id);
+                                                if (ch.type === "text") {
+                                                    onSelectChannel?.({ id: ch.id, name: ch.name });
+                                                }
+                                            }}
                                             onContextMenu={(ev) => ev.stopPropagation()}
                                         >
                                         {ch.type === "text" ? <FaHashtag className={`w-6 h-6`} /> : <HiSpeakerWave className={`w-6 h-6`}/>}
@@ -317,8 +321,6 @@ export default function ServerDetails({ activeServer }: ServerDetailsProps) {
                         </div>
                     );
                 })}
-
-                {/* Tip area: right-click in empty space (not on channel/header) to create a category */}
             </div>
 
             {/* add channel popup for specific or each category  */}
