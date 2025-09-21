@@ -87,14 +87,14 @@ export default function ServerList({
         console.log(newServer);
 
         setServers(prev => [...prev, newServer]);
-    onServerClick(newServer); // logic for when opening a server when createing a new one
-  };
+        onServerClick(newServer); // logic for when opening a server when creating a new one
+    };
 
     const handleJoinServer = () => {
         const newServer: Server = {id: Date.now(), name: 'Joined Server'};
         setServers(prev => [...prev, newServer]);
-    onServerClick(newServer); // logic for always opening a server when joining a new one
-  };
+        onServerClick(newServer); // logic for always opening a server when joining a new one
+    };
 
     // servers to show initially and the extra ones for "more"
     const visibleServers = servers.slice(0, MAX_VISIBLE);
@@ -103,28 +103,40 @@ export default function ServerList({
     return (
         <div className=" flex flex-col items-center select-none w-full p-2">
             {/* Top Toggle Buttons */}
-            <div className="flex justify-around w-full bg-gray-200 rounded-lg p-2 mb-3">
+            <div className="flex w-full bg-gray-200 rounded-t-lg">
                 <button
                     onClick={onServersToggle}
-                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "server" ? "color-primary-button text-black" : "hover:bg-gray-300"}`}
+                    className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out
+                        ${activeView === "server"
+                            ? "bg-[#f3f3f4] text-black rounded-l-lg"
+                            : "hover:bg-gray-300 rounded-tl-lg text-gray-600"
+                        }
+                    `}
                 >
                     <BsGridFill className="w-8 h-8"/>
                 </button>
+
                 <button
                     onClick={onDirectMessagesClick}
-                    className={`p-2 rounded-lg flex items-center justify-center ${activeView === "dm" ? "color-primary-button text-black" : "hover:bg-gray-300"}`}
+                    className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out
+                        ${activeView === "dm"
+                            ? "bg-[#f3f3f4] text-black rounded-r-lg"
+                            : "hover:bg-gray-300 rounded-tr-lg text-gray-600"
+                        }
+                    `}
                 >
+                    {/* Message icon */}
                     <RiMessage3Fill className="w-8 h-8"/>
                 </button>
             </div>
 
             {/* Server Grid */}
             {/* handling opening server container wen only server tab is clicked otherwise hides UI */}
-      {activeView === "server" && (<div className="grid grid-cols-3 gap-8 p-4">
+            {activeView === "server" && (<div className="grid grid-cols-3 gap-8 p-4">
                 {/* Add server button */}
                 <button
                     onClick={() => setShowPopup(true)}
-                    className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white"
+                    className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white cursor-pointer"
                 >
                     <FaPlus size={24}/>
                 </button>
@@ -142,7 +154,7 @@ export default function ServerList({
                     >
                         <div
                             className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center transition-transform duration-300 ease-out
-              ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
+                            ${activeServer?.id === server.id ? 'scale-x-100' : 'scale-x-0'}`}
                         />
 
                         {server.image ? (
@@ -172,11 +184,11 @@ export default function ServerList({
             {contextMenu && (
                 <div
                     ref={menuRef}
-                    className="fixed z-100 bg-white rounded-lg shadow-lg py-2 px-4"
+                    className="fixed z-100 bg-white rounded-lg shadow-lg py-2 px-4 cursor-pointer"
                     style={{top: contextMenu.y, left: contextMenu.x, minWidth: 120}}
                 >
                     <button
-                        className="text-red-500 w-full text-left"
+                        className="text-red-500 w-full text-left cursor-pointer"
                         onClick={() => {
                             onLeaveServer(contextMenu.serverId);
                             setContextMenu(null);
@@ -191,11 +203,11 @@ export default function ServerList({
             {showMorePopup && (
                 <div
                     ref={serverPopupRef}
-                    className="absolute top-82 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
+                    className="absolute top-78 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
                     {extraServers.map(server => (
                         <div
                             key={server.id}
-                            className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer hover:bg-[#6164f2]"
+                            className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer"
                             onClick={() => {
                                 onServerClick(server);
                                 setShowMorePopup(false);
@@ -207,11 +219,11 @@ export default function ServerList({
                             }}
                         >
                             {server.image ? (
-                                <img src={server.image} alt={server.name}
-                                     className="w-16 h-16 rounded-lg object-cover"/>
+                                <img src={server.image} alt={server.name} className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]`: `border-none`}`}/>
                             ) : (
                                 <div
-                                    className="w-16 h-16 rounded-lg bg-[#6164f2] text-white flex items-center justify-center">
+                                    className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]`: `border-none hover:border-none`}`}
+                                >
                                     {server.name.trim().charAt(0).toUpperCase()}
                                 </div>
                             )}

@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useRef } from "react";
-import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
+import React, {useState, useRef, useEffect} from "react";
+import {BiSolidMicrophone, BiSolidMicrophoneOff} from "react-icons/bi";
+import {RiUser6Fill} from "react-icons/ri";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
 import ServerList from "../components/ServerList";
 import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
-import { IoIosSearch, IoIosClose } from "react-icons/io";
 import FriendsProfile from "../components/FriendsProfile";
+import PollPopup from "@/app/(main)/components/PollPopup";
+import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 
 type Server = {
@@ -33,6 +35,7 @@ export default function HomePage() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
     const [query, setQuery] = useState("");
+    const [selectedChannel, setSelectedChannel] = useState<{id: string, name: string} | null>(null);
     const [selectedFriend, setSelectedFriend] = useState<any>(null);
     const [showServersOnly, setShowServersOnly] = useState(false);
     const [activeServer, setActiveServer] = useState<Server | null>(null);
@@ -89,12 +92,6 @@ export default function HomePage() {
         setShowServersOnly(false);
     }
 
-    // handling focus on the search input field
-    const handleClear = () => {
-        setQuery("");
-        inputRef.current?.focus();
-    }
-
     // handling server tab click for the last active server
     const handleServersTabClick = () => {
         setActiveView("server");
@@ -128,7 +125,7 @@ export default function HomePage() {
                         {/* Channels and Friends Section To Be Displayed */}
                         <div className="flex-1 min-h-0 overflow-y-auto border-t border-b border-[#dcd9d3]">
                             {showServersOnly && activeView === "server" && activeServer ? (
-                                <ServerDetails activeServer={activeServer} />
+                                <ServerDetails activeServer={activeServer} onSelectChannel={setSelectedChannel}/>
                             ) : activeView === "dm" ? (
                                 <DirectMessages friends={friends} onSelectFriend={setSelectedFriend} />
                             ) : null}
@@ -191,7 +188,7 @@ export default function HomePage() {
                     </div>
 
                     {/* main section to be edited */}
-                    <div className="relative flex flex-2 flex-col justify-between bg-white border-r border-[#dcd9d3]">
+                    <div className="relative flex flex-2 flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3]">
                         <div>
                             Username: {user?.username}
                             <br />
@@ -203,35 +200,21 @@ export default function HomePage() {
                             <br />
                             Active : {user?.active ? "True" : "False"}
                         </div>
-                        <div className="flex relative">
-                            <input
-                                className="w-full py-6 pl-18 m-4 focus:outline-none rounded-xl border border-[#dcd9d3]" />
-                        </div>
+                        {activeServer && selectedChannel ? (
+                            <ChatArea
+                                serverName={activeServer.name}
+                                channelName={selectedChannel.name}
+                            />
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-gray-500">
+                                Select a channel to start chatting
+                            </div>
+                        )}
                     </div>
 
-                    <div className="relative flex flex-col w-[400px] bg-white rounded-r-lg">
+                    <div className="flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
                         {/* search and friends who are online and offline */}
 
-                        <div className="relative border-b border-[#d4c9be] p-4">
-                            <input
-                                value={query}
-                                ref={inputRef}
-                                onChange={(e) => setQuery(e.target.value)}
-                                className="relative py-2 px-3 border border-[#D4C9BE] text-[#222831] rounded-lg w-full focus:outline-none"
-                            />
-                            {query ? (
-                                <button
-                                    onClick={handleClear}
-                                >
-                                    <IoIosClose
-                                        className="absolute w-8 h-8 top-1/2 right-7 -translate-y-1/2 cursor-pointer" />
-                                </button>
-                            ) : (
-                                <button>
-                                    <IoIosSearch className="absolute w-7 h-7 top-1/2 right-7 -translate-y-1/2" />
-                                </button>
-                            )}
-                        </div>
                         {/* Friends Section */}
                         <div>
                             {!showServersOnly && activeView === "dm" && (
