@@ -172,7 +172,7 @@ export default function AddServerPopup({
 
               <div className="relative mt-2 mb-3">
                 {serverImage ? (
-                  <Image
+                  <img
                     src={serverImage}
                     alt="Server Preview"
                     className="w-20 h-20 rounded-full object-cover mx-auto cursor-pointer"

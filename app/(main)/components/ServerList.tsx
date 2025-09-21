@@ -170,7 +170,7 @@ export default function ServerList({
               />
 
               {server.image ? (
-                <Image
+                <img
                   src={server.image}
                   alt={server.name}
                   className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}

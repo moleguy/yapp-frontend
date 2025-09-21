@@ -230,7 +230,7 @@ export default function ServerDetails({
       <div className="border-b border-[#dcd9d3] pt-0 pb-4">
         <div className="flex items-center gap-2">
           {activeServer.image ? (
-            <Image
+            <img
               src={activeServer.image}
               alt={activeServer.name}
               className="w-10 h-10 rounded-xl object-cover"
