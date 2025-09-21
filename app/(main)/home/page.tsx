@@ -1,10 +1,12 @@
 'use client';
 
-import {useState, useRef} from "react";
+import React, {useState, useRef, useEffect} from "react";
 import {BiSolidMicrophone, BiSolidMicrophoneOff} from "react-icons/bi";
 import {RiUser6Fill} from "react-icons/ri";
-// import { IoIosSearch, IoIosClose } from "react-icons/io";
-// import { FiPlus } from "react-icons/fi";
+
+
+
+
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
 import ServerList from "../components/ServerList";
@@ -13,6 +15,8 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
+import PollPopup from "@/app/(main)/components/PollPopup";
+import ChatArea from "@/app/(main)/components/ChatArea";
 import {useUserStore} from "@/app/store/useUserStore";
 
 type Server = {
@@ -36,6 +40,7 @@ export default function HomePage() {
     const [preview, setPreview] = useState<string | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
+    const [selectedChannel, setSelectedChannel] = useState<{id: string, name: string} | null>(null);
 
     const {user} = useAuth();
     /*
@@ -153,7 +158,7 @@ export default function HomePage() {
                         {/* Channels and Friends Section To Be Displayed */}
                         <div className="flex-1 min-h-0 overflow-y-auto border-t border-b border-[#dcd9d3]">
                             {showServersOnly && activeView === "server" && activeServer ? (
-                                <ServerDetails activeServer={activeServer}/>
+                                <ServerDetails activeServer={activeServer} onSelectChannel={setSelectedChannel}/>
                             ) : activeView === "dm" ? (
                                 <DirectMessages friends={friends} onSelectFriend={setSelectedFriend}/>
                             ) : null}
@@ -222,13 +227,19 @@ export default function HomePage() {
                             <br/>
                             Active : {active ? "True" : "False"}
                         </div>
-                        <div className="flex relative">
-                            <input
-                                className="w-full py-6 pl-18 m-4 focus:outline-none rounded-xl border border-[#dcd9d3]"/>
-                        </div>
+                        {activeServer && selectedChannel ? (
+                            <ChatArea
+                                serverName={activeServer.name}
+                                channelName={selectedChannel.name}
+                            />
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-gray-500">
+                                Select a channel to start chatting
+                            </div>
+                        )}
                     </div>
 
-                    <div className="relative flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
+                    <div className="flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
                         {/* search and friends who are online and offline */}
 
 

@@ -23,6 +23,9 @@ export default function AddServerPopup({
     const [inviteLink, setInviteLink] = useState("");
     const [errorMessage, setErrorMessage] = useState<String | null>(null);
     const serverRef = useRef<HTMLDivElement | null>(null);
+    const createInputRef = useRef<HTMLInputElement | null>(null);
+    const joinInputRef = useRef<HTMLInputElement | null>(null);
+
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -71,6 +74,36 @@ export default function AddServerPopup({
             setInviteLink("");
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (step === "create" && createInputRef.current) {
+            createInputRef.current.focus();
+        }
+        if (step === "join" && joinInputRef.current) {
+            joinInputRef.current.focus();
+        }
+    }, [step]);
+
+    useEffect(() => {
+        if (!isOpen || step !== "create") return;
+
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                if (!serverName.trim()) {
+                    setErrorMessage("Server name is required.");
+                    setTimeout(() => setErrorMessage(null), 3000);
+                    return;
+                }
+                onCreate(serverName, serverImage);
+                onClose();
+            }
+        };
+
+        document.addEventListener("keydown", handleGlobalKeyDown);
+        return () => document.removeEventListener("keydown", handleGlobalKeyDown);
+    }, [isOpen, step, serverName, serverImage, onCreate, onClose]);
+
 
     if (!isOpen) return null;
 
@@ -160,10 +193,11 @@ export default function AddServerPopup({
                             </div>
                             <p className={`text-left font-light tracking-wide`}>Server Name</p>
                             <input
+                                ref={createInputRef}
                                 type="text"
                                 placeholder="Server Name"
                                 value={serverName}
-                                onKeyDown={handleKeyDown}
+                                // onKeyDown={handleKeyDown}
                                 onChange={(e) => setServerName(e.target.value)}
                                 className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb]"
                             />
@@ -200,6 +234,7 @@ export default function AddServerPopup({
                     className="relative flex flex-col bg-white rounded-xl p-6 w-[380px] h-[220px] text-center">
                     <h2 className="text-lg font-semibold mb-4">Join Server</h2>
                     <input
+                        ref={joinInputRef}
                         type="text"
                         placeholder="Invite Link"
                         value={inviteLink}

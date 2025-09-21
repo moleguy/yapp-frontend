@@ -87,14 +87,14 @@ export default function ServerList({
         console.log(newServer);
 
         setServers(prev => [...prev, newServer]);
-    onServerClick(newServer); // logic for when opening a server when createing a new one
-  };
+        onServerClick(newServer); // logic for when opening a server when creating a new one
+    };
 
     const handleJoinServer = () => {
         const newServer: Server = {id: Date.now(), name: 'Joined Server'};
         setServers(prev => [...prev, newServer]);
-    onServerClick(newServer); // logic for always opening a server when joining a new one
-  };
+        onServerClick(newServer); // logic for always opening a server when joining a new one
+    };
 
     // servers to show initially and the extra ones for "more"
     const visibleServers = servers.slice(0, MAX_VISIBLE);
@@ -203,11 +203,11 @@ export default function ServerList({
             {showMorePopup && (
                 <div
                     ref={serverPopupRef}
-                    className="absolute top-82 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
+                    className="absolute top-78 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50">
                     {extraServers.map(server => (
                         <div
                             key={server.id}
-                            className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer hover:bg-[#6164f2]"
+                            className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer"
                             onClick={() => {
                                 onServerClick(server);
                                 setShowMorePopup(false);
@@ -219,11 +219,11 @@ export default function ServerList({
                             }}
                         >
                             {server.image ? (
-                                <img src={server.image} alt={server.name}
-                                     className="w-16 h-16 rounded-lg object-cover"/>
+                                <img src={server.image} alt={server.name} className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]`: `border-none`}`}/>
                             ) : (
                                 <div
-                                    className="w-16 h-16 rounded-lg bg-[#6164f2] text-white flex items-center justify-center">
+                                    className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]`: `border-none hover:border-none`}`}
+                                >
                                     {server.name.trim().charAt(0).toUpperCase()}
                                 </div>
                             )}
