@@ -33,11 +33,12 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
 
   return (
     <div className=" space-y-2">
-      <h2 className="text-lg font-semibold px-4 py-2">Direct Messages</h2>
+      <h2 className="text-lg font-medium px-4 py-2 tracking-wide">Direct Messages</h2>
       <div className="relative border-b border-[#dcd9d3] px-4 pb-4">
         <input
           value={query}
           ref={inputRef}
+          placeholder={`Search for friends...`}
           onChange={(e) => setQuery(e.target.value)}
           className="relative py-2 px-2 border border-[#dcd9d3] text-[#222831] rounded-lg w-full focus:outline-none"
         />

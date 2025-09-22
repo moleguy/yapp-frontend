@@ -101,7 +101,7 @@ export default function ChatArea({ serverName, channelName }: ChatAreaProps) {
 
       {/* Input */}
       <div className="relative flex items-center p-4">
-        <button className="absolute left-6 text-gray-500 hover:text-black">
+        <button className="absolute left-6 text-gray-500 hover:text-black cursor-pointer">
           <FaPlus
             onClick={() => setShowPopup(!showPopup)}
             className="p-2 w-10 h-10 hover:bg-[#d3d3d7] rounded-lg"
@@ -113,7 +113,7 @@ export default function ChatArea({ serverName, channelName }: ChatAreaProps) {
             className={`absolute bottom-14 left-0 bg-[#ffffff] border border-gray-300 rounded-lg shadow-lg w-50 p-2`}
           >
             <button
-              className="flex items-center gap-1 text-[#2f3035] w-full text-left px-2 py-2 hover:bg-[#f2f2f3] rounded-lg font-base tracking-wide"
+              className="flex items-center gap-1 text-[#2f3035] w-full text-left px-2 py-2 hover:bg-[#f2f2f3] rounded-lg font-base tracking-wide cursor-pointer"
               onClick={() => {
                 setShowPopup(false);
                 console.log("Upload File clicked");
@@ -125,7 +125,7 @@ export default function ChatArea({ serverName, channelName }: ChatAreaProps) {
               Upload File
             </button>
             <button
-              className="w-full text-left px-2 py-2 hover:bg-[#f2f2f3] flex items-center gap-1 text-[#2f3035] font-base tracking-wide rounded-lg"
+              className="w-full text-left px-2 py-2 hover:bg-[#f2f2f3] flex items-center gap-1 text-[#2f3035] font-base tracking-wide rounded-lg cursor-pointer"
               onClick={() => {
                 setShowPopup(false);
                 setShowPollPopup(true);
@@ -152,7 +152,7 @@ export default function ChatArea({ serverName, channelName }: ChatAreaProps) {
         {/* send button */}
         <button
           onClick={sendMessage}
-          className="absolute right-8 text-gray-500 hover:text-black"
+          className="absolute right-8 text-gray-500 hover:text-black cursor-pointer"
         >
           <FiSend size={22} />
         </button>

@@ -1,6 +1,7 @@
 // components/SettingsPopup.tsx
 'use client';
 
+import React from 'react';
 // import { FiSettings } from 'react-icons/fi';
 // import { IoIosSettings } from "react-icons/io";
 import { IoMdSettings } from "react-icons/io";
@@ -15,29 +16,14 @@ type Props = {
 };
 
 const SettingsPopup: React.FC<Props> = ({isOpen, onClose, onOpen}) => {
-  // const [isOpen, setIsOpen] = useState(false);
-
-  // const toggleModal = () => setIsOpen((prev) => !prev);
 
   return (
     <>
-      <style>
-        {`
-          @keyframes rotate {
-            0%, 100% {transform: rotate(0deg); }
-            25% {transform: rotate(-25deg); }
-            75% {transform: rotate(25deg); }
-          }
-          .rotate-hover:hover {
-            animation: rotate 0.4s ease-in-out;
-          }
-        `}
-      </style>
       <button
         onClick={onOpen}
-        className=" text-white "
+        className=" text-white hover:text-black cursor-pointer"
       >
-        <IoMdSettings size={28} className="flex justify-center items-center text-2xl text-gray-500 cursor-pointer hover:text-[#1e1e1e] rotate-hover" />
+        <IoMdSettings size={24} className="flex justify-center items-center text-2xl text-gray-500 cursor-pointer" />
       </button>
 
       <SettingsModal isOpen={isOpen} onClose={onClose} />

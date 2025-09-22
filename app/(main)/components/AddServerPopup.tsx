@@ -110,11 +110,11 @@ export default function AddServerPopup({
       {step === "choice" && (
         <div
           ref={serverRef}
-          className="relative flex flex-col bg-white rounded-xl p-6 w-[400px] h-[270px] text-center"
+          className="relative flex flex-col bg-white rounded-xl p-6 w-[420px] text-center"
         >
-          <h2 className="flex text-xl text-[#323339] tracking-wide mb-4">
+          <label className="text-start text-xl text-[#323339] tracking-wide mb-4">
             Create your server
-          </h2>
+          </label>
           <button
             onClick={onClose}
             className="absolute top-3 right-2 text-gray-500 hover:text-black text-3xl cursor-pointer"
@@ -126,7 +126,7 @@ export default function AddServerPopup({
             <div className="flex flex-col w-full">
               <button
                 onClick={() => setStep("create")}
-                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center cursor-pointer"
+                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center cursor-pointer tracking-wide"
               >
                 Create My Own
                 <FaChevronRight className="w-4 h-4" />
@@ -140,12 +140,12 @@ export default function AddServerPopup({
               <div className="flex-grow h-px bg-gray-600 opacity-35" />
             </div>
             <div className="flex flex-col w-full">
-              <p className="text-start text-[#323339] text-xl tracking-wide">
+              <label className="text-start text-[#323339] text-xl tracking-wide mb-4">
                 Already have an invite?
-              </p>
+              </label>
               <button
                 onClick={() => setStep("join")}
-                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center mt-2 cursor-pointer"
+                className="py-3 px-4 rounded-lg border bg-[#f2f2f3] border-[#dcd9d3] flex justify-between items-center cursor-pointer tracking-wide"
               >
                 Join a server
                 <FaChevronRight className="w-4 h-4" />
@@ -163,14 +163,14 @@ export default function AddServerPopup({
         >
           <div className={`h-full flex flex-col justify-between`}>
             <div>
-              <h2 className="text-xl font-medium tracking-wide mb-2">
+              <h2 className="text-xl font-medium tracking-wide">
                 Modify Your Server
               </h2>
               <p className="text-[#73726e] mb-4">
                 Configure your new server with a name and an icon.
               </p>
 
-              <div className="relative mt-2 mb-3">
+              <div className="relative mt-2 mb-5">
                 {serverImage ? (
                   <img
                     src={serverImage}
@@ -197,7 +197,7 @@ export default function AddServerPopup({
                   </p>
                 )}
               </div>
-              <p className={`text-left font-light tracking-wide`}>
+              <p className={`text-left text-[#1e1e1e] font-light tracking-wide`}>
                 Server Name
               </p>
               <input
@@ -209,14 +209,14 @@ export default function AddServerPopup({
                 onChange={(e) => setServerName(e.target.value)}
                 className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb]"
               />
-              <p className={`font-thin text-sm text-left mt-2 text-[#73726e]`}>
+              <p className={`font-thin text-sm text-left mt-2 text-[#73726e] tracking-wide`}>
                 Craft a unique name for your server
               </p>
             </div>
             <div className="flex gap-2 justify-between">
               <button
                 onClick={() => setStep("choice")}
-                className="py-2 px-4 rounded-lg text-gray-600 cursor-pointer"
+                className="py-2 px-4 rounded-lg text-[#7e7f83] cursor-pointer hover:underline"
               >
                 Back
               </button>
@@ -240,21 +240,25 @@ export default function AddServerPopup({
       {step === "join" && (
         <div
           ref={serverRef}
-          className="relative flex flex-col bg-white rounded-xl p-6 w-[380px] h-[220px] text-center"
+          className="relative flex flex-col bg-white rounded-xl p-6 w-[380px] text-center"
         >
-          <h2 className="text-lg font-semibold mb-4">Join Server</h2>
-          <input
-            ref={joinInputRef}
-            type="text"
-            placeholder="Invite Link"
-            value={inviteLink}
-            onChange={(e) => setInviteLink(e.target.value)}
-            className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none"
-          />
-          <div className="flex gap-2 justify-center">
+          <label className="text-2xl font-medium tracking-wide">Join a server</label>
+          <label className={`text-sm text-[#525358] mb-4`}>Enter a link below to join an existing server</label>
+          <div className={`flex flex-col justify-center items-start gap-2 mb-5`}>
+            <label className={`text-[#525358]`}>Invite link</label>
+            <input
+                ref={joinInputRef}
+                type="text"
+                placeholder="Invite Link"
+                value={inviteLink}
+                onChange={(e) => setInviteLink(e.target.value)}
+                className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none"
+            />
+          </div>
+          <div className="flex gap-2 justify-between">
             <button
               onClick={() => setStep("choice")}
-              className="py-2 px-4 rounded-lg bg-gray-300 text-gray-600"
+              className="py-2 px-4 rounded-lg text-[#7e7f83] cursor-pointer hover:underline"
             >
               Back
             </button>
@@ -265,9 +269,9 @@ export default function AddServerPopup({
                   onClose();
                 }
               }}
-              className="py-2 px-4 rounded-lg bg-[#b6b09f] hover:bg-[#a19a87] text-white"
+              className="py-2 px-5 rounded-lg bg-[#6164f2] hover:bg-[#4c52bd] text-white cursor-pointer"
             >
-              Join
+              Join Server
             </button>
           </div>
         </div>

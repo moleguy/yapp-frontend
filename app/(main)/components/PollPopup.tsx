@@ -12,6 +12,22 @@ export default function PollPopup({onClose, onCreate}: PollPopupProps){
 
     const [question, setQuestion] = useState("");
     const [options, setOptions] = useState<string[]>(["", ""]);
+    const pollPopupRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if(
+                pollPopupRef.current &&
+                !pollPopupRef.current?.contains(e.target as Node)
+            ){
+                onClose();
+            }
+        }
+
+        window.addEventListener("mousedown", handleClickOutside);
+
+        return () => window.removeEventListener("mousedown", handleClickOutside);
+    }, [onClose]);
 
     const handleOptionChange = (index: number, value: string) =>{
         const newOptions = [...options];
@@ -41,7 +57,9 @@ export default function PollPopup({onClose, onCreate}: PollPopupProps){
 
     return(
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
-            <div className="w-116 bg-white rounded-lg p-6">
+            <div
+                ref={pollPopupRef}
+                className="w-116 bg-white rounded-xl p-6">
                 <h2 className="text-xl font-medium mb-3 text-[#1e1e1e] tracking-wide">Create a Poll</h2>
 
                 {/* Question input */}
