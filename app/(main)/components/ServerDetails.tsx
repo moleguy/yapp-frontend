@@ -79,6 +79,15 @@ export default function ServerDetails({
       // default categories are expanded which can be changed when set to [] if preferred collapsed
       return { ...prev, [activeServer.id]: initialCategories.map((c) => c.id) };
     });
+
+    const generalChannel = initialCategories
+        .flatMap((c) => c.channels)
+        .find((ch) => ch.name === "general"  && ch.type === "text");
+
+    if(generalChannel){
+      setSelectedChannelId(generalChannel.id);
+      onSelectChannel?.({id: generalChannel.id, name: generalChannel.name})
+    }
   }, [activeServer]);
 
   useEffect(() => {

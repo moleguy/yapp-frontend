@@ -23,7 +23,7 @@ type Server = {
 type Friend = {
   id: number;
   name: string;
-  status?: string;
+  status?: "online" | "offline";
   mutualFriends?: number;
   username?: string;
   memberSince?: string;
@@ -53,12 +53,20 @@ export default function HomePage() {
   const [friends, setFriends] = useState<Friend[]>([
     {
       id: 1,
-      name: "Alice",
-      username: "alice123",
+      name: "Nischal",
+      username: "jasontheween123",
       status: "online",
       mutualFriends: 2,
       memberSince: "2 Jan 2014",
       mutualServers: 3,
+    },{
+      id: 2,
+      name: "Manish",
+      username: "manish123",
+      status: "offline",
+      mutualFriends: 4,
+      memberSince: "2 Jan 2018",
+      mutualServers: 8,
     },
   ]);
 
@@ -66,6 +74,9 @@ export default function HomePage() {
     setActiveServer(server);
     setActiveView("server");
     setLastActiveServer(server);
+
+    // auto selecting the general channel when creating a server
+    setSelectedChannel({id: "1", name: "general"});
   };
 
   // handling leaving a server and showing a server next to it or the server before it
@@ -160,7 +171,7 @@ export default function HomePage() {
                     width={48}
                     height={48}
                     onError={() => {
-                      console.error("Avatar image failed to load:", avatarUrl);
+                      console.error("Avatar image failed to load:", avatarUrl); // REMOVE IN PROD
                     }}
                   />
                 ) : (
@@ -209,28 +220,41 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* main section to be edited */}
           <div className="relative flex flex-2 flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3]">
-            <div>
-              Username: {user?.username}
-              <br />
-              Display name: {user?.display_name}
-              <br />
-              Email: {user?.email}
-              <br />
-              Avatar URL: {user?.avatar_url ? user?.avatar_url : "Not Set"}
-              <br />
-              Active : {user?.active ? "True" : "False"}
-            </div>
-            {activeServer && selectedChannel ? (
-              <ChatArea
-                serverName={activeServer.name}
-                channelName={selectedChannel.name}
-              />
+            {/* User's information*/}
+            {/*<div>*/}
+            {/*  Username: {user?.username}*/}
+            {/*  <br />*/}
+            {/*  Display name: {user?.display_name}*/}
+            {/*  <br />*/}
+            {/*  Email: {user?.email}*/}
+            {/*  <br />*/}
+            {/*  Avatar URL: {user?.avatar_url ? user?.avatar_url : "Not Set"}*/}
+            {/*  <br />*/}
+            {/*  Active : {user?.active ? "True" : "False"}*/}
+            {/*</div>*/}
+
+            {activeView === "server" && activeServer && selectedChannel ? (
+                <ChatArea
+                    serverName={activeServer.name}
+                    channelName={selectedChannel.name}
+                    channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`} // Unique ID for each channel
+                    isDm={false}
+                />
+            ) : activeView === "dm" && selectedFriend ? (
+                <ChatArea
+                    friendDisplayName={selectedFriend.display_name || selectedFriend.name}
+                    friendUsername={selectedFriend.username || ""}
+                    friendId={selectedFriend.id.toString()}
+                    friendAvatar={selectedFriend.avatarUrl}
+                    isDm={true}
+                />
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                Select a channel to start chatting
-              </div>
+                <div className="flex-1 flex items-center justify-center text-gray-500">
+                  {activeView === "dm"
+                      ? "Select a friend to start chatting"
+                      : "Select a channel to start chatting"}
+                </div>
             )}
           </div>
 

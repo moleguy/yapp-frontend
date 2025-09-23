@@ -4,159 +4,353 @@ import React, { useState, useEffect, useRef } from "react";
 import PollPopup from "@/app/(main)/components/PollPopup";
 import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
-import { FaPlus } from "react-icons/fa6";
+import { FaPlus, FaUserPlus, FaHashtag } from "react-icons/fa6";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { useAuth } from "@/app/contexts/AuthContext";
+import Image from "next/image";
 
 type Message = {
-  sender: string;
-  text: string;
-};
-
-type Server = {
-  id: number;
-  name: string;
-  image?: string;
+    id: string;
+    sender: string;
+    senderAvatar?: string;
+    text: string;
+    timestamp: Date;
+    isSystem?: boolean;
+    isWelcome?: boolean;
 };
 
 type ChatAreaProps = {
-  serverName: string;
-  channelName: string;
+    serverName?: string;
+    channelName?: string;
+    channelId?: string;
+    friendDisplayName?: string;
+    friendUsername?: string;
+    friendId?: string;
+    friendAvatar?: string;
+    isDm: boolean;
 };
 
-export default function ChatArea({ serverName, channelName }: ChatAreaProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [showPollPopup, setShowPollPopup] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [activeServer, setActiveServer] = useState<Server | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const uploadRef = useRef<HTMLDivElement | null>(null);
+export default function ChatArea({
+                                     serverName,
+                                     channelName,
+                                     channelId,
+                                     friendDisplayName,
+                                     friendUsername,
+                                     friendId,
+                                     friendAvatar,
+                                     isDm = false,
+                                 }: ChatAreaProps) {
+    const { user } = useAuth();
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const uploadRef = useRef<HTMLDivElement | null>(null);
 
-  const { user } = useAuth();
+    const [messageInput, setMessageInput] = useState("");
+    const [showPopup, setShowPopup] = useState(false);
+    const [showPollPopup, setShowPollPopup] = useState(false);
+    const [showInvitePopup, setShowInvitePopup] = useState(false);
 
-  // scroll to bottom when new messages
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
+    // Separate state for actual messages (user messages)
+    const [messages, setMessages] = useState<Message[]>([]);
 
-  const sendMessage = () => {
-    if (!messageInput.trim()) return;
-    setMessages([
-      ...messages,
-      { sender: user?.username || "Unknown", text: messageInput.trim() },
-    ]);
-    setMessageInput("");
-    setShowWelcome(false);
-  };
+    // Separate welcome message that can be easily modified
+    const [welcomeMessage, setWelcomeMessage] = useState<Message | null>(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  // handling poll logic after creation
-  const handleCreatePoll = (question: string, options: string[]) => {
-    console.log("Poll created:", { question, options });
-  };
-
-  useEffect(() => {
-    if (!showPopup) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (uploadRef.current && uploadRef.current.contains(e.target as Node)) {
-        return;
-      }
-      setShowPopup(false);
+    // Generate welcome message based on context
+    const generateWelcomeMessage = (): Message | null => {
+        if (isDm && friendDisplayName) {
+            return {
+                id: "welcome-dm",
+                sender: "System",
+                text: `This is the beginning of your direct message history with **${friendDisplayName}**.`,
+                timestamp: new Date(),
+                isSystem: true,
+                isWelcome: true,
+            };
+        } else if (channelName && serverName) {
+            return {
+                id: "welcome-channel",
+                sender: "System",
+                text: `Welcome to **${serverName}**. This is the beginning of the **#${channelName}** channel.`,
+                timestamp: new Date(),
+                isSystem: true,
+                isWelcome: true,
+            };
+        }
+        return null;
     };
-    window.addEventListener("mousedown", handleClickOutside);
 
-    return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, [showPopup]);
+    // Initialize or update welcome message when context changes
+    useEffect(() => {
+        const newWelcomeMessage = generateWelcomeMessage();
+        setWelcomeMessage(newWelcomeMessage);
+        setMessages([]); // Clear user messages when context changes
+        setMessageInput("");
+    }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName]);
 
-  return (
-    <div className="flex flex-col  h-full">
-      {/* Messages area */}
-      <div className="flex flex-1 flex-col-reverse overflow-y-auto p-2">
-        {/*{showWelcome && (*/}
-        {/*    <div className="text-center text-gray-600 my-8">*/}
-        {/*        <h2 className="text-2xl font-semibold">*/}
-        {/*            Welcome to "{serverName}"*/}
-        {/*        </h2>*/}
-        {/*        <p className="text-gray-500">This is the beginning of #{channelName}</p>*/}
-        {/*    </div>*/}
-        {/*)}*/}
-        {/*{messages.map((msg, idx) => (*/}
-        {/*    <div key={idx} className="mb-2">*/}
-        {/*        <span className="font-medium text-[#1e1e1e]">{msg.sender}:</span> {msg.text}*/}
-        {/*    </div>*/}
-        {/*))}*/}
-        {/*<div ref={messagesEndRef}></div>*/}
-      </div>
+    // Combine welcome message with user messages for rendering
+    const allMessages = welcomeMessage ? [welcomeMessage, ...messages] : messages;
 
-      {/* Input */}
-      <div className="relative flex items-center p-4">
-        <button className="absolute left-6 text-gray-500 hover:text-black cursor-pointer">
-          <FaPlus
-            onClick={() => setShowPopup(!showPopup)}
-            className="p-2 w-10 h-10 hover:bg-[#d3d3d7] rounded-lg"
-          />
-        </button>
-        {showPopup && (
-          <div
-            ref={uploadRef}
-            className={`absolute bottom-14 left-0 bg-[#ffffff] border border-gray-300 rounded-lg shadow-lg w-50 p-2`}
-          >
-            <button
-              className="flex items-center gap-1 text-[#2f3035] w-full text-left px-2 py-2 hover:bg-[#f2f2f3] rounded-lg font-base tracking-wide cursor-pointer"
-              onClick={() => {
-                setShowPopup(false);
-                console.log("Upload File clicked");
-              }}
-            >
-              <MdOutlineDriveFolderUpload
-                className={`w-8 h-8 text-[#2f3035]`}
-              />{" "}
-              Upload File
-            </button>
-            <button
-              className="w-full text-left px-2 py-2 hover:bg-[#f2f2f3] flex items-center gap-1 text-[#2f3035] font-base tracking-wide rounded-lg cursor-pointer"
-              onClick={() => {
-                setShowPopup(false);
-                setShowPollPopup(true);
-              }}
-            >
-              <BiPoll className={`w-8 h-8 text-[#2f3035]`} /> Create Poll
-            </button>
-          </div>
-        )}
-        {showPollPopup && (
-          <PollPopup
-            onClose={() => setShowPollPopup(false)}
-            onCreate={handleCreatePoll}
-          />
-        )}
-        {/* input */}
-        <input
-          value={messageInput}
-          onChange={(e) => setMessageInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={`Message ${activeServer?.name || ""}`}
-          className="w-full pl-14 pr-12 py-4 rounded-xl border border-[#dcd9d3] focus:outline-none"
-        />
-        {/* send button */}
-        <button
-          onClick={sendMessage}
-          className="absolute right-8 text-gray-500 hover:text-black cursor-pointer"
-        >
-          <FiSend size={22} />
-        </button>
-      </div>
-    </div>
-  );
+    // Scroll to bottom when messages change
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [allMessages]);
+
+    const sendMessage = () => {
+        if (!messageInput.trim()) return;
+
+        const newMessage: Message = {
+            id: Date.now().toString(),
+            sender: user?.username || "Unknown",
+            text: messageInput.trim(),
+            timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, newMessage]);
+        setMessageInput("");
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
+    const handleCreatePoll = (question: string, options: string[]) => {
+        console.log("Poll created:", { question, options });
+    };
+
+    const handleCreateInvite = (expiry: string, maxUses: number) => {
+        console.log("Invite created:", { expiry, maxUses });
+        const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        return `https://discord.gg/${inviteCode}`;
+    };
+
+    // Close popup when clicking outside
+    useEffect(() => {
+        if (!showPopup) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (uploadRef.current && uploadRef.current.contains(e.target as Node)) {
+                return;
+            }
+            setShowPopup(false);
+        };
+        window.addEventListener("mousedown", handleClickOutside);
+
+        return () => window.removeEventListener("mousedown", handleClickOutside);
+    }, [showPopup]);
+
+    // Format date like Discord (Today at HH:MM)
+    const formatDate = (date: Date) => {
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+
+        if (isToday) {
+            return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        return date.toLocaleDateString([], {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        }) + ` at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    };
+
+    // Function to update welcome message (example of how you can modify it)
+    const updateWelcomeMessage = (newText: string) => {
+        if (welcomeMessage) {
+            setWelcomeMessage({
+                ...welcomeMessage,
+                text: newText,
+                timestamp: new Date(),
+            });
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-[#f8f9fa]">
+            {/* Messages area - Fixed overflow */}
+            <div className="flex-1 flex flex-col-reverse overflow-y-auto min-h-0">
+                <div className="p-4">
+                    <div className="space-y-4">
+                        {allMessages.map((msg) => (
+                            <div key={msg.id} className={`flex gap-3 ${msg.isSystem ? 'justify-center' : ''}`}>
+                                {!msg.isSystem && (
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                                        {user?.avatar_url ? (
+                                            <Image
+                                                src={user.avatar_url}
+                                                alt={msg.sender}
+                                                width={40}
+                                                height={40}
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <span className="font-medium text-gray-600">
+                                                {msg.sender.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className={`flex-1 min-w-0 ${msg.isSystem ? 'text-center max-w-4xl mx-auto' : 'max-w-full'}`}>
+                                    {!msg.isSystem && (
+                                        <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                                            <span className="font-semibold text-[#1e1f22] break-words">{msg.sender}</span>
+                                            <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(msg.timestamp)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className={`${msg.isSystem ? 'w-full' : 'text-[#2e2f32]'}`}>
+                                        {msg.isSystem ? (
+                                            <div className="break-words w-full">
+                                                {/* server welcome section */}
+                                                {!isDm && serverName && channelName && (
+                                                    <div className="w-full">
+                                                        {/*!!! To be edited !!!*/}
+                                                        {/*<div className="w-16 h-16 mx-auto rounded-full bg-[#5865f2] mb-4 flex items-center justify-center text-white text-2xl font-bold">*/}
+                                                        {/*    <FaHashtag className="w-8 h-8"/>*/}
+                                                        {/*</div>*/}
+                                                        {/*<div className="text-2xl font-bold text-[#1e1f22] mb-2 break-words px-4">*/}
+                                                        {/*    Welcome to #{channelName}!*/}
+                                                        {/*</div>*/}
+                                                        {/*<div className="text-sm text-gray-600 mb-6 break-words px-4">*/}
+                                                        {/*    This is the start of the <strong>#{channelName}</strong> channel in <strong>{serverName}</strong>.*/}
+                                                        {/*</div>*/}
+
+                                                        {/*/!* invite friend card - only for servers *!/*/}
+                                                        {/*<div className="bg-[#f8f9fa] rounded-lg p-4 border border-gray-200 max-w-md mx-auto">*/}
+                                                        {/*    <div className="flex items-center gap-3 mb-3">*/}
+                                                        {/*        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white">*/}
+                                                        {/*            <FaUserPlus className="w-5 h-5" />*/}
+                                                        {/*        </div>*/}
+                                                        {/*        <div className="min-w-0 flex-1">*/}
+                                                        {/*            <div className="font-semibold text-[#1e1f22] break-words">Invite your friends</div>*/}
+                                                        {/*            <div className="text-xs text-gray-600 break-words">Bring your friends into the conversation</div>*/}
+                                                        {/*        </div>*/}
+                                                        {/*    </div>*/}
+                                                        {/*    <button*/}
+                                                        {/*        onClick={() => setShowInvitePopup(true)}*/}
+                                                        {/*        className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white py-2 px-4 rounded text-sm font-medium transition-colors"*/}
+                                                        {/*    >*/}
+                                                        {/*        Create Invite*/}
+                                                        {/*    </button>*/}
+                                                        {/*</div>*/}
+                                                    </div>
+                                                )}
+
+                                                {/* DM welcome section */}
+                                                {isDm && friendDisplayName && (
+                                                    <div className="w-full text-start">
+                                                        <div className="w-16 h-16 rounded-full bg-[#3A6F43] mb-4 flex items-center justify-center text-white text-3xl font-bold">
+                                                            {friendDisplayName?.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div className="text-3xl font-semibold text-[#1e1f22] mb-2 tracking-wide break-words">
+                                                            {friendDisplayName}
+                                                        </div>
+                                                        <div className={`text-lg font-medium text-[#1e1f22] mb-2`}>
+                                                            @{friendUsername}
+                                                        </div>
+                                                        <div className="text-lg text-gray-600 tracking-wide break-words">
+                                                            {msg.text.replace(/\*\*(.*?)\*\*/g, '$1')}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Input area */}
+            <div className="p-4 bg-white border-t border-gray-200">
+                <div className="relative">
+                    <button className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer">
+                        <FaPlus
+                            onClick={() => setShowPopup(!showPopup)}
+                            className="w-5 h-5 hover:bg-gray-100 rounded p-1"
+                        />
+                    </button>
+
+                    {/* File / Poll popup */}
+                    {showPopup && (
+                        <div
+                            ref={uploadRef}
+                            className="absolute bottom-12 left-0 bg-white border border-gray-300 rounded-lg shadow-lg w-48 p-2 z-10"
+                        >
+                            <button
+                                className="flex items-center gap-2 text-gray-700 w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md text-sm font-medium cursor-pointer"
+                                onClick={() => {
+                                    setShowPopup(false);
+                                    console.log("Upload File clicked");
+                                }}
+                            >
+                                <MdOutlineDriveFolderUpload className="w-4 h-4" />
+                                Upload File
+                            </button>
+                            <button
+                                className="flex items-center gap-2 text-gray-700 w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md text-sm font-medium cursor-pointer"
+                                onClick={() => {
+                                    setShowPopup(false);
+                                    setShowPollPopup(true);
+                                }}
+                            >
+                                <BiPoll className="w-4 h-4" />
+                                Create Poll
+                            </button>
+                        </div>
+                    )}
+
+                    {showPollPopup && (
+                        <PollPopup
+                            onClose={() => setShowPollPopup(false)}
+                            onCreate={handleCreatePoll}
+                        />
+                    )}
+
+                    {/*{showInvitePopup && (*/}
+                    {/*    <InvitePopup*/}
+                    {/*        onClose={() => setShowInvitePopup(false)}*/}
+                    {/*        onCreate={handleCreateInvite}*/}
+                    {/*        serverName={serverName || ""}*/}
+                    {/*    />*/}
+                    {/*)}*/}
+
+                    {/* Input */}
+                    <input
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={
+                            isDm
+                                ? `Message @${friendDisplayName}`
+                                : channelName
+                                    ? `Message #${channelName}`
+                                    : "Message"
+                        }
+                        className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300 focus:outline-none bg-gray-50 text-[15px]"
+                    />
+
+                    {/* Send button */}
+                    <button
+                        onClick={sendMessage}
+                        disabled={!messageInput.trim()}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FiSend size={18} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }
