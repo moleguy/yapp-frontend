@@ -179,30 +179,33 @@ export default function HomePage() {
               {/* Right: mic + settings */}
               <div className="flex items-center gap-2">
                 <div
-                    className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${
-                      showMicrophone
-                          ? "hover:bg-[#dfdfe1] hover:text-[#1e1e1e]"
-                          : "bg-[#ebc8ca] text-[#cb3b40]"
-                      }
+                  className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${
+                    showMicrophone
+                      ? "hover:bg-[#dfdfe1] hover:text-[#1e1e1e]"
+                      : "bg-[#ebc8ca] text-[#cb3b40]"
+                  }
                     `}
-                    onClick={() => setShowMicrophone(!showMicrophone)}
+                  onClick={() => setShowMicrophone(!showMicrophone)}
                 >
                   {showMicrophone ? (
-                      <button className="cursor-pointer hover:text-[#1e1e1e]">
-                        <BiSolidMicrophone size={24} className="text-gray-500" />
-                      </button>
+                    <button className="cursor-pointer hover:text-[#1e1e1e]">
+                      <BiSolidMicrophone size={24} className="text-gray-500" />
+                    </button>
                   ) : (
-                      <button>
-                        <BiSolidMicrophoneOff size={24} className="cursor-pointer" />
-                      </button>
+                    <button>
+                      <BiSolidMicrophoneOff
+                        size={24}
+                        className="cursor-pointer"
+                      />
+                    </button>
                   )}
                 </div>
 
                 <div className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer">
                   <SettingsPopup
-                      isOpen={settingsOpen}
-                      onClose={() => setSettingsOpen(false)}
-                      onOpen={() => setSettingsOpen(true)}
+                    isOpen={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    onOpen={() => setSettingsOpen(true)}
                   />
                 </div>
               </div>

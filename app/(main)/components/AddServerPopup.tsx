@@ -3,12 +3,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { IoIosClose } from "react-icons/io";
 import { FaChevronRight } from "react-icons/fa";
-import Image from "next/image";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, image?: string) => void;
+  onCreate: (name: string, imageString?: string) => void;
   onJoin: (link: string) => void;
 };
 
@@ -29,39 +28,12 @@ export default function AddServerPopup({
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB
-      setErrorMessage("File size too big! Please select an image under 5MB.");
-      setTimeout(() => setErrorMessage(null), 3000);
-      return;
-    }
-    try {
-      if (avatar_url) {
-        try {
-          await edgestore.publicImages.delete({ url: user.avatar_url });
-          console.log("Old avatar deleted:", user.avatar_url); // REMOVE IN PRODUCTION
-        } catch (err) {
-          console.warn("Failed to delete old avatar (ignored):", err);
-        }
-      }
-
-      const res = await edgestore.publicImages.upload({
-        file,
-        onProgressChange: (progress: number) =>
-          console.log("Upload progress:", progress),
-      });
-
-      // Update Zustand store
-      updateUser({ avatar_url: res.url });
-
-      // Update backend
-      if (user) {
-        const updatedUser: UpdateUserProfileReq = {
-          display_name: user.display_name,
-          avatar_url: res.url,
-        };
-        await updateUserMe(updatedUser);
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB
+        setErrorMessage("File size too big! Please select an image under 5MB.");
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
       }
       const reader = new FileReader();
       reader.onloadend = () => setServerImage(reader.result as string);
@@ -224,7 +196,9 @@ export default function AddServerPopup({
                   </p>
                 )}
               </div>
-              <p className={`text-left text-[#1e1e1e] font-light tracking-wide`}>
+              <p
+                className={`text-left text-[#1e1e1e] font-light tracking-wide`}
+              >
                 Server Name
               </p>
               <input
@@ -236,7 +210,9 @@ export default function AddServerPopup({
                 onChange={(e) => setServerName(e.target.value)}
                 className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb]"
               />
-              <p className={`font-thin text-sm text-left mt-2 text-[#73726e] tracking-wide`}>
+              <p
+                className={`font-thin text-sm text-left mt-2 text-[#73726e] tracking-wide`}
+              >
                 Craft a unique name for your server
               </p>
             </div>
@@ -269,17 +245,23 @@ export default function AddServerPopup({
           ref={serverRef}
           className="relative flex flex-col bg-white rounded-xl p-6 w-[380px] text-center"
         >
-          <label className="text-2xl font-medium tracking-wide">Join a server</label>
-          <label className={`text-sm text-[#525358] mb-4`}>Enter a link below to join an existing server</label>
-          <div className={`flex flex-col justify-center items-start gap-2 mb-5`}>
+          <label className="text-2xl font-medium tracking-wide">
+            Join a server
+          </label>
+          <label className={`text-sm text-[#525358] mb-4`}>
+            Enter a link below to join an existing server
+          </label>
+          <div
+            className={`flex flex-col justify-center items-start gap-2 mb-5`}
+          >
             <label className={`text-[#525358]`}>Invite link</label>
             <input
-                ref={joinInputRef}
-                type="text"
-                placeholder="Invite Link"
-                value={inviteLink}
-                onChange={(e) => setInviteLink(e.target.value)}
-                className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none"
+              ref={joinInputRef}
+              type="text"
+              placeholder="Invite Link"
+              value={inviteLink}
+              onChange={(e) => setInviteLink(e.target.value)}
+              className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none"
             />
           </div>
           <div className="flex gap-2 justify-between">

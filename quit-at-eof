@@ -1,0 +1,410 @@
+[33mcommit 2bdc8e81713578d2b80bb8c02917fb148444e4ab[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/hall-creation-api-call[m[33m, [m[1;31morigin/feat/hall-creation-api-call[m[33m, [m[1;32mmain[m[33m)[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Wed Sep 24 00:55:28 2025 +0545
+
+    feat/hall-creation-api-call
+
+[33mcommit 2e8979a7a729188b7b0da6e050d4fa60bf655807[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Merge: 3e12e6c 40f38ce
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Mon Sep 22 21:10:54 2025 +0545
+
+    Merge pull request #15 from moleguy/feat/details
+    
+    some minor changes
+
+[33mcommit 40f38ced627ec11a0e2ec19211deb7bbec44f51d[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Mon Sep 22 21:06:42 2025 +0545
+
+    some minor changes
+
+[33mcommit 3e12e6cd565d796381d0c4480eca6d5a81036204[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Mon Sep 22 02:44:25 2025 +0545
+
+    Minor changes
+
+[33mcommit 157db19d99847d29d91dc9846baa7c18dff6fb83[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Mon Sep 22 02:18:09 2025 +0545
+
+    Fix crashes on image upload
+
+[33mcommit aac99fd98a75f533d50546f08e8bc455dca50d2a[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Mon Sep 22 02:01:10 2025 +0545
+
+    Minor UI changes
+
+[33mcommit 9632b3991a5bf2bd444905fda369de5e8275a07e[m
+Merge: 80d6f86 6d1c7b0
+Author: Nischal <142683507+Nischall01@users.noreply.github.com>
+Date:   Sun Sep 21 22:09:36 2025 +0545
+
+    Merge pull request #14 from moleguy/feat/edgestore-integration
+    
+    Add edgestore integration for image and file uploads
+
+[33mcommit 6d1c7b052fc538adff954f154ddfb96aa9291110[m
+Merge: edcee3c 80d6f86
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Sun Sep 21 22:09:03 2025 +0545
+
+    Merge remote-tracking branch 'origin/main' into feat/edgestore-integration
+    
+    # Conflicts:
+    #       app/(main)/components/ProfileSettings.tsx
+    #       app/(main)/home/page.tsx
+    #       package.json
+    #       pnpm-lock.yaml
+
+[33mcommit edcee3c2f517b0b154c55f5781c70bda4138f11f[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Sun Sep 21 21:58:00 2025 +0545
+
+    Add edgestore integration for image and file uploads
+
+[33mcommit 80d6f8681c66a80f5aaef233a49f2d3ab70857e7[m
+Merge: 4dc87f1 2f8ad88
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Sun Sep 21 21:41:00 2025 +0545
+
+    Merge pull request #13 from moleguy/feat/pollpopup
+    
+    created a poll feature
+
+[33mcommit 2f8ad88097da4ae809ee953a46de6bac2f99bf67[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 21 21:39:38 2025 +0545
+
+    created a poll feature
+
+[33mcommit 4dc87f12cba37a29664d6af2d8c966dca9037987[m
+Merge: 1d82403 a1c6dbd
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Sat Sep 20 12:37:17 2025 +0545
+
+    Merge pull request #12 from moleguy/feat/tabmode
+    
+    tab mode changed
+
+[33mcommit a1c6dbd3ff6db72b6e3598f5a511b7c271566a72[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sat Sep 20 12:36:07 2025 +0545
+
+    tab mode changed
+
+[33mcommit 1d82403032382964fd8096d2737aae4a74aca28f[m
+Merge: bda6643 f6c3ee1
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Fri Sep 19 20:16:28 2025 +0545
+
+    Merge pull request #11 from moleguy/feat/serverlist
+    
+    category creation
+
+[33mcommit f6c3ee186cce9d094f81e830025d33d6d50d6ec0[m
+Merge: 47b881c bda6643
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Fri Sep 19 20:13:25 2025 +0545
+
+    Merge remote-tracking branch 'origin/main' into feat/serverlist
+    
+    # Conflicts:
+    #       app/(main)/components/ProfileSettings.tsx
+    #       app/(main)/components/ServerList.tsx
+    #       app/(main)/home/page.tsx
+
+[33mcommit 47b881cf5cdad0c71dffcc309efa5594478de24e[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Fri Sep 19 19:57:03 2025 +0545
+
+    category creation
+
+[33mcommit bda6643a8e7e49efadc1210aa58aaccb69a6087e[m
+Merge: 65ddc3d 6f00b52
+Author: Nischal <142683507+Nischall01@users.noreply.github.com>
+Date:   Fri Sep 19 18:56:18 2025 +0545
+
+    Merge pull request #10 from moleguy/feat/zustand-implementation
+    
+    User profile hydration and zustand implementation
+
+[33mcommit 6f00b521e035656c3f6a5759a6543381fa6a6b39[m
+Merge: 7a84530 65ddc3d
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Fri Sep 19 18:55:24 2025 +0545
+
+    Merge remote-tracking branch 'origin/main' into feat/zustand-implementation
+    
+    # Conflicts:
+    #       app/(main)/components/ProfileSettings.tsx
+    #       app/(main)/components/ServerList.tsx
+    #       app/(main)/home/page.tsx
+
+[33mcommit 7a84530c98caea682de4dcd280b1c550dd6e82d8[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Fri Sep 19 18:22:22 2025 +0545
+
+    User profile hydration and zustand implementation
+
+[33mcommit 65ddc3d2d635acd1da77a4a900be1cc3740818a2[m
+Merge: 9d5a5b6 99404da
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Thu Sep 18 21:09:10 2025 +0545
+
+    Merge pull request #9 from moleguy/feat/serverlist
+    
+    layout changes in create channel
+
+[33mcommit 99404daaf4b1989426473c1e7a9b80ffb58f9446[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Thu Sep 18 21:05:46 2025 +0545
+
+    layout changes in create channel
+
+[33mcommit 9d5a5b69aee24c1d426695aec9c6f6fe07114030[m
+Merge: 93e6c2b fbe7616
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Thu Sep 18 10:00:57 2025 +0545
+
+    Merge pull request #8 from moleguy/feat/serverlist
+    
+    tab mode added for server and friends
+
+[33mcommit fbe7616bb85f926854b957113bfd270c9f2938a8[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Thu Sep 18 09:59:03 2025 +0545
+
+    tab mode added for server and friends
+
+[33mcommit 93e6c2b2aa9426528f411404e6154f421cb649e3[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Thu Sep 18 02:48:42 2025 +0545
+
+    Merge Cleanup
+
+[33mcommit aecaec1303b1a461dcfda4312234518ae7ade5e3[m
+Merge: 5b7adde b78fec5
+Author: Nischal <142683507+Nischall01@users.noreply.github.com>
+Date:   Thu Sep 18 02:19:10 2025 +0545
+
+    Merge pull request #7 from moleguy/feat/user-profile-hydration
+    
+    Feat/user profile hydration
+
+[33mcommit b78fec508497e5291f4dd1472abd97ba4fc4ea0c[m
+Merge: 26d9136 5b7adde
+Author: Nischal <142683507+Nischall01@users.noreply.github.com>
+Date:   Thu Sep 18 02:17:19 2025 +0545
+
+    Merge branch 'main' into feat/user-profile-hydration
+
+[33mcommit 26d9136882a17d4a403d1a342811ca6427790059[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Thu Sep 18 02:11:46 2025 +0545
+
+    Remove unused import
+
+[33mcommit aa9f28bf110cf7107fc7a316ea754e33aa6da3da[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Thu Sep 18 02:05:03 2025 +0545
+
+    User profile ui hydration  and auth workflow cleanup
+
+[33mcommit 5b7addec5c18d82e3b713fe18fd53239d7632df4[m
+Merge: 246b3a0 4e93ef2
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Wed Sep 17 21:40:42 2025 +0545
+
+    Merge pull request #5 from moleguy/feat/serverlist
+    
+    tab mode added for server and friends
+
+[33mcommit 246b3a008c81db2936d51f0267d6bf7fb846e085[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Wed Sep 17 21:39:26 2025 +0545
+
+    Remove .idea directory
+
+[33mcommit 4e93ef242bb4117d558191a23c2589ec210edbda[m[33m ([m[1;31morigin/feat/serverlist[m[33m)[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 17 21:37:56 2025 +0545
+
+    tab mode added for server and friends
+
+[33mcommit 6c3f15fda2fcb5846d6a052c4e3fe8c116d3545d[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Wed Sep 17 21:37:44 2025 +0545
+
+    Update gitignore
+
+[33mcommit 8c8727f171f5cda8ff5eedb3b33ba430e3b966d1[m
+Merge: 74f49a5 009225c
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Tue Sep 16 22:42:18 2025 +0545
+
+    Merge pull request #4 from moleguy/feat/serverlist
+    
+    no new changes
+
+[33mcommit 009225cef596bfedca98db26bb8920e965497a67[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Tue Sep 16 22:40:43 2025 +0545
+
+    no new changes
+
+[33mcommit 74f49a5d0c51b2babce23f0cee8887777d276b34[m
+Merge: 02f289e 6f67d46
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Tue Sep 16 17:45:04 2025 +0545
+
+    Merge pull request #3 from moleguy/feat/serverlist
+    
+    Changes in serverlist, Add direct messages component
+
+[33mcommit 6f67d466f0b35195187a18931aa3de3640422705[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Tue Sep 16 17:41:58 2025 +0545
+
+    Changes in serverlist, Add direct messages component
+
+[33mcommit 02f289ee107cac7f1a8e19813439317eddb61fdd[m
+Merge: d529cde ceab898
+Author: Nischal <142683507+Nischall01@users.noreply.github.com>
+Date:   Tue Sep 16 00:43:46 2025 +0545
+
+    Merge pull request #2 from moleguy/feat/user-profile
+    
+    Add user profile integration
+
+[33mcommit ceab8981ba4e084def5475122b144fab828fd1a4[m
+Merge: ac4e7d7 d529cde
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Tue Sep 16 00:42:41 2025 +0545
+
+    Merge branch 'main' of https://github.com/moleguy/yapp-frontend into feat/user-profile
+
+[33mcommit ac4e7d7805f0a7b14e68a2897f0fc2b7675f7f97[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Mon Sep 15 23:44:39 2025 +0545
+
+    Add user profile integration
+
+[33mcommit d529cde851a96132953cb296a41054a3b41824eb[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Mon Sep 15 22:27:19 2025 +0545
+
+    channel feature added
+
+[33mcommit d53f6a8118f6fce4676c803fcbddce6a5fed6351[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 14 22:44:27 2025 +0545
+
+    direct message feature
+
+[33mcommit 65a297b1d103fb550734d9b6a1db5692f35ad4f1[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 14 22:22:31 2025 +0545
+
+    server name bug fixed
+
+[33mcommit 6b995f4fb36f08b84d0c4a0028f5f0b834256f85[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 14 22:18:27 2025 +0545
+
+    channelList not needed
+
+[33mcommit d0b232f87a6305d31def80535ff0a75d34d0d4e6[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 14 22:17:33 2025 +0545
+
+    some basic UI changes
+
+[33mcommit 8a4dde6a08ad153ab8be531c946aa9b0a2431e00[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Fri Sep 12 21:45:27 2025 +0545
+
+    server list slider
+
+[33mcommit d98052100ca41b8d5b88dc9e396e17eea682eb61[m
+Merge: e789b57 3c3d7ce
+Author: Manish Lama <136307971+moleguy@users.noreply.github.com>
+Date:   Fri Sep 12 21:43:03 2025 +0545
+
+    Merge pull request #1 from moleguy/feat/auth-flow
+    
+    feat: add new signup fields and integrate backend auth
+
+[33mcommit e789b579e4d57b07d74bc3e9b8cdc3723e12f6a4[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 10 13:41:17 2025 +0545
+
+    settings modified and some changes in servers
+
+[33mcommit 3c3d7ce7ef37d499bc2dce683bbc18dfb3ef7474[m
+Author: Nischall01 <thapanischal39@gmail.com>
+Date:   Mon Sep 8 13:42:16 2025 +0545
+
+    feat: add new signup fields and integrate backend auth
+
+[33mcommit c0be325297bf8246dacd44e7c1da356ba745dbbc[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 7 09:49:17 2025 +0545
+
+    small left inline border added in settings
+
+[33mcommit 453a0fd1ec17d89a3ee2b761ee42962933a8d9a1[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sun Sep 7 06:25:04 2025 +0545
+
+    personalization and storage feature in settings
+
+[33mcommit b3d21e47b38a30e4041a92ccd9df2105dc989ef9[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Sat Sep 6 10:36:14 2025 +0545
+
+    some settings changes
+
+[33mcommit 0cc258920c206db67c4cbc394af0e2bfd61bcebb[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Fri Sep 5 09:08:41 2025 +0545
+
+    background changed
+
+[33mcommit af833e65fe14333ed4a9ac8108802b2b34a269ce[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Thu Sep 4 21:14:25 2025 +0545
+
+    minor change
+
+[33mcommit a52f2d132642fe1a19c78615200c4c52d55d7b8b[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Thu Sep 4 21:08:52 2025 +0545
+
+    auth UI completed
+
+[33mcommit ab5636fa668663990bf07f2daa6bfb9abe2c8596[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 3 22:19:39 2025 +0545
+
+    some cleanups and font added
+
+[33mcommit a6201e505d22b89303dbb8dd7910edb464c2f4a7[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 3 16:15:46 2025 +0545
+
+    font change
+
+[33mcommit 06c7064e273f85919a40a6d2d510716d185e1cb4[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 3 15:44:09 2025 +0545
+
+    fixed some issues
+
+[33mcommit 2f3a7fe99b81afe22606efe81c605fd86d3f3277[m
+Author: moleguy <tamangmanish446@gmail.com>
+Date:   Wed Sep 3 15:04:50 2025 +0545
+
+    init

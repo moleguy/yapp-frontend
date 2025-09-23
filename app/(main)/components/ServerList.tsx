@@ -7,11 +7,12 @@ import { BsGridFill } from "react-icons/bs"; // icon for servers tab
 import AddServerPopup from "./AddServerPopup";
 import { FaLayerGroup } from "react-icons/fa6";
 import Image from "next/image";
+import { useEdgeStore } from "@/lib/edgestore";
 
 type Server = {
   id: number;
   name: string;
-  image?: string;
+  imageString?: string;
 };
 
 interface ServerListProps {
@@ -47,6 +48,8 @@ export default function ServerList({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const serverPopupRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const { edgestore } = useEdgeStore();
 
   // load / save from localStorage
   useEffect(() => {
@@ -89,9 +92,15 @@ export default function ServerList({
 
   const handleCreateServer = async (name: string, imageString?: string) => {
     const id = String(Date.now());
-    if(imageString){
+    const newServer: Server = { id: Date.now(), name, imageString };
+    setServers((prev) => [...prev, newServer]);
+    onServerClick(newServer); // logic for when opening a server when creating a new one
+
+    // Create new hall - Backend
+    let hallIconUrl: string | null = null;
+    if (imageString) {
       const hallIcon = base64ToFile(imageString || "", `${id}.png`);
-      const hallIconUrl = await uploadImage(hallIcon);
+      hallIconUrl = await uploadImage(hallIcon);
     }
 
     // Create new hall
@@ -99,7 +108,7 @@ export default function ServerList({
       const { createHall } = await import("@/lib/api");
       const newhall = await createHall({
         name: name,
-        icon_url: hallIconUrl ??  null,
+        icon_url: hallIconUrl ?? null,
         banner_color: "#ffffff",
         description: "",
       });
@@ -108,10 +117,36 @@ export default function ServerList({
       console.warn("Failed to create hall:", err);
       return;
     }
-
-    setServers((prev) => [...prev, newServer]);
-    onServerClick(newServer); // logic for when opening a server when creating a new one
   };
+
+  async function uploadImage(file: File): Promise<string | null> {
+    try {
+      const res = await edgestore.publicImages.upload({
+        file,
+        onProgressChange: (progress: number) =>
+          console.log("Upload progress:", progress),
+      });
+
+      return res.url ?? null;
+    } catch (err) {
+      console.warn("Failed to upload image (ignored):", err);
+      return null;
+    }
+  }
+
+  function base64ToFile(base64: string, filename: string): File {
+    const arr = base64.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+
+    return new File([u8arr], filename, { type: mime });
+  }
 
   const handleJoinServer = () => {
     const newServer: Server = { id: Date.now(), name: "Joined Server" };
@@ -187,9 +222,9 @@ export default function ServerList({
                             ${activeServer?.id === server.id ? "scale-x-100" : "scale-x-0"}`}
               />
 
-              {server.image ? (
+              {server.imageString ? (
                 <img
-                  src={server.image}
+                  src={server.imageString}
                   alt={server.name}
                   className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
                 />
@@ -259,9 +294,9 @@ export default function ServerList({
                 // setShowMorePopup(false);
               }}
             >
-              {server.image ? (
+              {server.imageString ? (
                 <Image
-                  src={server.image}
+                  src={server.imageString}
                   alt={server.name}
                   className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
                 />

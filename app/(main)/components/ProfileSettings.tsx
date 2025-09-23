@@ -84,7 +84,7 @@ export default function ProfileSettings() {
           console.warn("Failed to delete old avatar (ignored):", err);
         }
       }
-
+      // Upload new avatar
       const res = await edgestore.publicImages.upload({
         file,
         onProgressChange: (progress: number) =>
