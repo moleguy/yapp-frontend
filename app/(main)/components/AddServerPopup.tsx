@@ -29,12 +29,39 @@ export default function AddServerPopup({
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB
-        setErrorMessage("File size too big! Please select an image under 5MB.");
-        setTimeout(() => setErrorMessage(null), 3000);
-        return;
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB
+      setErrorMessage("File size too big! Please select an image under 5MB.");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
+    try {
+      if (avatar_url) {
+        try {
+          await edgestore.publicImages.delete({ url: user.avatar_url });
+          console.log("Old avatar deleted:", user.avatar_url); // REMOVE IN PRODUCTION
+        } catch (err) {
+          console.warn("Failed to delete old avatar (ignored):", err);
+        }
+      }
+
+      const res = await edgestore.publicImages.upload({
+        file,
+        onProgressChange: (progress: number) =>
+          console.log("Upload progress:", progress),
+      });
+
+      // Update Zustand store
+      updateUser({ avatar_url: res.url });
+
+      // Update backend
+      if (user) {
+        const updatedUser: UpdateUserProfileReq = {
+          display_name: user.display_name,
+          avatar_url: res.url,
+        };
+        await updateUserMe(updatedUser);
       }
       const reader = new FileReader();
       reader.onloadend = () => setServerImage(reader.result as string);
