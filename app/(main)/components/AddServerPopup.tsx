@@ -207,7 +207,7 @@ export default function AddServerPopup({
                 value={serverName}
                 // onKeyDown={handleKeyDown}
                 onChange={(e) => setServerName(e.target.value)}
-                className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb]"
+                className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide"
               />
               <p className={`font-thin text-sm text-left mt-2 text-[#73726e] tracking-wide`}>
                 Craft a unique name for your server
