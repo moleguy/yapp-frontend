@@ -87,9 +87,27 @@ export default function ServerList({
     return () => window.removeEventListener("mousedown", handleOutside);
   }, [contextMenu]);
 
-  const handleCreateServer = (name: string, image?: string) => {
-    const newServer: Server = { id: Date.now(), name, image };
-    console.log(newServer);
+  const handleCreateServer = async (name: string, imageString?: string) => {
+    const id = String(Date.now());
+    if(imageString){
+      const hallIcon = base64ToFile(imageString || "", `${id}.png`);
+      const hallIconUrl = await uploadImage(hallIcon);
+    }
+
+    // Create new hall
+    try {
+      const { createHall } = await import("@/lib/api");
+      const newhall = await createHall({
+        name: name,
+        icon_url: hallIconUrl ??  null,
+        banner_color: "#ffffff",
+        description: "",
+      });
+      console.log(newhall);
+    } catch (err) {
+      console.warn("Failed to create hall:", err);
+      return;
+    }
 
     setServers((prev) => [...prev, newServer]);
     onServerClick(newServer); // logic for when opening a server when creating a new one
