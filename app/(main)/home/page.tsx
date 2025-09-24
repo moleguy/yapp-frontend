@@ -48,7 +48,7 @@ export default function HomePage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const user = useUser();
-  const { avatarUrl, fallback, hasAvatar } = useAvatar();
+  const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
 
   const [friends, setFriends] = useState<Friend[]>([
     {
@@ -59,7 +59,8 @@ export default function HomePage() {
       mutualFriends: 2,
       memberSince: "2 Jan 2014",
       mutualServers: 3,
-    },{
+    },
+    {
       id: 2,
       name: "Manish",
       username: "manish123",
@@ -76,7 +77,7 @@ export default function HomePage() {
     setLastActiveServer(server);
 
     // auto selecting the general channel when creating a server
-    setSelectedChannel({id: "1", name: "general"});
+    setSelectedChannel({ id: "1", name: "general" });
   };
 
   // handling leaving a server and showing a server next to it or the server before it
@@ -165,11 +166,11 @@ export default function HomePage() {
               <div className="flex items-center">
                 {hasAvatar ? (
                   <Image
-                    src={avatarUrl}
+                    src={avatarThumbnailUrl}
                     alt="Profile"
                     className="w-12 h-12 object-cover rounded-full"
-                    width={48}
-                    height={48}
+                    width={90}
+                    height={90}
                     onError={() => {
                       console.error("Avatar image failed to load:", avatarUrl); // REMOVE IN PROD
                     }}
@@ -238,26 +239,28 @@ export default function HomePage() {
             {/*</div>*/}
 
             {activeView === "server" && activeServer && selectedChannel ? (
-                <ChatArea
-                    serverName={activeServer.name}
-                    channelName={selectedChannel.name}
-                    channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`} // Unique ID for each channel
-                    isDm={false}
-                />
+              <ChatArea
+                serverName={activeServer.name}
+                channelName={selectedChannel.name}
+                channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`} // Unique ID for each channel
+                isDm={false}
+              />
             ) : activeView === "dm" && selectedFriend ? (
-                <ChatArea
-                    friendDisplayName={selectedFriend.display_name || selectedFriend.name}
-                    friendUsername={selectedFriend.username || ""}
-                    friendId={selectedFriend.id.toString()}
-                    friendAvatar={selectedFriend.avatarUrl}
-                    isDm={true}
-                />
+              <ChatArea
+                friendDisplayName={
+                  selectedFriend.display_name || selectedFriend.name
+                }
+                friendUsername={selectedFriend.username || ""}
+                friendId={selectedFriend.id.toString()}
+                friendAvatar={selectedFriend.avatarUrl}
+                isDm={true}
+              />
             ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-500">
-                  {activeView === "dm"
-                      ? "Select a friend to start chatting"
-                      : "Select a channel to start chatting"}
-                </div>
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                {activeView === "dm"
+                  ? "Select a friend to start chatting"
+                  : "Select a channel to start chatting"}
+              </div>
             )}
           </div>
 

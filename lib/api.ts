@@ -69,30 +69,30 @@ export type SignUpRes =
   | { message?: string };
 
 export type UserMeRes = {
+  id: string;
   username: string;
   display_name: string;
   email: string;
   phone_number: string | null;
   avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
   description: string | null;
   friend_policy: string;
   active: boolean;
-  last_seen: string;
   created_at: string;
   updated_at: string;
 };
 
-export type UserProfile = {
-  username: string;
+export type UpdateUserMeReq = {
   display_name: string;
-  email: string;
   avatar_url: string | null;
-  active: boolean;
+  avatar_thumbnail_url: string | null;
 };
 
-export type UpdateUserProfileReq = {
+export type UpdateUserMeRes = {
   display_name: string;
   avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
 };
 
 // Hall type
@@ -158,10 +158,10 @@ export async function getUserMe(): Promise<UserMeRes | null> {
 }
 
 export async function updateUserMe(
-  payload: UpdateUserProfileReq | null,
-): Promise<UserProfile | null> {
+  payload: UpdateUserMeReq | null,
+): Promise<UpdateUserMeRes | null> {
   try {
-    return await request<UserProfile>(`${protectedApiBase}/me/`, {
+    return await request<UpdateUserMeRes>(`${protectedApiBase}/me/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });

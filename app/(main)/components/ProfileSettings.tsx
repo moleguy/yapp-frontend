@@ -11,11 +11,13 @@ import {
   useUserStore,
   useUpdateUser,
   useSetUser,
+  useAvatar,
+  useUser,
 } from "@/app/store/useUserStore";
 import {
   authSignOut,
   updateUserMe,
-  UpdateUserProfileReq,
+  UpdateUserMeReq,
   UserMeRes,
 } from "@/lib/api";
 
@@ -38,6 +40,8 @@ export default function ProfileSettings() {
     email: user?.email || "",
   });
   const [hasChanges, setHasChanges] = useState(false);
+
+  const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
 
   // Close profile pic options when clicking outside
   useEffect(() => {
@@ -92,13 +96,17 @@ export default function ProfileSettings() {
       });
 
       // Update Zustand store
-      updateUser({ avatar_url: res.url });
+      updateUser({
+        avatar_url: res.url,
+        avatar_thumbnail_url: res.thumbnailUrl,
+      });
 
       // Update backend
       if (user) {
-        const updatedUser: UpdateUserProfileReq = {
+        const updatedUser: UpdateUserMeReq = {
           display_name: user.display_name,
           avatar_url: res.url,
+          avatar_thumbnail_url: res.thumbnailUrl,
         };
         await updateUserMe(updatedUser);
       }
@@ -121,9 +129,10 @@ export default function ProfileSettings() {
       await edgestore.publicImages.delete({ url: user.avatar_url });
 
       // Update backend profile
-      const updatedUser: UpdateUserProfileReq = {
+      const updatedUser: UpdateUserMeReq = {
         display_name: user.display_name,
         avatar_url: null,
+        avatar_thumbnail_url: null,
       };
       await updateUserMe(updatedUser);
 
@@ -160,9 +169,10 @@ export default function ProfileSettings() {
   const handleSave = async () => {
     if (!user) return;
     try {
-      const updatedUser: UpdateUserProfileReq = {
+      const updatedUser: UpdateUserMeReq = {
         display_name: fields["display name"],
         avatar_url: user.avatar_url ?? null,
+        avatar_thumbnail_url: user.avatar_thumbnail_url ?? null,
       };
 
       await updateUserMe(updatedUser);
@@ -204,13 +214,13 @@ export default function ProfileSettings() {
         <div
           className="w-24 h-24 overflow-hidden rounded-full cursor-pointer group relative"
           onClick={() => {
-            if (user?.avatar_url) setShowOptions(!showOptions);
+            if (avatarUrl) setShowOptions(!showOptions);
             else document.getElementById("fileUpload")?.click();
           }}
         >
-          {user?.avatar_url ? (
+          {avatarUrl ? (
             <Image
-              src={user.avatar_url}
+              src={avatarThumbnailUrl}
               alt="Profile"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
