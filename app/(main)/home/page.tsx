@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
-import { RiUser6Fill } from "react-icons/ri";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
 import ServerList from "../components/ServerList";
@@ -10,7 +9,6 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
-import PollPopup from "@/app/(main)/components/PollPopup";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 
@@ -34,8 +32,6 @@ export default function HomePage() {
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
-  const [query, setQuery] = useState("");
-  const [muted, setMuted] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<{
     id: string;
     name: string;
@@ -45,12 +41,11 @@ export default function HomePage() {
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const user = useUser();
   const { avatarUrl, fallback, hasAvatar } = useAvatar();
 
-  const [friends, setFriends] = useState<Friend[]>([
+  const [friends] = useState<Friend[]>([
     {
       id: 1,
       name: "Nischal",

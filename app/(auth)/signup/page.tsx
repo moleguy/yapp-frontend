@@ -446,8 +446,8 @@ export default function SignUp() {
                                 </div>
                                 {fieldErrors.confirmPassword && (
                                     <span id="confirmPassword-error" className="text-red-600 text-sm mt-1" role="alert">
-                    {fieldErrors.confirmPassword}
-                  </span>
+                                        {fieldErrors.confirmPassword}
+                                    </span>
                                 )}
                                 {confirmPassword && !fieldErrors.confirmPassword && confirmPassword === password && (
                                     <div className="flex items-center gap-1 text-xs mt-1">
