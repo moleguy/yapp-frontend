@@ -114,7 +114,7 @@ export default function ServerList({
       });
       console.log(newhall);
     } catch (err) {
-      console.warn("Failed to create hall:", err);
+      console.warn("Failed to create hall:", err); // fix here
       return;
     }
   };
@@ -255,17 +255,29 @@ export default function ServerList({
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-100 bg-white rounded-lg shadow-lg py-2 px-4 cursor-pointer"
+          className="flex flex-col items-center gap-2 py-3 px-2 fixed z-100 border rounded-lg border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e]"
           style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
         >
           <button
-            className="text-red-500 w-full text-left cursor-pointer"
+              className={`text-left cursor-pointer hover:bg-[#f2f2f3] rounded-md w-full py-2 px-2 font-base`}
+          >
+            Invite People
+          </button>
+          <div className="flex items-center justif-center w-40 flex-grow h-[1px] bg-gray-600 opacity-35" />
+          <button
+              className={`text-left cursor-pointer hover:bg-[#f2f2f3] rounded-md w-full py-2 px-2 font-base`}
+          >
+            Create Category
+          </button>
+          <div className="flex items-center justif-center w-40 flex-grow h-[1px] bg-gray-600 opacity-35" />
+          <button
+            className="text-left text-[#cb3b40] hover:bg-[#ebc8ca] rounded-md cursor-pointer w-full py-2 px-2 font-base"
             onClick={() => {
               onLeaveServer(contextMenu.serverId);
               setContextMenu(null);
             }}
           >
-            Leave Server
+            Leave Hall
           </button>
         </div>
       )}

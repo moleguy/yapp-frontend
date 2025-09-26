@@ -167,7 +167,7 @@ export default function HomePage() {
                     width={90}
                     height={90}
                     onError={() => {
-                      console.error("Avatar image failed to load:", avatarUrl); // REMOVE IN PROD
+                      console.error("Avatar image failed to load:", avatarThumbnailUrl); // REMOVE IN PROD
                     }}
                   />
                 ) : (

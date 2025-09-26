@@ -6,7 +6,9 @@ import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
 import { FaPlus, FaUserPlus, FaHashtag } from "react-icons/fa6";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { MdOutlineGif } from "react-icons/md";
+// import { useAuth } from "@/app/contexts/AuthContext";
+import {useAvatar, useUser} from "@/app/store/useUserStore";
 import Image from "next/image";
 
 type Message = {
@@ -40,7 +42,9 @@ export default function ChatArea({
                                      friendAvatar,
                                      isDm = false,
                                  }: ChatAreaProps) {
-    const { user } = useAuth();
+    // const { user } = useAuth();
+    const user = useUser();
+    const {avatarUrl, avatarThumbnailUrl, fallback, hasAvatar} = useAvatar();
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const uploadRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,7 +106,7 @@ export default function ChatArea({
 
         const newMessage: Message = {
             id: Date.now().toString(),
-            sender: user?.username || "Unknown",
+            sender: user?.display_name || "Unknown",
             text: messageInput.trim(),
             timestamp: new Date(),
         };
@@ -173,19 +177,19 @@ export default function ChatArea({
     return (
         <div className="flex flex-col h-full bg-[#f8f9fa]">
             {/* Messages area - Fixed overflow */}
-            <div className="flex-1 flex flex-col-reverse overflow-y-auto min-h-0">
+            <div className="flex-1 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
                 <div className="p-4">
                     <div className="space-y-4">
                         {allMessages.map((msg) => (
                             <div key={msg.id} className={`flex gap-3 ${msg.isSystem ? 'justify-center' : ''}`}>
                                 {!msg.isSystem && (
                                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                                        {user?.avatar_url ? (
+                                        {avatarThumbnailUrl ? (
                                             <Image
-                                                src={user.avatar_url}
+                                                src={avatarThumbnailUrl}
                                                 alt={msg.sender}
-                                                width={40}
-                                                height={40}
+                                                width={124}
+                                                height={124}
                                                 className="object-cover"
                                             />
                                         ) : (
@@ -196,7 +200,7 @@ export default function ChatArea({
                                     </div>
                                 )}
 
-                                <div className={`flex-1 min-w-0 ${msg.isSystem ? 'text-center max-w-4xl mx-auto' : 'max-w-full'}`}>
+                                <div className={`flex-1 min-w-0 ${msg.isSystem ? 'text-center w-full mx-auto' : 'max-w-full'}`}>
                                     {!msg.isSystem && (
                                         <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                                             <span className="font-semibold text-[#1e1f22] break-words">{msg.sender}</span>
@@ -273,12 +277,12 @@ export default function ChatArea({
             </div>
 
             {/* Input area */}
-            <div className="p-4 bg-white border-t border-gray-200">
+            <div className="p-4 bg-[#ffffff]">
                 <div className="relative">
                     <button className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer">
                         <FaPlus
                             onClick={() => setShowPopup(!showPopup)}
-                            className="w-5 h-5 hover:bg-gray-100 rounded p-1"
+                            className="w-7 h-7 hover:bg-gray-100 rounded p-1"
                         />
                     </button>
 
@@ -338,16 +342,16 @@ export default function ChatArea({
                                     ? `Message #${channelName}`
                                     : "Message"
                         }
-                        className="w-full pl-10 pr-12 py-3 rounded-lg border border-gray-300 focus:outline-none bg-gray-50 text-[15px]"
+                        className="w-full pl-12 pr-12 py-4 rounded-lg border border-[#dcd9d3] focus:outline-none bg-[#ffffff] tracking-wide text-[#222831]"
                     />
 
                     {/* Send button */}
                     <button
                         onClick={sendMessage}
                         disabled={!messageInput.trim()}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <FiSend size={18} />
+                        <FiSend size={20} />
                     </button>
                 </div>
             </div>
