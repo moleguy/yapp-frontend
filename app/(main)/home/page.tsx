@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
-import { RiUser6Fill } from "react-icons/ri";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
 import ServerList from "../components/ServerList";
@@ -10,11 +9,9 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import ServerDetails from "@/app/(main)/components/ServerDetails";
 import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
-import PollPopup from "@/app/(main)/components/PollPopup";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import { Hall, getUserHalls } from "@/lib/api";
-import { afterEach } from "node:test";
 
 type Server = {
   id: number;
@@ -30,14 +27,13 @@ type Friend = {
   username?: string;
   memberSince?: string;
   mutualServers?: number;
+  tags?: string;
 };
 
 export default function HomePage() {
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
-  const [query, setQuery] = useState("");
-  const [muted, setMuted] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<{
     id: string;
     name: string;
@@ -47,7 +43,8 @@ export default function HomePage() {
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
+  const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(null);
 
   const user = useUser();
   const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
@@ -74,7 +71,7 @@ export default function HomePage() {
     }
   }
 
-  const [friends, setFriends] = useState<Friend[]>([
+  const [friends] = useState<Friend[]>([
     {
       id: 1,
       name: "Nischal",
@@ -147,6 +144,18 @@ export default function HomePage() {
     }
   };
 
+  const handleCreateCategoryClick = (server: Server) => {
+    setCategoryPopupServer(server);
+    setShowCategoryPopup(true);
+  };
+
+  const handleOpenCategoryPopup = () => {
+    if (activeServer) {
+      setCategoryPopupServer(activeServer);
+      setShowCategoryPopup(true);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-black text-black font-MyFont">
@@ -163,6 +172,7 @@ export default function HomePage() {
               onDirectMessagesClick={handleDirectMessageClick}
               onServersToggle={handleServersTabClick}
               activeView={activeView}
+              onCreateCategoryClick={handleCreateCategoryClick}
             />
 
             {/* Channels and Friends Section To Be Displayed */}
@@ -175,6 +185,9 @@ export default function HomePage() {
                 <ServerDetails
                   activeServer={activeServer}
                   onSelectChannel={setSelectedChannel}
+                  showCategoryPopup={showCategoryPopup && categoryPopupServer?.id === activeServer.id}
+                  onCloseCategoryPopup={() => setShowCategoryPopup(false)}
+                  onOpenCategoryPopup={handleOpenCategoryPopup}
                 />
               ) : activeView === "dm" ? (
                 <DirectMessages
@@ -193,10 +206,10 @@ export default function HomePage() {
                     src={avatarThumbnailUrl}
                     alt="Profile"
                     className="w-12 h-12 object-cover rounded-full"
-                    width={124}
-                    height={124}
+                    width={90}
+                    height={90}
                     onError={() => {
-                      console.error("Avatar image failed to load:", avatarUrl); // REMOVE IN PROD
+                      console.error("Avatar image failed to load:", avatarThumbnailUrl); // REMOVE IN PROD
                     }}
                   />
                 ) : (

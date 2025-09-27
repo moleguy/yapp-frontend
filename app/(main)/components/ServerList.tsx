@@ -24,19 +24,21 @@ interface ServerListProps {
   onDirectMessagesClick: () => void;
   onServersToggle: () => void;
   activeView: "server" | "dm" | null;
+  onCreateCategoryClick: (server: Server) => void;
 }
 
 const MAX_VISIBLE = 7; // show up to 7 servers before showing "more"
 
 export default function ServerList({
-  servers,
-  setServers,
-  activeServer,
-  onServerClick,
-  onLeaveServer,
-  onDirectMessagesClick,
-  onServersToggle,
-  activeView,
+    servers,
+    setServers,
+    activeServer,
+    onServerClick,
+    onLeaveServer,
+    onDirectMessagesClick,
+    onServersToggle,
+    activeView,
+    onCreateCategoryClick,
 }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -120,7 +122,7 @@ export default function ServerList({
       });
       console.log(newhall);
     } catch (err) {
-      console.warn("Failed to create hall:", err);
+      console.warn("Failed to create hall:", err); // fix here
       return;
     }
   };
@@ -172,6 +174,36 @@ export default function ServerList({
   // servers to show initially and the extra ones for "more"
   const visibleServers = servers.slice(0, MAX_VISIBLE);
   const extraServers = servers.slice(MAX_VISIBLE);
+
+  const contextMenuItems = [
+    {
+      label: "Invite People",
+      danger: false,
+      onClick: () => {}, // here to add a function to invite people on hall
+    },
+    {
+      label: "Create Category",
+      danger: false,
+      onClick: () => {
+        if (contextMenu) {
+          const server = servers.find(s => s.id === contextMenu?.serverId);
+          if (server) {
+            onCreateCategoryClick(server); // CALL THE PARENT FUNCTION
+          }
+        }
+        setContextMenu(null);
+      },
+    },
+    {
+      label: "Leave Hall",
+      danger: true,
+      onClick: () => {
+        if(!contextMenu) return;
+        onLeaveServer(contextMenu.serverId);
+        setContextMenu(null);
+      },
+    },
+  ];
 
   return (
     <div className=" flex flex-col items-center select-none w-full ">
@@ -268,21 +300,29 @@ export default function ServerList({
 
       {/* Context menu for leaving a server */}
       {contextMenu && (
-        <div
-          ref={menuRef}
-          className="fixed z-100 bg-white rounded-lg shadow-lg py-2 px-4 cursor-pointer"
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
-        >
-          <button
-            className="text-red-500 w-full text-left cursor-pointer"
-            onClick={() => {
-              onLeaveServer(contextMenu.serverId);
-              setContextMenu(null);
-            }}
+          <div
+              ref={menuRef}
+              className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+              style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
           >
-            Leave Server
-          </button>
-        </div>
+            {contextMenuItems.map((item, idx, arr) => ( // USE THE NEW ARRAY
+                <React.Fragment key={item.label}>
+                  <button
+                      onClick={item.onClick}
+                      className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
+                          item.danger
+                              ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                              : "hover:bg-[#f2f2f3]"
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                  {idx < arr.length - 1 && (
+                      <div className="h-px bg-gray-200 w-full my-1" />
+                  )}
+                </React.Fragment>
+            ))}
+          </div>
       )}
 
       {/* Popup with extra servers */}

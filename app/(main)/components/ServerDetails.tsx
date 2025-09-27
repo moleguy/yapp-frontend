@@ -28,28 +28,47 @@ type Category = {
 interface ServerDetailsProps {
   activeServer: Server | null;
   onSelectChannel?: (channel: { id: string; name: string }) => void;
+  showCategoryPopup: boolean;
+  onCloseCategoryPopup: () => void;
+  onOpenCategoryPopup: () => void;
 }
 
 export default function ServerDetails({
                                         activeServer,
                                         onSelectChannel,
+                                        showCategoryPopup,
+                                        onCloseCategoryPopup,
+                                        onOpenCategoryPopup,
                                       }: ServerDetailsProps) {
-  const [serverCategories, setServerCategories] = useState<
-      Record<number, Category[]>
-  >({});
-  const [openCategories, setOpenCategories] = useState<
-      Record<number, string[]>
-  >({});
+  const [serverCategories, setServerCategories] = useState<Record<number, Category[]>>({});
+  const [openCategories, setOpenCategories] = useState<Record<number, string[]>>({});
   const [popupCategoryId, setPopupCategoryId] = useState<string | null>(null);
-  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
+  // const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
-      null,
-  );
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null,);
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenu, setContextMenu] = useState({ x: 0, y: 0 });
+  const [contextMenu, setContextMenu] = useState(
+      {
+        x: 0,
+        y: 0
+      }
+  );
+  const [categoryContextMenu, setCategoryContextMenu] = useState<{
+    x: number;
+    y: number;
+    categoryId: string | null;
+  } | null>(null);
   const channelsAreaRef = useRef<HTMLDivElement | null>(null);
   const categoryPopupRef = useRef<HTMLDivElement | null>(null);
+  const deleteCategoryMenuRef = useRef<HTMLDivElement | null>(null);
+  const [channelContextMenu, setChannelContextMenu] = useState<{
+    x: number;
+    y: number;
+    channelId: string | null;
+  } | null>(null);
+
+  const channelMenuRef = useRef<HTMLDivElement | null>(null);
+
 
   // default categories (used to initialize a server)
   const initialCategories: Category[] = [
@@ -88,7 +107,7 @@ export default function ServerDetails({
       setSelectedChannelId(generalChannel.id);
       onSelectChannel?.({id: generalChannel.id, name: generalChannel.name})
     }
-  }, [activeServer]);
+  }, [activeServer, onSelectChannel]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -104,7 +123,7 @@ export default function ServerDetails({
           categoryPopupRef.current &&
           !categoryPopupRef.current.contains(e.target as Node)
       ) {
-        setShowCategoryPopup(false);
+        onCloseCategoryPopup();
       }
     }
 
@@ -115,7 +134,98 @@ export default function ServerDetails({
     }
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showCategoryPopup]);
+  }, [showCategoryPopup, onCloseCategoryPopup]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+          categoryContextMenu &&
+          deleteCategoryMenuRef.current &&
+          !deleteCategoryMenuRef.current.contains(e.target as Node)
+      ) {
+        setCategoryContextMenu(null);
+      }
+    }
+
+    if (categoryContextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [categoryContextMenu]);
+
+  // logic for click outside for delete channel popup to disappear
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+          channelContextMenu &&
+          channelMenuRef.current &&
+          !channelMenuRef.current.contains(e.target as Node)
+      ) {
+        setChannelContextMenu(null);
+      }
+    }
+
+    if (channelContextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [channelContextMenu]);
+
+  // deleting a channel after delete channel button click
+  const handleLeaveChannel = () => {
+    if (!activeServer || !channelContextMenu) return;
+
+    setServerCategories((prev) => {
+      const updatedCategories = (prev[activeServer.id] || []).map((cat) => {
+        if (cat.channels.some((ch) => ch.id === channelContextMenu.channelId)) {
+          const newChannels = cat.channels.filter(
+              (ch) => ch.id !== channelContextMenu.channelId
+          );
+
+          // If the deleted channel was selected and category is collapsed
+          if (newChannels.length > 0 && selectedChannelId === channelContextMenu.channelId) {
+            setSelectedChannelId(newChannels[0].id); // safe here because this is inside a click handler
+            const selCh = newChannels[0];
+            onSelectChannel?.({ id: selCh.id, name: selCh.name });
+          } else if (newChannels.length === 0 && selectedChannelId === channelContextMenu.channelId) {
+            setSelectedChannelId(null); // no channels left
+            onSelectChannel?.({ id: "", name: "" });
+          }
+
+          return { ...cat, channels: newChannels };
+        }
+        return cat;
+      });
+
+      return { ...prev, [activeServer.id]: updatedCategories };
+    });
+
+    setChannelContextMenu(null);
+  };
+
+  // handling contextMenu for deleting category with a popup over the channel when right click happens
+  const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string) => {
+    e.preventDefault();
+    setCategoryContextMenu({x: e.pageX, y: e.pageY, categoryId});
+  }
+
+  // deleting a category when clicking a button: Delete Category
+  const handleDeleteCategory = (categoryId: string) => {
+    if(!activeServer) return;
+    setServerCategories((prev) => {
+      const updated = (prev[activeServer.id] || []).filter(
+          (c) => c.id !== categoryId
+      );
+      return { ...prev, [activeServer.id]: updated };
+    });
+    setCategoryContextMenu(null);
+  };
 
   // If any server isn't open then default message is shown.
   if (!activeServer) {
@@ -195,7 +305,7 @@ export default function ServerDetails({
     }));
     // resets the category popup to be blank
     setNewCategoryName("");
-    setShowCategoryPopup(false);
+    onCloseCategoryPopup();
   };
 
   // context menu handler: only open when right-click is not on a channel or header
@@ -213,7 +323,7 @@ export default function ServerDetails({
       return;
     }
 
-    // Get the position relative to the channels area container
+    // getting the position relative to the channels area container
     setContextMenu({
       x: e.pageX,
       y: e.pageY
@@ -221,13 +331,9 @@ export default function ServerDetails({
     setShowContextMenu(true);
   };
 
-  // const handleClick = () =>{
-  //     if(showContextMenu) setShowContextMenu(false);
-  // }
-
   const handleCreateCategoryClick = () => {
     setShowContextMenu(false);
-    setShowCategoryPopup(true);
+    onOpenCategoryPopup();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -238,7 +344,7 @@ export default function ServerDetails({
   };
 
   return (
-      <div className="h-full w-full p-4 flex flex-col relative">
+      <div className="h-full w-full p-4 flex flex-col relative select-none">
         {/* server heder */}
         <div className="border-b border-[#dcd9d3] pt-0 pb-4">
           <div className="flex items-center gap-2">
@@ -297,6 +403,7 @@ export default function ServerDetails({
                           toggleCategory(cat.id);
                         }
                       }}
+                      onContextMenu={(e) => handleCategoryContextMenu(e, cat.id)}
                   >
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium tracking-wide text-[#222831]">
@@ -319,7 +426,7 @@ export default function ServerDetails({
                     </button>
                   </div>
 
-                  <ul className={`flex flex-col gap-1 tracking-wide`}>
+                  <ul className={`flex flex-col gap-1 tracking-wide cursor-pointer`}>
                     {open ? (
                             // expanded -> show all channels
                             cat.channels.map((ch) => (
@@ -333,7 +440,11 @@ export default function ServerDetails({
                                         onSelectChannel?.({ id: ch.id, name: ch.name });
                                       }
                                     }}
-                                    onContextMenu={(ev) => ev.stopPropagation()}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setChannelContextMenu({ x: e.pageX, y: e.pageY, channelId: ch.id });
+                                    }}
                                 >
                                   {ch.type === "text" ? (
                                       <FaHashtag className={`w-6 h-6`} />
@@ -348,7 +459,21 @@ export default function ServerDetails({
                             <li
                                 key={selectedInThisCat.id}
                                 className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dddde0] text-[#222831]"
-                                onContextMenu={(ev) => ev.stopPropagation()}
+                                onClick={() => {
+                                  setSelectedChannelId(selectedInThisCat.id);
+                                  if (selectedInThisCat.type === "text") {
+                                    onSelectChannel?.({ id: selectedInThisCat.id, name: selectedInThisCat.name });
+                                  }
+                                }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setChannelContextMenu({
+                                    x: e.pageX,
+                                    y: e.pageY,
+                                    channelId: selectedInThisCat.id,
+                                  });
+                                }}
                             >
                               {selectedInThisCat.type === "text" ? (
                                   <FaHashtag className={`w-6 h-6`} />
@@ -363,6 +488,68 @@ export default function ServerDetails({
             );
           })}
         </div>
+
+        {categoryContextMenu && (
+            <div
+                ref={deleteCategoryMenuRef}
+                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+                style={{ top: categoryContextMenu.y, left: categoryContextMenu.x }}
+                onClick={() => setCategoryContextMenu(null)}
+            >
+              {[
+                {
+                  label: "Collapse Category",
+                  danger: false,
+                  onClick: () => {},
+                },
+                {
+                  label: "Collapse All Categories",
+                  danger: false,
+                  onClick: () => {},
+                },
+                {
+                  label: "Delete Category",
+                  danger: true,
+                  onClick: () => {
+                    handleDeleteCategory(categoryContextMenu.categoryId!);
+                  },
+                },
+              ].map((item, idx, arr) => (
+                  <React.Fragment key={item.label}>
+                    <button
+                        onClick={item.onClick}
+                        className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${
+                            item.danger
+                                ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                                : "hover:bg-[#f2f2f3]"
+                        }`}
+                    >
+                      {item.label}
+                    </button>
+                    {idx < arr.length - 1 && (
+                        <div className="h-px bg-gray-200 w-full my-1" />
+                    )}
+                  </React.Fragment>
+              ))}
+            </div>
+        )}
+
+
+        {channelContextMenu && (
+            <div
+                ref={channelMenuRef}
+                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50"
+                style={{ top: channelContextMenu.y, left: channelContextMenu.x }}
+            >
+              <button
+                  className="block w-full text-left hover:bg-gray-100 p-2 text-[#1e1e1e] rounded-lg"
+                  onClick={handleLeaveChannel}
+              >
+                Delete Channel
+              </button>
+            </div>
+        )}
+
 
         {/* add channel popup for specific or each category  */}
         {popupCategoryId && (
@@ -416,7 +603,7 @@ export default function ServerDetails({
                 />
                 <div className="flex justify-between gap-2">
                   <button
-                      onClick={() => setShowCategoryPopup(false)}
+                      onClick={onCloseCategoryPopup}
                       className="px-4 py-2 border rounded-lg bg-[#eeeef0] border-[#dcdce0] cursor-pointer"
                   >
                     Cancel
