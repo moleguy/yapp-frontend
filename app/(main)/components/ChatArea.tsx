@@ -6,7 +6,7 @@ import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
 import { FaPlus, FaUserPlus, FaHashtag } from "react-icons/fa6";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
-import { MdOutlineGif } from "react-icons/md";
+import { MdOutlineGif } from "react-icons/md"; // gif icon
 // import { useAuth } from "@/app/contexts/AuthContext";
 import {useAvatar, useUser} from "@/app/store/useUserStore";
 import Image from "next/image";

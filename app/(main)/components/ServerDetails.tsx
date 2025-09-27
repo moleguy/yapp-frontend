@@ -423,7 +423,7 @@ export default function ServerDetails({
                     </button>
                   </div>
 
-                  <ul className={`flex flex-col gap-1 tracking-wide`}>
+                  <ul className={`flex flex-col gap-1 tracking-wide cursor-pointer`}>
                     {open ? (
                             // expanded -> show all channels
                             cat.channels.map((ch) => (
@@ -489,12 +489,18 @@ export default function ServerDetails({
         {categoryContextMenu && (
             <div
                 ref={deleteCategoryMenuRef}
-                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50"
+                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-3 px-3 flex flex-col gap-2 w-[220px]"
                 style={{ top: categoryContextMenu.y, left: categoryContextMenu.x }}
                 onClick={() => setCategoryContextMenu(null)}
             >
+              <button className={`block w-full text-left hover:bg-[#f2f2f3] text-[#393a3e] rounded-md py-2 px-2 tracking-wide cursor-pointer`}>
+                Collapse Category
+              </button>
+              <button className={`block w-full text-left hover:bg-[#f2f2f3] text-[#393a3e] rounded-md py-2 px-2 tracking-wide cursor-pointer`}>
+                Collapse All Categories
+              </button>
               <button
-                  className="block w-full text-left hover:bg-gray-100 p-2 text-[#1e1e1e] rounded-lg"
+                  className={`block w-full text-left text-[#cb3b40] hover:bg-[#fbeff0] p-2 rounded-md tracking-wide cursor-pointer`}
                   onClick={() =>
                       handleDeleteCategory(categoryContextMenu.categoryId!)
                   }

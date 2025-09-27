@@ -271,7 +271,7 @@ export default function ServerList({
           </button>
           <div className="flex items-center justif-center w-40 flex-grow h-[1px] bg-gray-600 opacity-35" />
           <button
-            className="text-left text-[#cb3b40] hover:bg-[#ebc8ca] rounded-md cursor-pointer w-full py-2 px-2 font-base"
+            className="text-left text-[#cb3b40] hover:bg-[#fbeff0] rounded-md cursor-pointer w-full py-2 px-2 font-base"
             onClick={() => {
               onLeaveServer(contextMenu.serverId);
               setContextMenu(null);

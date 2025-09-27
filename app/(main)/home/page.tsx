@@ -26,6 +26,7 @@ type Friend = {
   username?: string;
   memberSince?: string;
   mutualServers?: number;
+  tags?: string;
 };
 
 export default function HomePage() {
