@@ -54,37 +54,37 @@ const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
 
                 {/* Details */}
                 <div className="px-4 pt-14 pb-4 bg-[#fbfbfb]">
-                  <h2 className="text-2xl font-semibold text-[#1e1e1e] tracking-wide">
-                      {friend.name}
-                  </h2>
-                  {friend.username && (
-                      <p className="font-base text-[#1e1e1e]">@{friend.username}</p>
-                  )}
+                    <h2 className="text-2xl font-semibold text-[#1e1e1e] tracking-wide">
+                        {friend.name}
+                    </h2>
+                    {friend.username && (
+                        <p className="font-base text-[#1e1e1e]">@{friend.username}</p>
+                    )}
 
-                  {friend.memberSince && (
-                      <div className="mt-4 border rounded-lg border-[#dcd9d3] p-3 flex flex-col gap-2">
-                          <h3 className="text-sm font-medium text-[#1e1e1e]">Member Since</h3>
-                          <p className="text-sm text-[#1e1e1e]">{friend.memberSince}</p>
-                      </div>
-                  )}
+                    {friend.memberSince && (
+                        <div className="mt-4 border rounded-lg border-[#dcd9d3] p-3 flex flex-col gap-2">
+                            <h3 className="text-sm font-medium text-[#1e1e1e]">Member Since</h3>
+                            <p className="text-sm text-[#1e1e1e]">{friend.memberSince}</p>
+                        </div>
+                    )}
 
-                  {friend.mutualServers !== undefined && (
-                      <div className="mt-3 gap-1 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
-                        <span className="text-sm font-base text-[#1e1e1e] tracking-wide">
-                            Mutual Servers — {friend.mutualServers}
-                        </span>
-                      </div>
-                  )}
+                    {friend.mutualServers !== undefined && (
+                        <div className="mt-3 gap-1 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
+                            <span className="text-sm font-base text-[#1e1e1e] tracking-wide">
+                                Mutual Servers — {friend.mutualServers}
+                            </span>
+                        </div>
+                    )}
 
-                  {friend.mutualFriends !== undefined && (
-                      <div className="mt-2 gap-1 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
-                        <span className="text-sm font-base text-[#1e1e1e] tracking-wide">
-                            Mutual Friends — {friend.mutualFriends}
-                        </span>
-                      </div>
-                  )}
-              </div>
-          </div>
+                    {friend.mutualFriends !== undefined && (
+                        <div className="mt-2 gap-1 border rounded-lg border-[#dcd9d3] p-3 flex justify-start items-center cursor-pointer hover:bg-gray-50">
+                            <span className="text-sm font-base text-[#1e1e1e] tracking-wide">
+                                Mutual Friends — {friend.mutualFriends}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Footer - always at bottom */}
             <button

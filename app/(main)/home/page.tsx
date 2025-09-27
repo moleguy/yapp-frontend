@@ -42,6 +42,8 @@ export default function HomePage() {
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
+  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
+  const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(null);
 
   const user = useUser();
   const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
@@ -119,6 +121,18 @@ export default function HomePage() {
     }
   };
 
+  const handleCreateCategoryClick = (server: Server) => {
+    setCategoryPopupServer(server);
+    setShowCategoryPopup(true);
+  };
+
+  const handleOpenCategoryPopup = () => {
+    if (activeServer) {
+      setCategoryPopupServer(activeServer);
+      setShowCategoryPopup(true);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-black text-black font-MyFont">
@@ -135,6 +149,7 @@ export default function HomePage() {
               onDirectMessagesClick={handleDirectMessageClick}
               onServersToggle={handleServersTabClick}
               activeView={activeView}
+              onCreateCategoryClick={handleCreateCategoryClick}
             />
 
             {/* Channels and Friends Section To Be Displayed */}
@@ -147,6 +162,9 @@ export default function HomePage() {
                 <ServerDetails
                   activeServer={activeServer}
                   onSelectChannel={setSelectedChannel}
+                  showCategoryPopup={showCategoryPopup && categoryPopupServer?.id === activeServer.id}
+                  onCloseCategoryPopup={() => setShowCategoryPopup(false)}
+                  onOpenCategoryPopup={handleOpenCategoryPopup}
                 />
               ) : activeView === "dm" ? (
                 <DirectMessages

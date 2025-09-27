@@ -28,16 +28,22 @@ type Category = {
 interface ServerDetailsProps {
   activeServer: Server | null;
   onSelectChannel?: (channel: { id: string; name: string }) => void;
+  showCategoryPopup: boolean;
+  onCloseCategoryPopup: () => void;
+  onOpenCategoryPopup: () => void;
 }
 
 export default function ServerDetails({
                                         activeServer,
                                         onSelectChannel,
+                                        showCategoryPopup,
+                                        onCloseCategoryPopup,
+                                        onOpenCategoryPopup,
                                       }: ServerDetailsProps) {
   const [serverCategories, setServerCategories] = useState<Record<number, Category[]>>({});
   const [openCategories, setOpenCategories] = useState<Record<number, string[]>>({});
   const [popupCategoryId, setPopupCategoryId] = useState<string | null>(null);
-  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
+  // const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null,);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -101,7 +107,7 @@ export default function ServerDetails({
       setSelectedChannelId(generalChannel.id);
       onSelectChannel?.({id: generalChannel.id, name: generalChannel.name})
     }
-  }, [activeServer]);
+  }, [activeServer, onSelectChannel]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -117,7 +123,7 @@ export default function ServerDetails({
           categoryPopupRef.current &&
           !categoryPopupRef.current.contains(e.target as Node)
       ) {
-        setShowCategoryPopup(false);
+        onCloseCategoryPopup();
       }
     }
 
@@ -128,7 +134,7 @@ export default function ServerDetails({
     }
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showCategoryPopup]);
+  }, [showCategoryPopup, onCloseCategoryPopup]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -203,9 +209,6 @@ export default function ServerDetails({
     setChannelContextMenu(null);
   };
 
-
-
-
   // handling contextMenu for deleting category with a popup over the channel when right click happens
   const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string) => {
     e.preventDefault();
@@ -214,8 +217,8 @@ export default function ServerDetails({
 
   // deleting a category when clicking a button: Delete Category
   const handleDeleteCategory = (categoryId: string) => {
+    if(!activeServer) return;
     setServerCategories((prev) => {
-      if (!activeServer) return prev;
       const updated = (prev[activeServer.id] || []).filter(
           (c) => c.id !== categoryId
       );
@@ -302,7 +305,7 @@ export default function ServerDetails({
     }));
     // resets the category popup to be blank
     setNewCategoryName("");
-    setShowCategoryPopup(false);
+    onCloseCategoryPopup();
   };
 
   // context menu handler: only open when right-click is not on a channel or header
@@ -330,7 +333,7 @@ export default function ServerDetails({
 
   const handleCreateCategoryClick = () => {
     setShowContextMenu(false);
-    setShowCategoryPopup(true);
+    onOpenCategoryPopup();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -489,26 +492,48 @@ export default function ServerDetails({
         {categoryContextMenu && (
             <div
                 ref={deleteCategoryMenuRef}
-                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-3 px-3 flex flex-col gap-2 w-[220px]"
+                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
                 style={{ top: categoryContextMenu.y, left: categoryContextMenu.x }}
                 onClick={() => setCategoryContextMenu(null)}
             >
-              <button className={`block w-full text-left hover:bg-[#f2f2f3] text-[#393a3e] rounded-md py-2 px-2 tracking-wide cursor-pointer`}>
-                Collapse Category
-              </button>
-              <button className={`block w-full text-left hover:bg-[#f2f2f3] text-[#393a3e] rounded-md py-2 px-2 tracking-wide cursor-pointer`}>
-                Collapse All Categories
-              </button>
-              <button
-                  className={`block w-full text-left text-[#cb3b40] hover:bg-[#fbeff0] p-2 rounded-md tracking-wide cursor-pointer`}
-                  onClick={() =>
-                      handleDeleteCategory(categoryContextMenu.categoryId!)
-                  }
-              >
-                Delete Category
-              </button>
+              {[
+                {
+                  label: "Collapse Category",
+                  danger: false,
+                  onClick: () => {},
+                },
+                {
+                  label: "Collapse All Categories",
+                  danger: false,
+                  onClick: () => {},
+                },
+                {
+                  label: "Delete Category",
+                  danger: true,
+                  onClick: () => {
+                    handleDeleteCategory(categoryContextMenu.categoryId!);
+                  },
+                },
+              ].map((item, idx, arr) => (
+                  <React.Fragment key={item.label}>
+                    <button
+                        onClick={item.onClick}
+                        className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${
+                            item.danger
+                                ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                                : "hover:bg-[#f2f2f3]"
+                        }`}
+                    >
+                      {item.label}
+                    </button>
+                    {idx < arr.length - 1 && (
+                        <div className="h-px bg-gray-200 w-full my-1" />
+                    )}
+                  </React.Fragment>
+              ))}
             </div>
         )}
+
 
         {channelContextMenu && (
             <div
@@ -578,7 +603,7 @@ export default function ServerDetails({
                 />
                 <div className="flex justify-between gap-2">
                   <button
-                      onClick={() => setShowCategoryPopup(false)}
+                      onClick={onCloseCategoryPopup}
                       className="px-4 py-2 border rounded-lg bg-[#eeeef0] border-[#dcdce0] cursor-pointer"
                   >
                     Cancel
