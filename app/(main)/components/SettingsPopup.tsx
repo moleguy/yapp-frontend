@@ -2,11 +2,7 @@
 'use client';
 
 import React from 'react';
-// import { FiSettings } from 'react-icons/fi';
-// import { IoIosSettings } from "react-icons/io";
 import { IoMdSettings } from "react-icons/io";
-// import { useState } from 'react';
-// import SettingsModal from './SettingsModal';
 import SettingsModal from "./SettingsModal";
 
 type Props = {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FaPen, FaPlus, FaCopy } from "react-icons/fa";
 import { HiOutlineUser } from "react-icons/hi2";
+import TagManager from "@/app/(main)/components/TagManager";
 
 import { useEdgeStore } from "@/lib/edgestore";
 import {
@@ -212,7 +213,7 @@ export default function ProfileSettings() {
       {/* Profile Image */}
       <div className="flex flex-col items-center mb-6">
         <div
-          className="w-24 h-24 overflow-hidden rounded-full cursor-pointer group relative"
+          className="w-24 h-24 overflow-hidden rounded-full group relative"
           onClick={() => {
             if (avatarUrl) setShowOptions(!showOptions);
             else document.getElementById("fileUpload")?.click();
@@ -324,12 +325,19 @@ export default function ProfileSettings() {
                     </div>
                   )}
                 </div>
-
                 {field === "display name"}
               </div>
             </div>
           ),
         )}
+        {/* creation of tags */}
+        <div
+          className={`text-gray-500 text-sm tracking-wide`}
+        >
+          <label>Tags:</label>
+          <TagManager />
+        </div>
+
 
         {/* Social Links */}
         <div className="gap-5">
