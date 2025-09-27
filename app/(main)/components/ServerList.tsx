@@ -100,9 +100,14 @@ export default function ServerList({
 
     // Create new hall - Backend
     let hallIconUrl: string | null = null;
+    let hallIconThumbnailUrl: string | null = null;
     if (imageString) {
       const hallIcon = base64ToFile(imageString || "", `${id}.png`);
-      hallIconUrl = await uploadImage(hallIcon);
+      const res = await uploadImage(hallIcon);
+      if (res) {
+        hallIconUrl = res.url;
+        hallIconThumbnailUrl = res.thumbnailUrl;
+      }
     }
 
     // Create new hall
@@ -111,6 +116,7 @@ export default function ServerList({
       const newhall = await createHall({
         name: name,
         icon_url: hallIconUrl ?? null,
+        icon_thumbnail_url: hallIconThumbnailUrl ?? null,
         banner_color: "#ffffff",
         description: "",
       });
@@ -121,7 +127,9 @@ export default function ServerList({
     }
   };
 
-  async function uploadImage(file: File): Promise<string | null> {
+  async function uploadImage(
+    file: File,
+  ): Promise<{ url: string; thumbnailUrl: string } | null> {
     try {
       const res = await edgestore.publicImages.upload({
         file,
@@ -129,7 +137,14 @@ export default function ServerList({
           console.log("Upload progress:", progress),
       });
 
-      return res.url ?? null;
+      if (res.url && res.thumbnailUrl) {
+        return {
+          url: res.url,
+          thumbnailUrl: res.thumbnailUrl,
+        };
+      }
+
+      return null;
     } catch (err) {
       console.warn("Failed to upload image (ignored):", err);
       return null;

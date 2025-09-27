@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
@@ -11,6 +11,7 @@ import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
+import { Hall, getUserHalls } from "@/lib/api";
 
 type Server = {
   id: number;
@@ -47,6 +48,28 @@ export default function HomePage() {
 
   const user = useUser();
   const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
+
+  const [userHalls, setUserHalls] = useState<Hall[] | null>(null);
+
+  useEffect(() => {
+    const fetchUserHalls = async () => {
+      try {
+        const halls = await getUserHalls();
+        setUserHalls(halls);
+      } catch (error) {
+        console.error("Error fetching user halls:", error);
+        setUserHalls(null);
+      }
+    };
+
+    fetchUserHalls();
+  }, []);
+
+  if (userHalls) {
+    for (const hall of userHalls) {
+      console.log(hall);
+    }
+  }
 
   const [friends] = useState<Friend[]>([
     {
