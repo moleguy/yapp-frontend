@@ -13,6 +13,8 @@ import FriendsProfile from "../components/FriendsProfile";
 import PollPopup from "@/app/(main)/components/PollPopup";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
+import { Hall, getUserHalls } from "@/lib/api";
+import { afterEach } from "node:test";
 
 type Server = {
   id: number;
@@ -49,6 +51,28 @@ export default function HomePage() {
 
   const user = useUser();
   const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
+
+  const [userHalls, setUserHalls] = useState<Hall[] | null>(null);
+
+  useEffect(() => {
+    const fetchUserHalls = async () => {
+      try {
+        const halls = await getUserHalls();
+        setUserHalls(halls);
+      } catch (error) {
+        console.error("Error fetching user halls:", error);
+        setUserHalls(null);
+      }
+    };
+
+    fetchUserHalls();
+  }, []);
+
+  if (userHalls) {
+    for (const hall of userHalls) {
+      console.log(hall);
+    }
+  }
 
   const [friends, setFriends] = useState<Friend[]>([
     {
@@ -169,8 +193,8 @@ export default function HomePage() {
                     src={avatarThumbnailUrl}
                     alt="Profile"
                     className="w-12 h-12 object-cover rounded-full"
-                    width={90}
-                    height={90}
+                    width={124}
+                    height={124}
                     onError={() => {
                       console.error("Avatar image failed to load:", avatarUrl); // REMOVE IN PROD
                     }}

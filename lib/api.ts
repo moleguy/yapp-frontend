@@ -99,6 +99,7 @@ export type UpdateUserMeRes = {
 export type CreateHallReq = {
   name: string;
   icon_url: string | null;
+  icon_thumbnail_url: string | null;
   banner_color: string | null;
   description: string | null;
 };
@@ -107,6 +108,7 @@ export type Hall = {
   id: string;
   name: string;
   icon_url: string | null;
+  icon_thumbnail_url: string | null;
   banner_color: string | null;
   description: string | null;
   created_at: string;
@@ -183,6 +185,18 @@ export async function createHall(payload: CreateHallReq): Promise<Hall | null> {
   } catch (error) {
     // If request fails (401, etc.), user is not authenticated
     console.log("Hall not created:", error);
+    return null;
+  }
+}
+
+export async function getUserHalls(): Promise<Hall[] | null> {
+  try {
+    return await request<Hall[]>(`${protectedApiBase}/halls/`, {
+      method: "GET",
+    });
+  } catch (error) {
+    // If request fails (401, etc.), user is not authenticated
+    console.log("Hall fetch failed:", error);
     return null;
   }
 }
