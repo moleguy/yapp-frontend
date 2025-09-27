@@ -24,19 +24,21 @@ interface ServerListProps {
   onDirectMessagesClick: () => void;
   onServersToggle: () => void;
   activeView: "server" | "dm" | null;
+  onCreateCategoryClick: (server: Server) => void;
 }
 
 const MAX_VISIBLE = 7; // show up to 7 servers before showing "more"
 
 export default function ServerList({
-  servers,
-  setServers,
-  activeServer,
-  onServerClick,
-  onLeaveServer,
-  onDirectMessagesClick,
-  onServersToggle,
-  activeView,
+    servers,
+    setServers,
+    activeServer,
+    onServerClick,
+    onLeaveServer,
+    onDirectMessagesClick,
+    onServersToggle,
+    activeView,
+    onCreateCategoryClick,
 }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -158,6 +160,36 @@ export default function ServerList({
   const visibleServers = servers.slice(0, MAX_VISIBLE);
   const extraServers = servers.slice(MAX_VISIBLE);
 
+  const contextMenuItems = [
+    {
+      label: "Invite People",
+      danger: false,
+      onClick: () => {}, // here to add a function to invite people on hall
+    },
+    {
+      label: "Create Category",
+      danger: false,
+      onClick: () => {
+        if (contextMenu) {
+          const server = servers.find(s => s.id === contextMenu?.serverId);
+          if (server) {
+            onCreateCategoryClick(server); // CALL THE PARENT FUNCTION
+          }
+        }
+        setContextMenu(null);
+      },
+    },
+    {
+      label: "Leave Hall",
+      danger: true,
+      onClick: () => {
+        if(!contextMenu) return;
+        onLeaveServer(contextMenu.serverId);
+        setContextMenu(null);
+      },
+    },
+  ];
+
   return (
     <div className=" flex flex-col items-center select-none w-full ">
       {/* Top Toggle Buttons */}
@@ -253,33 +285,29 @@ export default function ServerList({
 
       {/* Context menu for leaving a server */}
       {contextMenu && (
-        <div
-          ref={menuRef}
-          className="flex flex-col items-center gap-2 py-3 px-2 fixed z-100 border rounded-lg border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e]"
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
-        >
-          <button
-              className={`text-left cursor-pointer hover:bg-[#f2f2f3] rounded-md w-full py-2 px-2 font-base`}
+          <div
+              ref={menuRef}
+              className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+              style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
           >
-            Invite People
-          </button>
-          <div className="flex items-center justif-center w-40 flex-grow h-[1px] bg-gray-600 opacity-35" />
-          <button
-              className={`text-left cursor-pointer hover:bg-[#f2f2f3] rounded-md w-full py-2 px-2 font-base`}
-          >
-            Create Category
-          </button>
-          <div className="flex items-center justif-center w-40 flex-grow h-[1px] bg-gray-600 opacity-35" />
-          <button
-            className="text-left text-[#cb3b40] hover:bg-[#fbeff0] rounded-md cursor-pointer w-full py-2 px-2 font-base"
-            onClick={() => {
-              onLeaveServer(contextMenu.serverId);
-              setContextMenu(null);
-            }}
-          >
-            Leave Hall
-          </button>
-        </div>
+            {contextMenuItems.map((item, idx, arr) => ( // USE THE NEW ARRAY
+                <React.Fragment key={item.label}>
+                  <button
+                      onClick={item.onClick}
+                      className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
+                          item.danger
+                              ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                              : "hover:bg-[#f2f2f3]"
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                  {idx < arr.length - 1 && (
+                      <div className="h-px bg-gray-200 w-full my-1" />
+                  )}
+                </React.Fragment>
+            ))}
+          </div>
       )}
 
       {/* Popup with extra servers */}
