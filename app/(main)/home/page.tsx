@@ -65,7 +65,8 @@ export default function HomePage() {
     fetchUserHalls();
   }, []);
 
-  if (userHalls) {
+  // fixed here
+  if (userHalls && Array.isArray(userHalls)) {
     for (const hall of userHalls) {
       console.log(hall);
     }

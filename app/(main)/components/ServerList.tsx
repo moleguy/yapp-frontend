@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { RiMessage3Fill } from "react-icons/ri";
-import { BsGridFill } from "react-icons/bs"; // icon for servers tab
+import { BsGridFill } from "react-icons/bs";
 import AddServerPopup from "./AddServerPopup";
 import { FaLayerGroup } from "react-icons/fa6";
 import Image from "next/image";
@@ -27,29 +27,36 @@ interface ServerListProps {
   onCreateCategoryClick: (server: Server) => void;
 }
 
-const MAX_VISIBLE = 7; // show up to 7 servers before showing "more"
+const MAX_VISIBLE = 7;
 
 export default function ServerList({
-    servers,
-    setServers,
-    activeServer,
-    onServerClick,
-    onLeaveServer,
-    onDirectMessagesClick,
-    onServersToggle,
-    activeView,
-    onCreateCategoryClick,
-}: ServerListProps) {
+                                     servers,
+                                     setServers,
+                                     activeServer,
+                                     onServerClick,
+                                     onLeaveServer,
+                                     onDirectMessagesClick,
+                                     onServersToggle,
+                                     activeView,
+                                     onCreateCategoryClick,
+                                   }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     serverId: number;
   } | null>(null);
+  const [addServerContextMenu, setAddServerContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [showMorePopup, setShowMorePopup] = useState(false);
+  const [popupStep, setPopupStep] = useState<"choice" | "create" | "join">("choice");
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const addServerMenuRef = useRef<HTMLDivElement | null>(null);
   const serverPopupRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+  const addServerButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const { edgestore } = useEdgeStore();
 
@@ -69,10 +76,10 @@ export default function ServerList({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
-        serverPopupRef.current?.contains(target) ||
-        moreButtonRef.current?.contains(target)
+          serverPopupRef.current?.contains(target) ||
+          moreButtonRef.current?.contains(target)
       ) {
-        return; // clicked inside popup or button, ignore
+        return;
       }
       setShowMorePopup(false);
     };
@@ -83,20 +90,29 @@ export default function ServerList({
 
   // close context menu when clicking outside
   useEffect(() => {
-    if (!contextMenu) return;
+    if (!contextMenu && !addServerContextMenu) return;
+
     const handleOutside = (e: MouseEvent) => {
-      if (menuRef.current && menuRef.current.contains(e.target as Node)) return;
+      if (
+          (menuRef.current && menuRef.current.contains(e.target as Node)) ||
+          (addServerMenuRef.current && addServerMenuRef.current.contains(e.target as Node)) ||
+          (addServerButtonRef.current && addServerButtonRef.current.contains(e.target as Node))
+      ) {
+        return;
+      }
       setContextMenu(null);
+      setAddServerContextMenu(null);
     };
+
     window.addEventListener("mousedown", handleOutside);
     return () => window.removeEventListener("mousedown", handleOutside);
-  }, [contextMenu]);
+  }, [contextMenu, addServerContextMenu]);
 
   const handleCreateServer = async (name: string, imageString?: string) => {
     const id = String(Date.now());
     const newServer: Server = { id: Date.now(), name, imageString };
     setServers((prev) => [...prev, newServer]);
-    onServerClick(newServer); // logic for when opening a server when creating a new one
+    onServerClick(newServer);
 
     // Create new hall - Backend
     let hallIconUrl: string | null = null;
@@ -122,19 +138,19 @@ export default function ServerList({
       });
       console.log(newhall);
     } catch (err) {
-      console.warn("Failed to create hall:", err); // fix here
+      console.warn("Failed to create hall:", err);
       return;
     }
   };
 
   async function uploadImage(
-    file: File,
+      file: File,
   ): Promise<{ url: string; thumbnailUrl: string } | null> {
     try {
       const res = await edgestore.publicImages.upload({
         file,
         onProgressChange: (progress: number) =>
-          console.log("Upload progress:", progress),
+            console.log("Upload progress:", progress),
       });
 
       if (res.url && res.thumbnailUrl) {
@@ -168,18 +184,18 @@ export default function ServerList({
   const handleJoinServer = () => {
     const newServer: Server = { id: Date.now(), name: "Joined Server" };
     setServers((prev) => [...prev, newServer]);
-    onServerClick(newServer); // logic for always opening a server when joining a new one
+    onServerClick(newServer);
   };
 
   // servers to show initially and the extra ones for "more"
   const visibleServers = servers.slice(0, MAX_VISIBLE);
   const extraServers = servers.slice(MAX_VISIBLE);
 
-  const contextMenuItems = [
+  const serverContextMenuItems = [
     {
       label: "Invite People",
       danger: false,
-      onClick: () => {}, // here to add a function to invite people on hall
+      onClick: () => {},
     },
     {
       label: "Create Category",
@@ -188,7 +204,7 @@ export default function ServerList({
         if (contextMenu) {
           const server = servers.find(s => s.id === contextMenu?.serverId);
           if (server) {
-            onCreateCategoryClick(server); // CALL THE PARENT FUNCTION
+            onCreateCategoryClick(server);
           }
         }
         setContextMenu(null);
@@ -205,175 +221,232 @@ export default function ServerList({
     },
   ];
 
+  const addServerContextMenuItems = [
+    {
+      label: "Create Server",
+      danger: false,
+      onClick: () => {
+        setShowPopup(true);
+        setPopupStep("create");
+        setAddServerContextMenu(null);
+      },
+    },
+    {
+      label: "Join Server",
+      danger: false,
+      onClick: () => {
+        setShowPopup(true);
+        setPopupStep("join");
+        setAddServerContextMenu(null);
+      },
+    },
+  ];
+
   return (
-    <div className=" flex flex-col items-center select-none w-full ">
-      {/* Top Toggle Buttons */}
-      <div className="flex w-full bg-[#e6e6e6] rounded-t-lg ">
-        <button
-          onClick={onServersToggle}
-          className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-150 ease-in-out
-                                  ${
-                                    activeView === "server"
-                                      ? "bg-[#f3f3f4] text-black"
-                                      : "hover:bg-gray-300 text-gray-600"
-                                  }
-                              `}
-        >
-          <BsGridFill className="w-8 h-8" />
-        </button>
-
-        <button
-          onClick={onDirectMessagesClick}
-          className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-150 ease-in-out
-                                  ${
-                                    activeView === "dm"
-                                      ? "bg-[#f3f3f4] text-black"
-                                      : "hover:bg-gray-300 text-gray-600"
-                                  }
-                              `}
-        >
-          {/* Message icon */}
-          <RiMessage3Fill className="w-8 h-8" />
-        </button>
-      </div>
-
-      {/* Server Grid */}
-      {/* handling opening server container wen only server tab is clicked otherwise hides UI */}
-      {activeView === "server" && (
-        <div className="grid grid-cols-3 gap-8 p-4">
-          {/* Add server button */}
+      <div className=" flex flex-col items-center select-none w-full ">
+        {/* top toggle buttons */}
+        <div className="flex w-full bg-[#e6e6e6] rounded-t-lg ">
           <button
-            onClick={() => setShowPopup(true)}
-            className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white cursor-pointer"
+              onClick={onServersToggle}
+              className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-150 ease-in-out
+                                  ${
+                  activeView === "server"
+                      ? "bg-[#f3f3f4] text-black"
+                      : "hover:bg-gray-300 text-gray-600"
+              }
+                              `}
           >
-            <FaPlus size={24} />
+            <BsGridFill className="w-8 h-8" />
           </button>
 
-          {/* servers */}
-          {visibleServers.map((server) => (
-            <div
-              key={server.id}
-              className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer `}
-              onClick={() => onServerClick(server)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  serverId: server.id,
-                });
-              }}
-            >
-              <div
-                className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center transition-transform duration-300 ease-out
-                            ${activeServer?.id === server.id ? "scale-x-100" : "scale-x-0"}`}
-              />
-
-              {server.imageString ? (
-                <img
-                  src={server.imageString}
-                  alt={server.name}
-                  className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
-                />
-              ) : (
-                <div
-                  className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-none`}`}
-                >
-                  {server.name.trim().charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* More button if >7 servers */}
-          {extraServers.length > 0 && (
-            <button
-              ref={moreButtonRef}
-              onClick={() => setShowMorePopup((prev) => !prev)}
-              className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer"
-            >
-              <FaLayerGroup className="w-6 h-6 text-[#6164f2]" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Context menu for leaving a server */}
-      {contextMenu && (
-          <div
-              ref={menuRef}
-              className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
-              style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
+          <button
+              onClick={onDirectMessagesClick}
+              className={`flex-1 p-3 flex items-center justify-center cursor-pointer transition-all duration-150 ease-in-out
+                                  ${
+                  activeView === "dm"
+                      ? "bg-[#f3f3f4] text-black"
+                      : "hover:bg-gray-300 text-gray-600"
+              }
+                              `}
           >
-            {contextMenuItems.map((item, idx, arr) => ( // USE THE NEW ARRAY
-                <React.Fragment key={item.label}>
-                  <button
-                      onClick={item.onClick}
-                      className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
-                          item.danger
-                              ? "text-[#cb3b40] hover:bg-[#fbeff0]"
-                              : "hover:bg-[#f2f2f3]"
-                      }`}
-                  >
-                    {item.label}
-                  </button>
-                  {idx < arr.length - 1 && (
-                      <div className="h-px bg-gray-200 w-full my-1" />
-                  )}
-                </React.Fragment>
-            ))}
-          </div>
-      )}
+            <RiMessage3Fill className="w-8 h-8" />
+          </button>
+        </div>
 
-      {/* Popup with extra servers */}
-      {showMorePopup && (
-        <div
-          ref={serverPopupRef}
-          className="absolute top-78 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50"
-        >
-          {extraServers.map((server) => (
-            <div
-              key={server.id}
-              className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer"
-              onClick={() => {
-                onServerClick(server);
-                setShowMorePopup(false);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  serverId: server.id,
-                });
-                // setShowMorePopup(false);
-              }}
-            >
-              {server.imageString ? (
-                <Image
-                  src={server.imageString}
-                  alt={server.name}
-                  className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
-                />
-              ) : (
-                <div
-                  className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-none hover:border-none`}`}
-                >
-                  {server.name.trim().charAt(0).toUpperCase()}
-                </div>
+        {/* Server Grid */}
+        {activeView === "server" && (
+            <div className="grid grid-cols-3 gap-8 p-4">
+              {/* Add server button */}
+              <button
+                  ref={addServerButtonRef}
+                  onClick={() => {
+                    setShowPopup(true);
+                    setPopupStep("choice");
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setAddServerContextMenu({
+                      x: e.clientX,
+                      y: e.clientY,
+                    });
+                  }}
+                  className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white cursor-pointer"
+              >
+                <FaPlus size={24} />
+              </button>
+
+              {/* servers */}
+              {visibleServers.map((server) => (
+                  <div
+                      key={server.id}
+                      className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer `}
+                      onClick={() => onServerClick(server)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({
+                          x: e.clientX,
+                          y: e.clientY,
+                          serverId: server.id,
+                        });
+                      }}
+                  >
+                    <div
+                        className={`absolute bottom-[-6px] w-8 h-1 rounded-full bg-[#6164f2] origin-center transition-transform duration-300 ease-out
+                            ${activeServer?.id === server.id ? "scale-x-100" : "scale-x-0"}`}
+                    />
+
+                    {server.imageString ? (
+                        <img
+                            src={server.imageString}
+                            alt={server.name}
+                            className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
+                        />
+                    ) : (
+                        <div
+                            className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-none`}`}
+                        >
+                          {server.name.trim().charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                  </div>
+              ))}
+
+              {/* More button if >7 servers */}
+              {extraServers.length > 0 && (
+                  <button
+                      ref={moreButtonRef}
+                      onClick={() => setShowMorePopup((prev) => !prev)}
+                      className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer"
+                  >
+                    <FaLayerGroup className="w-6 h-6 text-[#6164f2]" />
+                  </button>
               )}
             </div>
-          ))}
-        </div>
-      )}
+        )}
 
-      {/* Add server popup */}
-      <AddServerPopup
-        isOpen={showPopup}
-        onClose={() => setShowPopup(false)}
-        onCreate={handleCreateServer}
-        onJoin={handleJoinServer}
-      />
-    </div>
+        {/* Context menu for servers */}
+        {contextMenu && (
+            <div
+                ref={menuRef}
+                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+                style={{ top: contextMenu.y, left: contextMenu.x, minWidth: 120 }}
+            >
+              {serverContextMenuItems.map((item, idx, arr) => (
+                  <React.Fragment key={item.label}>
+                    <button
+                        onClick={item.onClick}
+                        className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
+                            item.danger
+                                ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                                : "hover:bg-[#f2f2f3]"
+                        }`}
+                    >
+                      {item.label}
+                    </button>
+                    {idx < arr.length - 1 && (
+                        <div className="h-px bg-gray-200 w-full my-1" />
+                    )}
+                  </React.Fragment>
+              ))}
+            </div>
+        )}
+
+        {/* Context menu for Add Server button */}
+        {addServerContextMenu && (
+            <div
+                ref={addServerMenuRef}
+                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-lg border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+                style={{ top: addServerContextMenu.y, left: addServerContextMenu.x, minWidth: 120 }}
+            >
+              {addServerContextMenuItems.map((item, idx, arr) => (
+                  <React.Fragment key={item.label}>
+                    <button
+                        onClick={item.onClick}
+                        className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
+                            item.danger
+                                ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                                : "hover:bg-[#f2f2f3]"
+                        }`}
+                    >
+                      {item.label}
+                    </button>
+                  </React.Fragment>
+              ))}
+            </div>
+        )}
+
+        {/* Popup with extra servers */}
+        {showMorePopup && (
+            <div
+                ref={serverPopupRef}
+                className="absolute top-78 left-70 bg-white border border-[#dcd9d3] shadow-lg rounded-xl p-2 grid grid-cols-3 gap-2 z-50"
+            >
+              {extraServers.map((server) => (
+                  <div
+                      key={server.id}
+                      className="w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer"
+                      onClick={() => {
+                        onServerClick(server);
+                        setShowMorePopup(false);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({
+                          x: e.clientX,
+                          y: e.clientY,
+                          serverId: server.id,
+                        });
+                      }}
+                  >
+                    {server.imageString ? (
+                        <Image
+                            src={server.imageString}
+                            alt={server.name}
+                            className={`w-16 h-16 border-3 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
+                        />
+                    ) : (
+                        <div
+                            className={`w-16 h-16 border-3 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-none hover:border-none`}`}
+                        >
+                          {server.name.trim().charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                  </div>
+              ))}
+            </div>
+        )}
+
+        {/* Add server popup */}
+        <AddServerPopup
+            isOpen={showPopup}
+            onClose={() => {
+              setShowPopup(false);
+              setPopupStep("choice");
+            }}
+            onCreate={handleCreateServer}
+            onJoin={handleJoinServer}
+            initialStep={popupStep}
+        />
+      </div>
   );
 }
