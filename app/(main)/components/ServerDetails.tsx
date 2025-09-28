@@ -43,9 +43,8 @@ export default function ServerDetails({
   const [serverCategories, setServerCategories] = useState<Record<number, Category[]>>({});
   const [openCategories, setOpenCategories] = useState<Record<number, string[]>>({});
   const [popupCategoryId, setPopupCategoryId] = useState<string | null>(null);
-  // const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null,);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState(
       {
@@ -68,7 +67,6 @@ export default function ServerDetails({
   } | null>(null);
 
   const channelMenuRef = useRef<HTMLDivElement | null>(null);
-
 
   // default categories (used to initialize a server)
   const initialCategories: Category[] = [
@@ -101,11 +99,11 @@ export default function ServerDetails({
 
     const generalChannel = initialCategories
         .flatMap((c) => c.channels)
-        .find((ch) => ch.name === "general"  && ch.type === "text");
+        .find((ch) => ch.name === "general" && ch.type === "text");
 
-    if(generalChannel){
+    if (generalChannel) {
       setSelectedChannelId(generalChannel.id);
-      onSelectChannel?.({id: generalChannel.id, name: generalChannel.name})
+      onSelectChannel?.({ id: generalChannel.id, name: generalChannel.name })
     }
   }, [activeServer, onSelectChannel]);
 
@@ -188,9 +186,8 @@ export default function ServerDetails({
               (ch) => ch.id !== channelContextMenu.channelId
           );
 
-          // If the deleted channel was selected and category is collapsed
           if (newChannels.length > 0 && selectedChannelId === channelContextMenu.channelId) {
-            setSelectedChannelId(newChannels[0].id); // safe here because this is inside a click handler
+            setSelectedChannelId(newChannels[0].id);
             const selCh = newChannels[0];
             onSelectChannel?.({ id: selCh.id, name: selCh.name });
           } else if (newChannels.length === 0 && selectedChannelId === channelContextMenu.channelId) {
@@ -212,12 +209,12 @@ export default function ServerDetails({
   // handling contextMenu for deleting category with a popup over the channel when right click happens
   const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string) => {
     e.preventDefault();
-    setCategoryContextMenu({x: e.pageX, y: e.pageY, categoryId});
+    setCategoryContextMenu({ x: e.pageX, y: e.pageY, categoryId });
   }
 
   // deleting a category when clicking a button: Delete Category
   const handleDeleteCategory = (categoryId: string) => {
-    if(!activeServer) return;
+    if (!activeServer) return;
     setServerCategories((prev) => {
       const updated = (prev[activeServer.id] || []).filter(
           (c) => c.id !== categoryId
@@ -227,7 +224,43 @@ export default function ServerDetails({
     setCategoryContextMenu(null);
   };
 
-  // If any server isn't open then default message is shown.
+  // collapsing a specific category with only selected channel opened
+  const handleCollapseCategory = (categoryId: string) => {
+    if (!activeServer) return;
+    setOpenCategories((prev) => {
+      const ids = prev[activeServer.id] || [];
+      const newIds = ids.filter((id) => id !== categoryId);
+      return { ...prev, [activeServer.id]: newIds };
+    });
+    setCategoryContextMenu(null);
+  };
+
+  // collapsing all categories except the one containing the selected channel
+  const handleCollapseAllCategories = () => {
+    if (!activeServer) return;
+
+    setOpenCategories((prev) => {
+      const currentCategories = serverCategories[activeServer.id] || [];
+
+      let categoryWithSelectedChannel: string | null = null;
+
+      if (selectedChannelId) {
+        for (const category of currentCategories) {
+          if (category.channels.some(ch => ch.id === selectedChannelId)) {
+            categoryWithSelectedChannel = category.id;
+            break;
+          }
+        }
+      }
+      const newIds: string[] = []; // Empty array = all categories collapsed
+
+      return { ...prev, [activeServer.id]: newIds };
+    });
+
+    setCategoryContextMenu(null);
+  };
+
+  // if any hall isn't open then default message is shown.
   if (!activeServer) {
     return (
         <div className="h-full w-full flex items-center justify-center text-center text-[#222831] text-xl font-medium">
@@ -259,7 +292,7 @@ export default function ServerDetails({
       type: "text" | "voice",
       name: string,
   ) => {
-    if (!categoryId) return; // If no category id provided, then return
+    if (!categoryId) return; // if no category id provided, return
     setServerCategories((prev) => {
       const updated = [...(prev[activeServer.id] || [])];
       const catIndex = updated.findIndex((c) => c.id === categoryId);
@@ -298,12 +331,12 @@ export default function ServerDetails({
         { id: newId, name, channels: [] },
       ],
     }));
-    // open the newly created category
+    // opening the newly created category
     setOpenCategories((prev) => ({
       ...prev,
       [activeServer.id]: [...(prev[activeServer.id] || []), newId],
     }));
-    // resets the category popup to be blank
+    // reseting the category popup to be blank
     setNewCategoryName("");
     onCloseCategoryPopup();
   };
@@ -370,11 +403,6 @@ export default function ServerDetails({
           </div>
         </div>
 
-        {/* separator */}
-        {/*<div className="flex items-center my-2 w-full" role="separator">
-        <div className="flex-grow h-px bg-gray-600 opacity-35" />
-      </div>*/}
-
         {/* channels and categories container where it listens for right click for category popup */}
         <div
             ref={channelsAreaRef}
@@ -390,8 +418,6 @@ export default function ServerDetails({
 
             return (
                 <div key={cat.id} className="relative mb-3">
-                  {/* Category header: clickable area toggles collapse/expand.
-                        + button stops propagation so it doesn't toggle */}
                   <div
                       className="relative flex items-center justify-between category-header cursor-pointer select-none"
                       onClick={() => toggleCategory(cat.id)}
@@ -416,7 +442,7 @@ export default function ServerDetails({
 
                     <button
                         onClick={(e) => {
-                          e.stopPropagation(); // prevent header toggle
+                          e.stopPropagation();
                           setPopupCategoryId(cat.id);
                         }}
                         className="p-1 rounded-lg hover:bg-[#dcd9d3] add-channel-btn cursor-pointer"
@@ -492,7 +518,7 @@ export default function ServerDetails({
         {categoryContextMenu && (
             <div
                 ref={deleteCategoryMenuRef}
-                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+                className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48  bg-[#ffffff] text-[#1e1e1e] text-sm tracking-wide font-base"
                 style={{ top: categoryContextMenu.y, left: categoryContextMenu.x }}
                 onClick={() => setCategoryContextMenu(null)}
             >
@@ -500,12 +526,14 @@ export default function ServerDetails({
                 {
                   label: "Collapse Category",
                   danger: false,
-                  onClick: () => {},
+                  onClick: () => {
+                    handleCollapseCategory(categoryContextMenu.categoryId!);
+                  },
                 },
                 {
                   label: "Collapse All Categories",
                   danger: false,
-                  onClick: () => {},
+                  onClick: handleCollapseAllCategories,
                 },
                 {
                   label: "Delete Category",
@@ -518,10 +546,9 @@ export default function ServerDetails({
                   <React.Fragment key={item.label}>
                     <button
                         onClick={item.onClick}
-                        className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${
-                            item.danger
-                                ? "text-[#cb3b40] hover:bg-[#fbeff0]"
-                                : "hover:bg-[#f2f2f3]"
+                        className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${item.danger
+                            ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                            : "hover:bg-[#f2f2f3]"
                         }`}
                     >
                       {item.label}
@@ -534,22 +561,20 @@ export default function ServerDetails({
             </div>
         )}
 
-
         {channelContextMenu && (
             <div
                 ref={channelMenuRef}
-                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50"
+                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2"
                 style={{ top: channelContextMenu.y, left: channelContextMenu.x }}
             >
               <button
-                  className="block w-full text-left hover:bg-gray-100 p-2 text-[#1e1e1e] rounded-lg"
+                  className="block w-full text-left text-[#cb3b40] hover:bg-[#fbeff0]  rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
                   onClick={handleLeaveChannel}
               >
                 Delete Channel
               </button>
             </div>
         )}
-
 
         {/* add channel popup for specific or each category  */}
         {popupCategoryId && (
@@ -563,19 +588,19 @@ export default function ServerDetails({
             />
         )}
 
-        {/* Update the context menu rendering section*/}
+        {/* updating the context menu rendering section*/}
         {showContextMenu && contextMenu && (
             <div
-                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50"
+                className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2"
                 style={{
                   top: contextMenu.y,
                   left: contextMenu.x,
-                  transform: 'translate(0, 0)' // Ensure no additional transformation
+                  transform: 'translate(0, 0)'
                 }}
                 onClick={() => setShowContextMenu(false)}
             >
               <button
-                  className="block w-full text-left hover:bg-gray-100 p-2 text-[#1e1e1e] rounded-lg"
+                  className="block w-full text-left text-[#1e1e1e] hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
                   onClick={handleCreateCategoryClick}
               >
                 Create Category

@@ -3,6 +3,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {IoIosClose} from "react-icons/io";
 import { Friend } from "@/app/(main)/components/FriendsProfile";
+import Image from 'next/image';
 
 type ProfileCardProps = {
     friend: Friend;
@@ -36,21 +37,26 @@ export default function ProfileCard({friend, isOpen, onClose}: ProfileCardProps 
             ref={profileRef}
             className="fixed inset-0 flex items-center justify-center bg-black/30 bg-opacity-50 z-50">
             {/* Modal */}
-            <div className="bg-white shadow-lg w-[400px] max-w-full relative p-6  border border-[#dcd9d3] rounded-xl">
+            <div className="bg-white shadow-lg w-[540px] max-w-full relative p-6  border border-[#dcd9d3] rounded-xl">
                 {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-3 right-3 text-gray-600 hover:text-[#1e1e1e] cursor-pointer"
+                    className="absolute top-1 right-1 text-gray-600 hover:text-[#1e1e1e] cursor-pointer"
                 >
                     <IoIosClose className="w-8 h-8" />
                 </button>
 
                 {/* Content */}
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-start text-center">
+                    <div
+                        className={`w-full h-40 bg-black rounded-lg mb-20`}
+                    >
+                        banner
+                    </div>
                     <img
                         src={friend.avatarUrl || "/icons/default-avatar.png"}
                         alt={friend.name}
-                        className="w-24 h-24 rounded-full object-cover mb-4"
+                        className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-4 bg-gray-500"
                     />
                     <h2 className="text-xl font-semibold">{friend.name}</h2>
                     {friend.username && (
