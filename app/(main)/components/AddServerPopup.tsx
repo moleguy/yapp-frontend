@@ -3,12 +3,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { IoIosClose } from "react-icons/io";
 import { FaChevronRight } from "react-icons/fa";
+import Image from "next/image";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string, imageString?: string) => void;
   onJoin: (link: string) => void;
+  initialStep?: "choice" | "create" | "join";
 };
 
 export default function AddServerPopup({
@@ -16,12 +18,14 @@ export default function AddServerPopup({
   onClose,
   onCreate,
   onJoin,
+  initialStep = "choice",
 }: Props) {
-  const [step, setStep] = useState<"choice" | "create" | "join">("choice");
+  const [step, setStep] = useState<"choice" | "create" | "join">(initialStep);
   const [serverName, setServerName] = useState("");
   const [serverImage, setServerImage] = useState<string | undefined>();
   const [inviteLink, setInviteLink] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const serverRef = useRef<HTMLDivElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const joinInputRef = useRef<HTMLInputElement | null>(null);
@@ -41,13 +45,50 @@ export default function AddServerPopup({
     }
   };
 
+  const handleServerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setServerName(value);
+
+    // counting spaces in the input
+    const spaceCount = (value.match(/ /g) || []).length;
+
+    if (spaceCount > 1) {
+      setNameError("Server name can only contain one space");
+    } else {
+      setNameError(null);
+    }
+  };
+
+  const handleCreateServer = () => {
+    // validation before creating a hall with only one space
+    const spaceCount = (serverName.match(/ /g) || []).length;
+
+    if (spaceCount > 1) {
+      setNameError("Server name can only contain one space");
+      return;
+    }
+
+    if (!serverName.trim()) {
+      setNameError("Server name is required");
+      return;
+    }
+
+    onCreate(serverName, serverImage);
+    onClose();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      onCreate(serverName, serverImage);
-      onClose();
+      handleCreateServer();
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(initialStep);
+    }
+  }, [isOpen, initialStep]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,6 +110,8 @@ export default function AddServerPopup({
       setServerName("");
       setServerImage(undefined);
       setInviteLink("");
+      setNameError(null);
+      setErrorMessage(null);
     }
   }, [isOpen]);
 
@@ -87,19 +130,13 @@ export default function AddServerPopup({
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (!serverName.trim()) {
-          setErrorMessage("Server name is required.");
-          setTimeout(() => setErrorMessage(null), 3000);
-          return;
-        }
-        onCreate(serverName, serverImage);
-        onClose();
+        handleCreateServer();
       }
     };
 
     document.addEventListener("keydown", handleGlobalKeyDown);
     return () => document.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [isOpen, step, serverName, serverImage, onCreate, onClose]);
+  }, [isOpen, step, serverName, serverImage]);
 
   if (!isOpen) return null;
 
@@ -171,9 +208,11 @@ export default function AddServerPopup({
 
               <div className="relative mt-2 mb-5">
                 {serverImage ? (
-                  <img
+                  <Image
                     src={serverImage}
                     alt="Server Preview"
+                    width={90}
+                    height={90}
                     className="w-20 h-20 rounded-full object-cover mx-auto cursor-pointer"
                     onClick={() => setServerImage(undefined)}
                     title="Click to remove/change"
@@ -206,14 +245,21 @@ export default function AddServerPopup({
                 type="text"
                 placeholder="Server Name"
                 value={serverName}
-                // onKeyDown={handleKeyDown}
-                onChange={(e) => setServerName(e.target.value)}
-                className="w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide"
+                onChange={handleServerNameChange}
+                onKeyDown={handleKeyDown}
+                className={`w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide ${
+                  nameError ? "border-red-500" : ""
+                }`}
               />
+              {nameError && (
+                <p className="text-red-500 text-sm mt-1 text-left">
+                  {nameError}
+                </p>
+              )}
               <p
                 className={`font-thin text-sm text-left mt-2 text-[#73726e] tracking-wide`}
               >
-                Craft a unique name for your server
+                Craft a unique name for your server (max one space allowed)
               </p>
             </div>
             <div className="flex gap-2 justify-between">
@@ -224,13 +270,13 @@ export default function AddServerPopup({
                 Back
               </button>
               <button
-                onClick={() => {
-                  if (serverName.trim()) {
-                    onCreate(serverName, serverImage);
-                    onClose();
-                  }
-                }}
-                className="py-2 px-6 rounded-lg bg-[#6164f2] hover:bg-[#4c52bd] text-white cursor-pointer"
+                onClick={handleCreateServer}
+                disabled={!!nameError || !serverName.trim()}
+                className={`py-2 px-6 rounded-lg text-white cursor-pointer ${
+                  nameError || !serverName.trim()
+                    ? "bg-gray-400 cursor-not-allowed hover:cursor-default"
+                    : "bg-[#6164f2] hover:bg-[#4c52bd]"
+                }`}
               >
                 Create
               </button>
