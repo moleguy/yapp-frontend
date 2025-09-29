@@ -44,10 +44,12 @@ export default function HomePage() {
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
-  const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(null);
+  const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(
+    null,
+  );
 
   const user = useUser();
-  const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
+  const { avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
 
   const [userHalls, setUserHalls] = useState<Hall[] | null>(null);
 
@@ -185,7 +187,10 @@ export default function HomePage() {
                 <ServerDetails
                   activeServer={activeServer}
                   onSelectChannel={setSelectedChannel}
-                  showCategoryPopup={showCategoryPopup && categoryPopupServer?.id === activeServer.id}
+                  showCategoryPopup={
+                    showCategoryPopup &&
+                    categoryPopupServer?.id === activeServer.id
+                  }
                   onCloseCategoryPopup={() => setShowCategoryPopup(false)}
                   onOpenCategoryPopup={handleOpenCategoryPopup}
                 />
@@ -209,7 +214,10 @@ export default function HomePage() {
                     width={90}
                     height={90}
                     onError={() => {
-                      console.error("Avatar image failed to load:", avatarThumbnailUrl); // REMOVE IN PROD
+                      console.error(
+                        "Avatar image failed to load:",
+                        avatarThumbnailUrl,
+                      ); // REMOVE IN PROD
                     }}
                   />
                 ) : (
