@@ -7,7 +7,7 @@ import Image from 'next/image';
 
 type ProfileCardProps = {
     friend: Friend;
-    isOpen: () => void;
+    isOpen: boolean;
     onClose: () => void;
 }
 
@@ -21,7 +21,7 @@ export default function ProfileCard({friend, isOpen, onClose}: ProfileCardProps 
         const handleClickOutside = (e: MouseEvent) => {
             if(
                 profileRef.current &&
-                profileRef.current.contains(e.target as Node)
+                !profileRef.current.contains(e.target as Node)
             ) {
                 onClose();
             }
@@ -32,12 +32,14 @@ export default function ProfileCard({friend, isOpen, onClose}: ProfileCardProps 
         return () => window.removeEventListener("mousedown", handleClickOutside);
     }, [isOpen, onClose]);
 
+    if(!isOpen) return null;
+
     return(
-        <div
-            ref={profileRef}
-            className="fixed inset-0 flex items-center justify-center bg-black/30 bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 bg-opacity-50 z-50">
             {/* Modal */}
-            <div className="bg-white shadow-lg w-[540px] max-w-full relative p-6  border border-[#dcd9d3] rounded-xl">
+            <div
+                ref={profileRef}
+                className="bg-white shadow-lg w-[540px] max-w-full relative p-6  border border-[#dcd9d3] rounded-xl">
                 {/* Close button */}
                 <button
                     onClick={onClose}
