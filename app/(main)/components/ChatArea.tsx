@@ -19,6 +19,7 @@ type Message = {
     timestamp: Date;
     isSystem?: boolean;
     isWelcome?: boolean;
+    isConsecutive?: boolean;
 };
 
 type ChatAreaProps = {
@@ -91,7 +92,7 @@ export default function ChatArea({
         setMessageInput("");
     }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName]);
 
-    // Combine welcome message with user messages for rendering
+    // combining welcome message with user messages for rendering
     const allMessages = welcomeMessage ? [welcomeMessage, ...messages] : messages;
 
     // Scroll to bottom when messages change
@@ -109,6 +110,11 @@ export default function ChatArea({
             sender: user?.display_name || "Unknown",
             text: messageInput.trim(),
             timestamp: new Date(),
+
+            isConsecutive: messages.length > 0 &&
+                messages[messages.length -1].sender === (user?.display_name || "Unknown") &&
+                !messages[messages.length-1].isSystem &&
+                !messages[messages.length -1].isWelcome
         };
 
         setMessages(prev => [...prev, newMessage]);
@@ -176,97 +182,78 @@ export default function ChatArea({
 
     return (
         <div className="flex flex-col h-full bg-[#f8f9fa]">
-            {/* Messages area - Fixed overflow */}
             <div className="flex-1 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
                 <div className="p-4">
-                    <div className="space-y-4">
-                        {allMessages.map((msg) => (
-                            <div key={msg.id} className={`flex gap-3 ${msg.isSystem ? 'justify-center' : ''}`}>
-                                {!msg.isSystem && (
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                                        {avatarThumbnailUrl ? (
-                                            <Image
-                                                src={avatarThumbnailUrl}
-                                                alt={msg.sender}
-                                                width={124}
-                                                height={124}
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <span className="font-medium text-gray-600">
-                                                {msg.sender.charAt(0).toUpperCase()}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className={`flex-1 min-w-0 ${msg.isSystem ? 'text-center w-full mx-auto' : 'max-w-full'}`}>
-                                    {!msg.isSystem && (
-                                        <div className="flex items-baseline gap-2 mb-1 flex-wrap">
-                                            <span className="font-semibold text-[#1e1f22] break-words">{msg.sender}</span>
-                                            <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(msg.timestamp)}</span>
+                    <div className="space-y-0.5">
+                        {allMessages.map((msg, index) => (
+                            <div
+                                key={msg.id}
+                                className={`group relative ${msg.isSystem ? 'justify-center' : ''}`}
+                            >
+                                <div className={`flex gap-4 items-start group-hover:bg-[#eeeeef] rounded-lg px-2 transition-colors ${msg.isSystem ? 'flex items-start' : ''}`}>
+                                {!msg.isSystem && !msg.isConsecutive && (
+                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-start overflow-hidden">
+                                            {avatarThumbnailUrl ? (
+                                                <Image
+                                                    src={avatarThumbnailUrl}
+                                                    alt={msg.sender}
+                                                    width={124}
+                                                    height={124}
+                                                    className="object-cover cursor-pointer"
+                                                />
+                                            ) : (
+                                                <span className="font-medium text-gray-600">
+                                                    {msg.sender.charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
                                         </div>
                                     )}
 
-                                    <div className={`${msg.isSystem ? 'w-full' : 'text-[#2e2f32]'}`}>
-                                        {msg.isSystem ? (
-                                            <div className="break-words w-full">
-                                                {/* server welcome section */}
-                                                {!isDm && serverName && channelName && (
-                                                    <div className="w-full">
-                                                        {/*!!! To be edited !!!*/}
-                                                        {/*<div className="w-16 h-16 mx-auto rounded-full bg-[#5865f2] mb-4 flex items-center justify-center text-white text-2xl font-bold">*/}
-                                                        {/*    <FaHashtag className="w-8 h-8"/>*/}
-                                                        {/*</div>*/}
-                                                        {/*<div className="text-2xl font-bold text-[#1e1f22] mb-2 break-words px-4">*/}
-                                                        {/*    Welcome to #{channelName}!*/}
-                                                        {/*</div>*/}
-                                                        {/*<div className="text-sm text-gray-600 mb-6 break-words px-4">*/}
-                                                        {/*    This is the start of the <strong>#{channelName}</strong> channel in <strong>{serverName}</strong>.*/}
-                                                        {/*</div>*/}
+                                    {!msg.isSystem && msg.isConsecutive && (
+                                        <div className="flex-shrink-0 w-10 h-10"></div>
+                                    )}
 
-                                                        {/*/!* invite friend card - only for servers *!/*/}
-                                                        {/*<div className="bg-[#f8f9fa] rounded-lg p-4 border border-gray-200 max-w-md mx-auto">*/}
-                                                        {/*    <div className="flex items-center gap-3 mb-3">*/}
-                                                        {/*        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white">*/}
-                                                        {/*            <FaUserPlus className="w-5 h-5" />*/}
-                                                        {/*        </div>*/}
-                                                        {/*        <div className="min-w-0 flex-1">*/}
-                                                        {/*            <div className="font-semibold text-[#1e1f22] break-words">Invite your friends</div>*/}
-                                                        {/*            <div className="text-xs text-gray-600 break-words">Bring your friends into the conversation</div>*/}
-                                                        {/*        </div>*/}
-                                                        {/*    </div>*/}
-                                                        {/*    <button*/}
-                                                        {/*        onClick={() => setShowInvitePopup(true)}*/}
-                                                        {/*        className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white py-2 px-4 rounded text-sm font-medium transition-colors"*/}
-                                                        {/*    >*/}
-                                                        {/*        Create Invite*/}
-                                                        {/*    </button>*/}
-                                                        {/*</div>*/}
-                                                    </div>
-                                                )}
-
-                                                {/* DM welcome section */}
-                                                {isDm && friendDisplayName && (
-                                                    <div className="w-full text-start">
-                                                        <div className="w-16 h-16 rounded-full bg-[#3A6F43] mb-4 flex items-center justify-center text-white text-3xl font-bold">
-                                                            {friendDisplayName?.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div className="text-3xl font-semibold text-[#1e1f22] mb-2 tracking-wide break-words">
-                                                            {friendDisplayName}
-                                                        </div>
-                                                        <div className={`text-lg font-medium text-[#1e1f22] mb-2`}>
-                                                            @{friendUsername}
-                                                        </div>
-                                                        <div className="text-lg text-gray-600 tracking-wide break-words">
-                                                            {msg.text.replace(/\*\*(.*?)\*\*/g, '$1')}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                    <div className={`flex-1 min-w-0 ${msg.isSystem ? 'text-center w-full mx-auto' : 'max-w-full'}`}>
+                                        {!msg.isSystem && !msg.isConsecutive && (
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 mb-1">
+                                                <span className="font-semibold text-[#1e1f22] break-words hover:underline cursor-pointer flex-shrink-0">
+                                                    {msg.sender}
+                                                </span>
+                                                <span className="text-xs text-gray-500 flex-shrink-0">
+                                                    {formatDate(msg.timestamp)}
+                                                </span>
                                             </div>
-                                        ) : (
-                                            <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
                                         )}
+
+                                        {/* for consecutive messages, timestamp on hover */}
+                                        {!msg.isSystem && msg.isConsecutive && (
+                                            <div className="absolute left-14 -translate-x-12 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-xs text-gray-500">
+                                                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className={` ${msg.isSystem ? 'w-full' : 'text-[#2e2f32]'}`}>
+                                            {msg.isSystem ? (
+                                                <div className="break-words w-full">
+                                                    {!isDm && serverName && channelName && (
+                                                        <div className="w-full">
+                                                            {/* server welcome content */}
+                                                        </div>
+                                                    )}
+                                                    {isDm && friendDisplayName && (
+                                                        <div className="w-full text-start">
+                                                            {/* DM welcome content */}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[15px] text-[#1e1e1e] leading-relaxed break-words whitespace-pre-wrap overflow-hidden py-0.5">
+                                                    {msg.text}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -277,7 +264,7 @@ export default function ChatArea({
             </div>
 
             {/* Input area */}
-            <div className="p-4 bg-[#ffffff]">
+            <div className="p-4 bg-[#fbfbfb]">
                 <div className="relative">
                     <button className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer">
                         <FaPlus
@@ -286,7 +273,7 @@ export default function ChatArea({
                         />
                     </button>
 
-                    {/* File / Poll popup */}
+                    {/* file or poll popup */}
                     {showPopup && (
                         <div
                             ref={uploadRef}
@@ -345,7 +332,7 @@ export default function ChatArea({
                         className="w-full pl-12 pr-12 py-4 rounded-lg border border-[#dcd9d3] focus:outline-none bg-[#ffffff] tracking-wide text-[#222831]"
                     />
 
-                    {/* Send button */}
+                    {/* send button */}
                     <button
                         onClick={sendMessage}
                         disabled={!messageInput.trim()}
