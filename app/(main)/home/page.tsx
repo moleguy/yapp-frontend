@@ -284,7 +284,9 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <div className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer">
+                <div
+                    onClick={(e) => setSettingsOpen(true)}
+                    className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer">
                   <SettingsPopup
                     isOpen={settingsOpen}
                     onClose={() => setSettingsOpen(false)}

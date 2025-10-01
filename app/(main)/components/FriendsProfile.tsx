@@ -94,7 +94,11 @@ const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
             </button>
 
             {showProfileCard && (
-                <ProfileCard friend={friend} isOpen={() => setShowProfileCard(false)} onClose={() => setShowProfileCard(false)} />
+                <ProfileCard
+                    friend={friend}
+                    isOpen={showProfileCard}
+                    onCloseAction={() => setShowProfileCard(false)}
+                />
             )}
       </div>
   );

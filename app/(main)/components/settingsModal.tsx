@@ -43,6 +43,19 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen]);
+
   const toggleOption = (option: string) => {
     setSelected((prev) => 
       prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
@@ -51,8 +64,29 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (typeof onClose === 'function') {
+      onClose();
+    } else {
+      console.warn('onCloseAction is not a function');
+    }
+  };
+
+  const handleCloseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleClose();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin">
+    <div
+        onClick={handleBackdropClick}
+        className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-none bg-black/30 text-black font-thin cursor-default">
       <div 
         ref={settingsRef}
         className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible">
@@ -61,7 +95,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         {/* close button */}
           <button
-            onClick={onClose}
+            onClick={handleCloseClick}
             className="text-gray-500 hover:text-black text-3xl cursor-pointer"
           >
             <IoIosClose className='w-8 h-8 text-black'/>
