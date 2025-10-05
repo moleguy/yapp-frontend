@@ -26,10 +26,10 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
     let message: string | undefined;
     if (isJSON && body && typeof body === "object") {
       // Backend uses { error: string, code: number, success: false }
-      if ("error" in (body as any)) {
-        message = (body as any).error as string;
-      } else if ("message" in (body as any)) {
-        message = (body as any).message as string;
+      if ("error" in body) {
+        message = (body as { error: string }).error;
+      } else if ("message" in body) {
+        message = (body as { message: string }).message;
       }
     }
     if (!message && typeof body === "string" && body.trim()) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import classNames from "classnames";
 import {
   IoSettings,
@@ -17,7 +17,6 @@ import { MdOutlineSdStorage, MdSdStorage } from "react-icons/md";
 import ThemeDropDown from "./ThemeDropDown";
 import TextSizeDropDown from "./TextSizeDropDown";
 import { NotificationSettings } from "./NotificationSettings";
-// import Image from 'next/image';
 import ProfileSettings from "./ProfileSettings";
 
 interface Props {
@@ -31,6 +30,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [selected, setSelected] = useState<string[]>([]);
   const settingsRef = useRef<HTMLDivElement | null>(null);
 
+  const handleClose = useCallback(() => {
+    if (typeof onClose === "function") {
+      onClose();
+    } else {
+      console.warn("onClose is not a function");
+    }
+  }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -39,7 +46,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         settingsRef.current &&
         !settingsRef.current.contains(e.target as Node)
       ) {
-        onClose();
+        handleClose();
       }
     };
 
@@ -48,7 +55,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,7 +68,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   const toggleOption = (option: string) => {
     setSelected((prev) =>
@@ -72,14 +79,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
-
-  const handleClose = () => {
-    if (typeof onClose === "function") {
-      onClose();
-    } else {
-      console.warn("onCloseAction is not a function");
-    }
-  };
 
   const handleCloseClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -101,9 +100,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         ref={settingsRef}
         className="relative w-[100%] max-w-3xl h-[700px] bg-white rounded-2xl flex overflow-visible"
       >
-        {/* Sidebar Contents */}
         <div className="w-1/4 border-r rounded-l-xl p-4 bg-[#f9f9f9]">
-          {/* close button */}
           <button
             onClick={handleCloseClick}
             className="text-gray-500 hover:text-black text-3xl cursor-pointer"
@@ -111,7 +108,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <IoIosClose className="w-8 h-8 text-black" />
           </button>
           <ul className="space-y-1">
-            {/* General Button */}
             <button
               onClick={() => setActiveTab("General")}
               className={classNames(
@@ -132,7 +128,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <p className="text-base text-[#222831]">General</p>
             </button>
 
-            {/* Profile Button */}
             <button
               onClick={() => setActiveTab("Profile")}
               className={classNames(
@@ -153,7 +148,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <p className="text-base text-[#222831]">Profile</p>
             </button>
 
-            {/* Personalization Button */}
             <button
               onClick={() => setActiveTab("Personalization")}
               className={classNames(
@@ -174,7 +168,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <p className="text-base text-[#222831]">Personalization</p>
             </button>
 
-            {/* Security Button */}
             <button
               onClick={() => setActiveTab("Security")}
               className={classNames(
@@ -195,7 +188,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <p className="text-base text-[#222831]">Security</p>
             </button>
 
-            {/* Notification Button */}
             <button
               onClick={() => setActiveTab("Notification")}
               className={classNames(
@@ -216,7 +208,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <p className="text-base text-[#222831]">Notification</p>
             </button>
 
-            {/* Storage Button */}
             <button
               onClick={() => setActiveTab("Storage")}
               className={classNames(
@@ -239,13 +230,11 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </ul>
         </div>
 
-        {/* Content Area */}
         <div className="relative w-3/4 p-6 space-y-6 z-0">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl text-[#1e1e1e] font-medium">{activeTab}</h2>
           </div>
 
-          {/* General Tab */}
           {activeTab === "General" && (
             <div className="space-y-4">
               <div>
@@ -292,7 +281,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Personalization Tab */}
           {activeTab === "Personalization" && (
             <div className="space-y-4">
               <div
@@ -318,7 +306,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 >
                   <div className="flex-grow h-px bg-gray-300 opacity-35" />
                 </div>
-                {/* dropdown and showing option for text size in chat app */}
                 <div className="mt-2">
                   <p className="text-lg font-light">Text Size</p>
                   <TextSizeDropDown />
@@ -330,7 +317,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Storage Tab */}
           {activeTab === "Storage" && (
             <div className="space-y-4">
               <div
@@ -366,7 +352,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Profile Tab */}
           {activeTab === "Profile" && (
             <>
               <div
@@ -380,7 +365,6 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </>
           )}
 
-          {/* Notification Tab */}
           {activeTab === "Notification" && (
             <div className="space-y-2">
               <div

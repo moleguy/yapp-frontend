@@ -8,7 +8,7 @@ import Image from "next/image";
 import { GoDotFill } from "react-icons/go";
 
 type Friend = {
-  id: number;
+  id: string;
   name: string;
   status?: "online" | "offline"; // optional (e.g., online, offline)
 };
@@ -23,7 +23,7 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
   onSelectFriend,
 }) => {
   const [query, setQuery] = useState("");
-  const [selectedFriend, setSelectedFriend] = useState<number | null>(null);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleClear = () => {
@@ -63,7 +63,7 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
         {filteredFriends.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
             {query ? (
-              <p>No friends found matching "{query}"</p>
+              <p>No friends found matching &quot;{query}&quot;</p>
             ) : (
               <>
                 <p className="text-lg mb-2">

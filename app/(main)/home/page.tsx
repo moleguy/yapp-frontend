@@ -41,7 +41,7 @@ export default function HomePage() {
     id: string;
     name: string;
   } | null>(null);
-  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showServersOnly, setShowServersOnly] = useState(false);
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
@@ -285,8 +285,9 @@ export default function HomePage() {
                 </div>
 
                 <div
-                    onClick={(e) => setSettingsOpen(true)}
-                    className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer">
+                  onClick={() => setSettingsOpen(true)}
+                  className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer"
+                >
                   <SettingsPopup
                     isOpen={settingsOpen}
                     onClose={() => setSettingsOpen(false)}
@@ -317,7 +318,7 @@ export default function HomePage() {
                 ) : activeView === "dm" && selectedFriend ? (
                   <ChatArea
                     friendDisplayName={
-                      selectedFriend.display_name || selectedFriend.name
+                      selectedFriend.name || selectedFriend.name
                     }
                     friendUsername={selectedFriend.username || ""}
                     friendId={selectedFriend.id.toString()}
