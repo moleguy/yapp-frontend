@@ -113,7 +113,7 @@ export type Hall = {
   description: string | null;
   created_at: string;
   updated_at: string;
-  created_by: string;
+  owner_id: string;
 };
 
 // Auth Functions
@@ -178,7 +178,7 @@ export async function updateUserMe(
 export async function createHall(payload: CreateHallReq): Promise<Hall | null> {
   try {
     // Backend path: POST /halls/create (protected with AuthMiddleware)
-    return await request<Hall>(`${protectedApiBase}/halls/create`, {
+    return await request<Hall>(`${protectedApiBase}/halls/`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
