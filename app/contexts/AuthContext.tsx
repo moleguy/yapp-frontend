@@ -64,7 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (typeof error === "object" && error !== null) {
-        const apiError = error as any;
+        const apiError = error as {
+          message?: string;
+          code?: string;
+          statusCode?: number;
+        };
         return {
           message: apiError.message || defaultMessage,
           code: apiError.code,
