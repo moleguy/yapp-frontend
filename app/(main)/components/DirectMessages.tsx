@@ -8,7 +8,7 @@ import Image from "next/image";
 import { GoDotFill } from "react-icons/go";
 
 type Friend = {
-  id: string;
+  id: number;
   name: string;
   status?: "online" | "offline"; // optional (e.g., online, offline)
 };

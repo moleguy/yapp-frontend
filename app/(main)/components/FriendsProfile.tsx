@@ -6,11 +6,11 @@ import { GoDotFill } from "react-icons/go";
 import ProfileCard from "@/app/(main)/components/ProfileCard";
 
 export type Friend = {
-  id: string;
+  id: number;
   name: string;
   username?: string;
   avatarUrl?: string;
-  status: "online" | "offline";
+  status?: "online" | "offline";
   mutualFriends?: number;
   mutualServers?: number;
   memberSince?: string; // format: "10 Jan 2019"
