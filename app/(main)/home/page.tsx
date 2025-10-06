@@ -12,6 +12,7 @@ import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import { Hall, getUserHalls } from "@/lib/api";
+// import {Friend} from "../components/FriendsProfile";
 
 type Server = {
   id: string;
@@ -25,6 +26,7 @@ type Server = {
 type Friend = {
   id: number;
   name: string;
+  avatarUrl?: string;
   status?: "online" | "offline";
   mutualFriends?: number;
   username?: string;
