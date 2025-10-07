@@ -12,7 +12,6 @@ import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import { Hall, getUserHalls } from "@/lib/api";
-// import {Friend} from "../components/FriendsProfile";
 
 type Server = {
   id: string;
@@ -53,46 +52,17 @@ export default function HomePage() {
     null,
   );
 
+  const [hallDeselectedManually, setHallDeselectedManually] = useState(false);
+  const [friendDeselectedManually, setFriendDeselectedManually] =
+    useState(false);
+
   const user = useUser();
   const { avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
 
   const [userHalls, setUserHalls] = useState<Hall[] | null>(null);
   const [hallsLoading, setHallsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserHalls = async () => {
-      try {
-        setHallsLoading(true);
-        const halls = await getUserHalls();
-        setUserHalls(halls);
-
-        // Convert halls to servers format and set them
-        if (halls && Array.isArray(halls)) {
-          const convertedServers: Server[] = halls.map((hall) => ({
-            id: hall.id ?? "",
-            name: hall.name ?? "",
-            icon_url: hall.icon_url ?? "",
-            icon_thumbnail_url: hall.icon_thumbnail_url ?? "",
-            banner_color: hall.banner_color ?? "",
-            description: hall.description ?? "",
-          }));
-          setServers(convertedServers);
-
-          // Debug logging
-          console.log("Fetched halls:", halls);
-          console.log("Converted to servers:", convertedServers);
-        }
-      } catch (error) {
-        console.error("Error fetching user halls:", error);
-        setUserHalls(null);
-      } finally {
-        setHallsLoading(false);
-      }
-    };
-
-    fetchUserHalls();
-  }, []);
-
+  // Friends list
   const [friends] = useState<Friend[]>([
     {
       id: 1,
@@ -114,63 +84,176 @@ export default function HomePage() {
     },
   ]);
 
-  // Separate online and offline friends
-  const onlineFriends = friends.filter((friend) => friend.status === "online");
-  const offlineFriends = friends.filter(
-    (friend) => friend.status === "offline",
-  );
+  const onlineFriends = friends.filter((f) => f.status === "online");
+  const offlineFriends = friends.filter((f) => f.status === "offline");
 
+  // Fetch user halls
+  useEffect(() => {
+    const fetchUserHalls = async () => {
+      try {
+        setHallsLoading(true);
+        const halls = await getUserHalls();
+        setUserHalls(halls);
+
+        if (halls && Array.isArray(halls)) {
+          const convertedServers: Server[] = halls.map((hall) => ({
+            id: hall.id ?? "",
+            name: hall.name ?? "",
+            icon_url: hall.icon_url ?? "",
+            icon_thumbnail_url: hall.icon_thumbnail_url ?? "",
+            banner_color: hall.banner_color ?? "",
+            description: hall.description ?? "",
+          }));
+          setServers(convertedServers);
+        }
+      } catch (error) {
+        console.error("Error fetching user halls:", error);
+        setUserHalls(null);
+      } finally {
+        setHallsLoading(false);
+      }
+    };
+    fetchUserHalls();
+  }, []);
+
+  // Restore last active view, server, friend, and deselection state
+  useEffect(() => {
+    const savedView = localStorage.getItem("lastActiveView") as
+      | "server"
+      | "dm"
+      | null;
+    const savedServerId = localStorage.getItem("lastActiveServerId");
+    const hallDeselected = JSON.parse(
+      localStorage.getItem("hallDeselectedManually") || "false",
+    );
+    const friendDeselected = JSON.parse(
+      localStorage.getItem("friendDeselectedManually") || "false",
+    );
+    const savedFriendId = localStorage.getItem("lastSelectedFriendId");
+
+    setHallDeselectedManually(hallDeselected);
+    setFriendDeselectedManually(friendDeselected);
+    if (savedView) setActiveView(savedView);
+
+    // Restore last server if not manually deselected
+    if (!hallDeselected && savedServerId && servers.length > 0) {
+      const savedServer = servers.find((s) => s.id === savedServerId);
+      if (savedServer) {
+        setLastActiveServer(savedServer);
+        if (savedView === "server") {
+          setActiveServer(savedServer);
+          setSelectedChannel({ id: "1", name: "general" });
+          setShowServersOnly(true);
+        }
+      }
+    }
+
+    // Restore last friend if not manually deselected
+    if (!friendDeselected && savedFriendId) {
+      const savedFriend = friends.find(
+        (f) => f.id.toString() === savedFriendId,
+      );
+      if (savedFriend) setSelectedFriend(savedFriend);
+    }
+  }, [servers, friends]);
+
+  // Persist state
+  useEffect(() => {
+    if (activeView) localStorage.setItem("lastActiveView", activeView);
+    localStorage.setItem(
+      "hallDeselectedManually",
+      JSON.stringify(hallDeselectedManually),
+    );
+    localStorage.setItem(
+      "friendDeselectedManually",
+      JSON.stringify(friendDeselectedManually),
+    );
+
+    if (activeServer?.id)
+      localStorage.setItem("lastActiveServerId", activeServer.id);
+    else if (lastActiveServer?.id)
+      localStorage.setItem("lastActiveServerId", lastActiveServer.id);
+
+    if (selectedFriend)
+      localStorage.setItem(
+        "lastSelectedFriendId",
+        selectedFriend.id.toString(),
+      );
+    else localStorage.removeItem("lastSelectedFriendId");
+  }, [
+    activeView,
+    activeServer,
+    lastActiveServer,
+    hallDeselectedManually,
+    selectedFriend,
+    friendDeselectedManually,
+  ]);
+
+  // Server / hall click
   const handleServerClick = (server: Server) => {
     setActiveServer(server);
-    setActiveView("server");
-    setLastActiveServer(server);
-
-    // auto selecting the general channel when creating a server
     setSelectedChannel({ id: "1", name: "general" });
+    setLastActiveServer(server);
+    setHallDeselectedManually(false);
+    setActiveView("server");
   };
 
-  // handling leaving a server and showing a server next to it or the server before it
   const handleLeaveServer = (serverId: string) => {
-    // Changed from number to string
-    // Find the index of the server to be removed
     const serverIndex = servers.findIndex((s) => s.id === serverId);
-
     if (serverIndex !== -1) {
       const newServers = servers.filter((s) => s.id !== serverId);
       setServers(newServers);
 
       if (activeServer?.id === serverId) {
-        let nextActiveServer = null;
-
-        if (newServers.length > 0) {
-          const nextIndex =
-            serverIndex < newServers.length
-              ? serverIndex
-              : newServers.length - 1;
-          nextActiveServer = newServers[nextIndex];
-        }
-        setActiveServer(nextActiveServer);
+        const nextServer =
+          newServers.length > 0
+            ? newServers[Math.min(serverIndex, newServers.length - 1)]
+            : null;
+        setActiveServer(nextServer);
       }
     }
   };
 
-  // handling dm button click
-  const handleDirectMessageClick = () => {
-    setActiveServer(null);
-    setActiveView("dm");
-    setShowServersOnly(false);
+  // Server tab click
+  const handleServersTabClick = () => {
+    if (activeView === "server" && activeServer) {
+      // Deselect hall if already on server tab
+      setActiveServer(null);
+      setSelectedChannel(null);
+      setHallDeselectedManually(true);
+    } else {
+      // Switch to server tab
+      setActiveView("server");
+      setShowServersOnly(true);
+
+      // Emulate last active hall click
+      if (!hallDeselectedManually && lastActiveServer) {
+        setActiveServer(lastActiveServer);
+        setSelectedChannel({ id: "1", name: "general" });
+      } else if (servers.length > 0 && !hallDeselectedManually) {
+        setActiveServer(servers[0]);
+        setSelectedChannel({ id: "1", name: "general" });
+      }
+    }
   };
 
-  // handling server tab click for the last active server
-  const handleServersTabClick = () => {
-    setActiveView("server");
-    setShowServersOnly(true);
-
-    if (lastActiveServer) {
-      setActiveServer(lastActiveServer);
-    } else if (servers.length > 0) {
-      setActiveServer(servers[0]);
+  // DM tab click
+  const handleDMTabClick = () => {
+    if (activeView === "dm") {
+      setSelectedFriend(null);
+      setFriendDeselectedManually(true);
+    } else {
+      setActiveView("dm");
+      setShowServersOnly(false);
+      if (!friendDeselectedManually && selectedFriend)
+        setSelectedFriend(selectedFriend);
     }
+  };
+
+  const handleFriendClick = (friend: Friend) => {
+    setSelectedFriend(friend);
+    setFriendDeselectedManually(false);
+    setActiveView("dm");
   };
 
   const handleCreateCategoryClick = (server: Server) => {
@@ -191,27 +274,24 @@ export default function HomePage() {
         <div className="relative w-full flex bg-[#EAE4D5] m-1">
           {/* Sidebar */}
           <div className="flex flex-col h-full w-[350px] bg-[#f3f3f4] rounded-l-lg">
-            {/* Server list */}
             <ServerList
               servers={servers}
               setServers={setServers}
               activeServer={activeServer}
               onServerClick={handleServerClick}
               onLeaveServer={handleLeaveServer}
-              onDirectMessagesClick={handleDirectMessageClick}
+              onDirectMessagesClick={handleDMTabClick}
               onServersToggle={handleServersTabClick}
               activeView={activeView}
               onCreateCategoryClick={handleCreateCategoryClick}
-              isLoading={hallsLoading} // Pass loading state
+              isLoading={hallsLoading}
             />
 
-            {/* Channels and Friends Section To Be Displayed */}
+            {/* Channels / DM section */}
             <div
-              className={`flex-1 min-h-0 overflow-y-auto
-              ${activeView === "server" && activeServer ? "border-t border-[#dcd9d3]" : ""}
-              `}
+              className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeServer ? "border-t border-[#dcd9d3]" : ""}`}
             >
-              {showServersOnly && activeView === "server" && activeServer ? (
+              {activeView === "server" && activeServer && selectedChannel ? (
                 <ServerDetails
                   activeServer={activeServer}
                   onSelectChannel={setSelectedChannel}
@@ -225,14 +305,13 @@ export default function HomePage() {
               ) : activeView === "dm" ? (
                 <DirectMessages
                   friends={friends}
-                  onSelectFriend={setSelectedFriend}
+                  onSelectFriend={handleFriendClick}
                 />
               ) : null}
             </div>
 
-            {/* Profile with controls */}
+            {/* Profile + controls */}
             <div className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between">
-              {/* Left: avatar + names */}
               <div className="flex items-center">
                 {hasAvatar ? (
                   <Image
@@ -241,12 +320,6 @@ export default function HomePage() {
                     className="w-12 h-12 object-cover rounded-full"
                     width={90}
                     height={90}
-                    onError={() => {
-                      console.error(
-                        "Avatar image failed to load:",
-                        avatarThumbnailUrl,
-                      ); // REMOVE IN PROD
-                    }}
                   />
                 ) : (
                   <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-medium">
@@ -260,32 +333,17 @@ export default function HomePage() {
                   <p className="text-sm">@{user?.username || "no-username"}</p>
                 </div>
               </div>
-
-              {/* Right: mic + settings */}
               <div className="flex items-center gap-2">
                 <div
-                  className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${
-                    showMicrophone
-                      ? "hover:bg-[#dfdfe1] hover:text-[#1e1e1e]"
-                      : "bg-[#ebc8ca] text-[#cb3b40]"
-                  }
-                    `}
+                  className={`cursor-pointer flex justify-center items-center p-2 rounded-lg ${showMicrophone ? "hover:bg-[#dfdfe1] hover:text-[#1e1e1e]" : "bg-[#ebc8ca] text-[#cb3b40]"}`}
                   onClick={() => setShowMicrophone(!showMicrophone)}
                 >
                   {showMicrophone ? (
-                    <button className="cursor-pointer hover:text-[#1e1e1e]">
-                      <BiSolidMicrophone size={24} className="text-gray-500" />
-                    </button>
+                    <BiSolidMicrophone size={24} className="text-gray-500" />
                   ) : (
-                    <button>
-                      <BiSolidMicrophoneOff
-                        size={24}
-                        className="cursor-pointer"
-                      />
-                    </button>
+                    <BiSolidMicrophoneOff size={24} />
                   )}
                 </div>
-
                 <div
                   onClick={() => setSettingsOpen(true)}
                   className="flex justify-center items-center p-2 rounded-lg hover:bg-[#dfdfe1] cursor-pointer"
@@ -300,113 +358,98 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Chat Area */}
           <div className="relative flex flex-2 flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3]">
-            {/* Show loading state while fetching halls */}
-            {hallsLoading && (
+            {hallsLoading ? (
               <div className="flex-1 flex items-center justify-center text-gray-500">
                 Loading your halls...
               </div>
-            )}
-
-            {!hallsLoading && (
-              <>
-                {activeView === "server" && activeServer && selectedChannel ? (
-                  <ChatArea
-                    serverName={activeServer.name}
-                    channelName={selectedChannel.name}
-                    channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`} // Unique ID for each channel
-                    isDm={false}
-                  />
-                ) : activeView === "dm" && selectedFriend ? (
-                  <ChatArea
-                    friendDisplayName={
-                      selectedFriend.name || selectedFriend.name
-                    }
-                    friendUsername={selectedFriend.username || ""}
-                    friendId={selectedFriend.id.toString()}
-                    friendAvatar={selectedFriend.avatarUrl}
-                    isDm={true}
-                  />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500">
-                    {activeView === "dm"
-                      ? "Select a friend to start chatting"
-                      : userHalls && userHalls.length === 0
-                        ? "No halls found. Create or join a hall to get started!"
-                        : "Select a channel to start chatting"}
-                  </div>
-                )}
-              </>
+            ) : activeView === "server" && activeServer && selectedChannel ? (
+              <ChatArea
+                serverName={activeServer.name}
+                channelName={selectedChannel.name}
+                channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`}
+                isDm={false}
+              />
+            ) : activeView === "dm" && selectedFriend ? (
+              <ChatArea
+                friendDisplayName={selectedFriend.name}
+                friendUsername={selectedFriend.username || ""}
+                friendId={selectedFriend.id.toString()}
+                friendAvatar={selectedFriend.avatarUrl}
+                isDm={true}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                {activeView === "dm"
+                  ? "Select a friend to start chatting"
+                  : userHalls && userHalls.length === 0
+                    ? "No halls found. Create or join a hall to get started!"
+                    : "Select a channel to start chatting"}
+              </div>
             )}
           </div>
 
+          {/* Friends Sidebar */}
           <div className="flex flex-col w-[400px] bg-[#fbfbfb] rounded-r-lg">
-            {/* Friends List Section - Shows in both server and DM views */}
-            <div className="h-full flex flex-col">
-              {/* Friends List */}
-              <div className="flex-1 overflow-y-auto ">
-                {activeView === "server" && activeServer ? (
-                  // Server View - Show online/offline members like Discord
-                  <div className="py-6 px-3">
-                    <label className="text-sm px-3 font-base text-[#73726e] tracking-wide mb-2">
-                      Online — {onlineFriends.length}
-                    </label>
-                    <div className="space-y-2 mb-8">
-                      {onlineFriends.map((friend) => (
-                        <div
-                          key={friend.id}
-                          className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"
-                        >
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-[#3a6f43] rounded-full flex items-center justify-center text-white text-lg font-medium">
-                              {friend.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="absolute -bottom-0 left-8 w-4 h-4 bg-[#08cb00] border-2 border-white rounded-full "></div>
+            <div className="h-full flex flex-col overflow-y-auto">
+              {activeView === "server" && activeServer ? (
+                <div className="py-6 px-3">
+                  <label className="text-sm px-3 font-base text-[#73726e] tracking-wide mb-2">
+                    Online — {onlineFriends.length}
+                  </label>
+                  <div className="space-y-2 mb-8">
+                    {onlineFriends.map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"
+                      >
+                        <div className="relative">
+                          <div className="w-12 h-12 bg-[#3a6f43] rounded-full flex items-center justify-center text-white text-lg font-medium">
+                            {friend.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-lg font-medium    tracking-wide">
-                              {friend.name}
-                            </p>
+                          <div className="absolute -bottom-0 left-8 w-4 h-4 bg-[#08cb00] border-2 border-white rounded-full"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-medium tracking-wide">
+                            {friend.name}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="text-sm px-3 font-base text-[#73726e] tracking-wide mb-2">
+                    Offline — {offlineFriends.length}
+                  </label>
+                  <div className="space-y-2">
+                    {offlineFriends.map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#e7e7e9] hover:opacity-100 cursor-pointer group opacity-30"
+                      >
+                        <div className="relative">
+                          <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center text-white text-lg font-medium">
+                            {friend.name.charAt(0).toUpperCase()}
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    <label className="text-sm px-3 font-base text-[#73726e]  tracking-wide mb-2">
-                      Offline — {offlineFriends.length}
-                    </label>
-                    <div className="space-y-2">
-                      {offlineFriends.map((friend) => (
-                        <div
-                          key={friend.id}
-                          className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#e7e7e9] hover:opacity-100 cursor-pointer group opacity-30"
-                        >
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center text-white text-lg font-medium">
-                              {friend.name.charAt(0).toUpperCase()}
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-lg font-medium text-[#222831] tracking-wide">
-                              {friend.name}
-                            </p>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-medium text-[#222831] tracking-wide">
+                            {friend.name}
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                ) : activeView === "dm" ? (
-                  // DM View - Show friend profile
-                  <FriendsProfile friend={selectedFriend} />
-                ) : (
-                  // Default view when no server or DM is selected
-                  <div className="flex-1 flex items-center justify-center text-gray-500">
-                    {hallsLoading
-                      ? "Loading..."
-                      : "Select a server or friend to view details"}
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : activeView === "dm" ? (
+                <FriendsProfile friend={selectedFriend} />
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-500">
+                  {hallsLoading
+                    ? "Loading..."
+                    : "Select a server or friend to view details"}
+                </div>
+              )}
             </div>
           </div>
         </div>
