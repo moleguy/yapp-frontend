@@ -18,6 +18,11 @@ import {
   SignUpReq,
   UserMeRes,
 } from "@/lib/api";
+import {
+  useSetUser,
+  useClearUser,
+  useSetActive,
+} from "@/app/store/useUserStore";
 
 export interface AuthError {
   message: string;
@@ -38,7 +43,7 @@ interface AuthContextType {
     userData: SignUpReq,
   ) => Promise<{ success: boolean; error?: AuthError }>;
   signout: () => Promise<void>;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<UserMeRes | null>;
   clearError: () => void;
 }
 
@@ -50,41 +55,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<AuthError | null>(null);
   const router = useRouter();
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  const setUserEdge = useSetUser(); // <- EdgeStore user setter
+  const clearUserEdge = useClearUser(); // <- EdgeStore user clear
+  const setActive = useSetActive(); // <- EdgeStore user active setter
+
+  const clearError = useCallback(() => setError(null), []);
 
   const handleError = useCallback(
-    (error: unknown, defaultMessage: string): AuthError => {
-      if (error instanceof Error) {
-        return {
-          message: error.message,
-          code: "UNKNOWN_ERROR",
-        };
-      }
-
-      if (typeof error === "object" && error !== null) {
-        const apiError = error as {
+    (err: unknown, defaultMessage: string): AuthError => {
+      if (err instanceof Error)
+        return { message: err.message, code: "UNKNOWN_ERROR" };
+      if (typeof err === "object" && err !== null) {
+        const apiErr = err as {
           message?: string;
           code?: string;
           statusCode?: number;
         };
         return {
-          message: apiError.message || defaultMessage,
-          code: apiError.code,
-          statusCode: apiError.statusCode,
+          message: apiErr.message || defaultMessage,
+          code: apiErr.code,
+          statusCode: apiErr.statusCode,
         };
       }
-
-      return {
-        message: defaultMessage,
-        code: "UNKNOWN_ERROR",
-      };
+      return { message: defaultMessage, code: "UNKNOWN_ERROR" };
     },
     [],
   );
 
-  // Fetch user
   const fetchUser = useCallback(
     async (showLoading = true) => {
       try {
@@ -93,75 +90,84 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userData = await getUserMe();
         setUser(userData);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        const authError = handleError(error, "Failed to fetch user data");
-        setError(authError);
+        setActive(true);
+        if (userData) setUserEdge(userData); // <- sync to EdgeStore
+        return userData;
+      } catch (err) {
+        const authErr = handleError(err, "Failed to fetch user data");
+        setError(authErr);
         setUser(null);
+        setActive(false);
+        clearUserEdge();
+        return null;
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
     },
-    [handleError, clearError],
+    [clearError, handleError, setUserEdge, clearUserEdge, setActive],
   );
 
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
 
-  // SignIn
   const signin = useCallback(
     async (email: string, password: string) => {
+      setLoading(true);
+      clearError();
+
+      if (!email?.trim() || !password?.trim()) {
+        const err: AuthError = {
+          message: "Email and password are required",
+          code: "VALIDATION_ERROR",
+        };
+        setError(err);
+        setLoading(false);
+        return { success: false, error: err };
+      }
+
       try {
-        setLoading(true);
-        clearError();
-
-        if (!email?.trim() || !password?.trim()) {
-          const validationError: AuthError = {
-            message: "Email and password are required",
-            code: "VALIDATION_ERROR",
-          };
-          setError(validationError);
-          return { success: false, error: validationError };
-        }
-
         const payload: SignInReq = {
-          email: email.trim(),
-          password: password,
+          email: email.trim().toLowerCase(),
+          password,
         };
 
         const result = await authSignIn(payload);
 
-        if ("success" in result && result.success) {
-          await fetchUser(false);
-          console.log("User after signin:", user); //NOTE: Debug log, remove in production
-          return { success: true };
-        } else {
-          const errorMessage =
-            "message" in result ? result.message : "Invalid credentials";
-          const authError: AuthError = {
-            message: errorMessage ?? "Invalid credentials",
+        if (!result.success) {
+          const err: AuthError = {
+            message: result.message || "Sign in failed",
             code: "SIGNIN_FAILED",
-            statusCode:
-              "statusCode" in result && typeof result.statusCode === "number"
-                ? result.statusCode
-                : undefined,
           };
-          setError(authError);
-          return { success: false, error: authError };
+          setError(err);
+          return { success: false, error: err };
         }
-      } catch (error) {
-        const authError = handleError(error, "SignIn failed");
-        setError(authError);
-        return { success: false, error: authError };
+
+        // Fetch full user profile
+        const userData = await fetchUser(false);
+        if (!userData) {
+          const err: AuthError = {
+            message:
+              "Signed in but failed to load user profile. Refresh the page.",
+            code: "FETCH_USER_FAILED",
+          };
+          setError(err);
+          return { success: false, error: err };
+        }
+        router.push("/home");
+
+        return { success: true };
+      } catch (err) {
+        const authErr = handleError(err, "Sign in failed");
+        setError(authErr);
+        return { success: false, error: authErr };
       } finally {
         setLoading(false);
       }
     },
-    [fetchUser, handleError, clearError, user],
+    [fetchUser, handleError, clearError, router, setError],
   );
 
-  // SignUp
   const signup = useCallback(
     async (userData: SignUpReq) => {
       try {
@@ -169,36 +175,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearError();
 
         if (!userData.email?.trim()) {
-          const validationError: AuthError = {
+          const err: AuthError = {
             message: "Email is required",
             code: "VALIDATION_ERROR",
           };
-          setError(validationError);
-          return { success: false, error: validationError };
+          setError(err);
+          return { success: false, error: err };
         }
 
         const result = await authSignUp(userData);
-
-        if ("success" in result && result.success) {
-          return { success: true };
-        } else {
-          const errorMessage =
-            "message" in result ? result.message : "SignUp failed";
-          const authError: AuthError = {
-            message: errorMessage ?? "Invalid credentials",
+        if (!result.success) {
+          const err: AuthError = {
+            message: result.message || "Sign up failed",
             code: "SIGNUP_FAILED",
-            statusCode:
-              "statusCode" in result && typeof result.statusCode === "number"
-                ? result.statusCode
-                : undefined,
           };
-          setError(authError);
-          return { success: false, error: authError };
+          setError(err);
+          return { success: false, error: err };
         }
-      } catch (error) {
-        const authError = handleError(error, "SignUp failed");
-        setError(authError);
-        return { success: false, error: authError };
+
+        return { success: true };
+      } catch (err) {
+        const authErr = handleError(err, "Sign up failed");
+        setError(authErr);
+        return { success: false, error: authErr };
       } finally {
         setLoading(false);
       }
@@ -206,24 +205,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [handleError, clearError],
   );
 
-  // Signout
   const signout = useCallback(async () => {
     try {
       setLoading(true);
       clearError();
-
       await authSignOut();
-    } catch (error) {
-      console.error("Signout error:", error);
-      // Don't show error to user for signout - just log it
+    } catch (err) {
+      console.error("Sign out failed:", err);
     } finally {
       setUser(null);
+      clearUserEdge();
       setLoading(false);
       router.push("/signin");
     }
-  }, [router, clearError]);
+  }, [router, clearError, clearUserEdge]);
 
-  // Refetch user data
   const refetch = useCallback(() => fetchUser(true), [fetchUser]);
 
   const value: AuthContextType = {
@@ -241,31 +237,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
 
-// Custom hook for auth status only
 export const useAuthStatus = () => {
   const { isAuthenticated, loading } = useAuth();
   return { isAuthenticated, loading };
 };
 
-//  Custom hook for protected routes
 export const useRequireAuth = (redirectTo = "/signin") => {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push(redirectTo);
-    }
-  }, [isAuthenticated, loading, router, redirectTo]);
-
+    if (!loading && !isAuthenticated) router.push(redirectTo);
+  }, [isAuthenticated, loading, redirectTo, router]);
   return { isAuthenticated, loading };
 };

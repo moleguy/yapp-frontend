@@ -10,7 +10,7 @@ export const protectedApiBase =
 // Generic helpers
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const res = await fetch(input, {
-    credentials: "include", // include cookies for auth
+    credentials: "include",
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -25,7 +25,6 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let message: string | undefined;
     if (isJSON && body && typeof body === "object") {
-      // Backend uses { error: string, code: number, success: false }
       if ("error" in body) {
         message = (body as { error: string }).error;
       } else if ("message" in body) {
@@ -46,13 +45,22 @@ export type SignInReq = {
   email: string;
   password: string;
 };
-export type SignInRes =
-  | {
-      id?: string;
-      username?: string;
-      success?: boolean;
-    }
-  | { message?: string };
+export type SignInRes = {
+  id: string;
+  username: string;
+  display_name: string;
+  email: string;
+  phone_number: string | null;
+  avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
+  description: string | null;
+  friend_policy: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  success: boolean;
+  message?: string;
+};
 
 export type SignUpReq = {
   username: string;
@@ -60,13 +68,12 @@ export type SignUpReq = {
   email: string;
   display_name: string;
 };
-export type SignUpRes =
-  | {
-      id: string;
-      username: string;
-      success?: boolean;
-    }
-  | { message?: string };
+export type SignUpRes = {
+  id?: string;
+  username?: string;
+  success: boolean;
+  message?: string;
+};
 
 export type UserMeRes = {
   id: string;
@@ -117,44 +124,95 @@ export type Hall = {
 };
 
 // Auth Functions
+
 export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
-  // Backend path: POST /auth/signin (sets httpOnly cookie)
-  return request<SignInRes>(`${apiBase}/auth/signin`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const result = await request<SignInRes>(`${apiBase}/auth/signin`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    // Ensure result object
+    if (!result || typeof result !== "object") {
+      return {
+        id: "",
+        username: "",
+        display_name: "",
+        email: "",
+        phone_number: null,
+        avatar_url: null,
+        avatar_thumbnail_url: null,
+        description: null,
+        friend_policy: "",
+        created_at: "",
+        updated_at: "",
+        active: false,
+        success: false,
+        message: "Invalid response from server",
+      };
+    }
+
+    return {
+      ...result,
+      success: result.success === true, // Only true if server said so
+    };
+  } catch (err: any) {
+    // Convert thrown errors into a structured response
+    const message = err?.message || "Sign in failed due to server error";
+    return {
+      id: "",
+      username: "",
+      display_name: "",
+      email: "",
+      phone_number: null,
+      avatar_url: null,
+      avatar_thumbnail_url: null,
+      description: null,
+      friend_policy: "",
+      created_at: "",
+      updated_at: "",
+      active: false,
+      success: false,
+      message,
+    };
+  }
 }
 
 export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
-  // Backend path: POST /auth/signup
-  return request<SignUpRes>(`${apiBase}/auth/signup`, {
+  const result = await request<SignUpRes>(`${apiBase}/auth/signup`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+  if (!result || typeof result !== "object") {
+    return {
+      success: false,
+      message: "Invalid response from server",
+    };
+  }
+
+  return {
+    ...result,
+    success: result.success !== false,
+  };
 }
 
 export async function authSignOut(): Promise<{ message?: string } | undefined> {
-  // Backend path: GET /auth/signout (clears cookie)
   return request<{ message?: string }>(`${apiBase}/auth/signout`, {
     method: "GET",
   });
 }
 
 // User functions
-
-// Get current user from JWT cookie
 export async function getUserMe(): Promise<UserMeRes | null> {
   try {
-    // Backend path: GET /me/ (protected with AuthMiddleware)
-    return await request<UserMeRes>(`${protectedApiBase}/me/`, {
+    const result = await request<UserMeRes>(`${protectedApiBase}/me/`, {
       method: "GET",
     });
+    console.log("getUserMe response:", result);
+    return result;
   } catch (error) {
-    // If request fails (401, etc.), user is not authenticated
-    console.log("User not authenticated:", error);
+    console.log("getUserMe error:", error);
     return null;
   }
 }
@@ -168,7 +226,6 @@ export async function updateUserMe(
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    // If request fails (401, etc.), user is not authenticated
     console.log("User update failed.:", error);
     return null;
   }
@@ -177,13 +234,11 @@ export async function updateUserMe(
 // Hall functions
 export async function createHall(payload: CreateHallReq): Promise<Hall | null> {
   try {
-    // Backend path: POST /halls/create (protected with AuthMiddleware)
     return await request<Hall>(`${protectedApiBase}/halls/`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    // If request fails (401, etc.), user is not authenticated
     console.log("Hall not created:", error);
     return null;
   }
@@ -195,7 +250,6 @@ export async function getUserHalls(): Promise<Hall[] | null> {
       method: "GET",
     });
   } catch (error) {
-    // If request fails (401, etc.), user is not authenticated
     console.log("Hall fetch failed:", error);
     return null;
   }
