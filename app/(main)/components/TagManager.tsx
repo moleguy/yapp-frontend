@@ -86,7 +86,7 @@ const TagManager = () => {
                     <span
                         key={tag.id}
                         onDoubleClick={() => openModal(tag)}
-                        className="relative group px-3 py-1 rounded-lg text-sm tracking-wide text-[#1e1e1e]"
+                        className="relative group px-3 py-1 rounded-lg text-sm tracking-wide text-[#1e1e1e] cursor-pointer"
                         style={{ backgroundColor: tag.color }}
                     >
                         {tag.text}
