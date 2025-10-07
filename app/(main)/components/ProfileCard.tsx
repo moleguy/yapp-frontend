@@ -4,6 +4,8 @@ import React, { useEffect, useRef } from "react";
 import { IoIosClose } from "react-icons/io";
 import { Friend } from "@/app/(main)/components/FriendsProfile";
 import Image from "next/image";
+import { RiMessage3Fill } from "react-icons/ri";
+import { UserCheck } from "lucide-react";
 
 type ProfileCardProps = {
   friend: Friend;
@@ -89,7 +91,7 @@ export default function ProfileCard({
       >
         <div
             ref={profileRef}
-            className="bg-white shadow-lg w-[540px] max-w-full relative p-6 border border-[#dcd9d3] rounded-xl"
+            className="bg-white shadow-lg w-[640px] max-w-full relative p-6 border border-[#dcd9d3] rounded-2xl"
             onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -100,36 +102,58 @@ export default function ProfileCard({
           </button>
 
           <div className="flex flex-col items-start text-center">
-            <div className="w-full h-40 bg-black rounded-lg mb-20">banner</div>
+            <div className="w-full h-40 bg-green-400 rounded-t-xl">banner</div>
             <Image
                 src={friend.avatarUrl || "/icons/default-avatar.png"}
                 alt={friend.name}
                 width={90}
                 height={90}
-                className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-4 bg-gray-500"
+                className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-2 bg-gray-500"
             />
-            <h2 className="text-xl font-semibold">{friend.name}</h2>
-            {friend.username && (
-                <p className="text-sm text-gray-600">@{friend.username}</p>
-            )}
 
-            {friend.memberSince && (
-                <p className="mt-3 text-sm text-gray-700">
-                  Member since {friend.memberSince}
-                </p>
-            )}
+            <div className={`flex flex-col justify-center items-start w-full py-8 px-8 border-b border-l border-r border-t-0 rounded-b-xl border-[#dcd9d3]`}>
 
-            {friend.mutualServers !== undefined && (
-                <p className="mt-2 text-sm text-gray-700">
-                  Mutual Servers: {friend.mutualServers}
-                </p>
-            )}
+              <label className="text-xl font-semibold mt-12">{friend.name}</label>
+              {friend.username && (
+                  <p className="text-sm text-gray-600">@{friend.username}</p>
+              )}
 
-            {friend.mutualFriends !== undefined && (
-                <p className="mt-1 text-sm text-gray-700">
-                  Mutual Friends: {friend.mutualFriends}
-                </p>
-            )}
+              {friend.memberSince && (
+                  <p className="mt-3 text-base text-gray-700">
+                    Member since {friend.memberSince}
+                  </p>
+              )}
+
+              {friend.mutualServers !== undefined && (
+                  <p className="mt-2 text-base text-gray-700">
+                    Mutual Servers: {friend.mutualServers}
+                  </p>
+              )}
+
+              {friend.mutualFriends !== undefined && (
+                  <p className="mt-1 text-base text-gray-700">
+                    Mutual Friends: {friend.mutualFriends}
+                  </p>
+              )}
+
+              <div className={`flex gap-4 items-center mt-8 px-2 py-2`}>
+                <button
+                    className={`flex items-center gap-2 border border-[#dcd9d3] py-2 px-3 focus:outline-none rounded-xl cursor-pointer hover:bg-[#DCDCDC] text-[#1e1e1e]`}
+                >
+                  <RiMessage3Fill  className={`w-6 h-6`}/>
+                  Message
+                </button>
+
+                <button
+                  className={` border border-[#dcd9d3] py-2 px-3 rounded-xl hover:bg-[#DCDCDC] cursor-pointer`}
+                >
+                  <UserCheck className={`w-6 h-6`}/>
+                </button>
+
+              </div>
+            </div>
+
+
           </div>
         </div>
       </div>

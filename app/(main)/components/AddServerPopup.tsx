@@ -30,6 +30,10 @@ export default function AddServerPopup({
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const joinInputRef = useRef<HTMLInputElement | null>(null);
 
+  // length for creating a server name
+  const MIN_LENGTH = 3; // min length
+  const MAX_LENGTH = 32; // max length
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -49,30 +53,49 @@ export default function AddServerPopup({
     const value = e.target.value;
     setServerName(value);
 
-    // counting spaces in the input
+    // Count spaces in the input
     const spaceCount = (value.match(/ /g) || []).length;
 
-    if (spaceCount > 1) {
+    // Validation order matters: specific -> general
+    if (!value.trim()) {
+      setNameError("Server name is required");
+    } else if (spaceCount > 1) {
       setNameError("Server name can only contain one space");
+    } else if (value.length < MIN_LENGTH) {
+      setNameError(`Server name must be at least ${MIN_LENGTH} characters.`);
+    } else if (value.length > MAX_LENGTH) {
+      setNameError(`Server name cannot exceed ${MAX_LENGTH} characters.`);
     } else {
       setNameError(null);
     }
   };
 
   const handleCreateServer = () => {
-    // validation before creating a hall with only one space
     const spaceCount = (serverName.match(/ /g) || []).length;
+
+    // Combined validation before creating
+    if (!serverName.trim()) {
+      setNameError("Server name is required");
+      return;
+    }
 
     if (spaceCount > 1) {
       setNameError("Server name can only contain one space");
       return;
     }
 
-    if (!serverName.trim()) {
-      setNameError("Server name is required");
+    if (serverName.length < MIN_LENGTH) {
+      setNameError(`Server name must be at least ${MIN_LENGTH} characters.`);
       return;
     }
 
+    if (serverName.length > MAX_LENGTH) {
+      setNameError(`Server name cannot exceed ${MAX_LENGTH} characters.`);
+      return;
+    }
+
+    // ✅ Passed validation
+    setNameError(null);
     onCreate(serverName, serverImage);
     onClose();
   };
@@ -247,6 +270,7 @@ export default function AddServerPopup({
                 value={serverName}
                 onChange={handleServerNameChange}
                 onKeyDown={handleKeyDown}
+                maxLength={MAX_LENGTH}
                 className={`w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide ${
                   nameError ? "border-red-500" : ""
                 }`}
