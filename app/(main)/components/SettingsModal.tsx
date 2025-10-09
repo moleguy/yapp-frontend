@@ -237,47 +237,50 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {activeTab === "General" && (
             <div className="space-y-4">
-              <div>
-                <div className="block text-lg font-normal mb-4">Dark Mode</div>
-                <div
-                  className="flex items-center my-2 w-full"
-                  role="separator"
-                  aria-label="or"
-                >
-                  <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                  <div className="flex-grow h-px bg-gray-400 opacity-35" />
-                </div>
-                <div className="flex flex-1 justify-between mb-6 items-center">
-                  <label>Off</label>
-                  <input
-                    className="flex justify-center items-center accent-[#000000] w-5 h-5"
-                    type="radio"
-                    name="darkmode"
-                  />
-                </div>
-                <div className="flex flex-1 justify-between items-center mb-6">
-                  <label>On</label>
-                  <input
-                    type="radio"
-                    name="darkmode"
-                    className="flex justify-center items-center accent-[#5f94ff] w-5 h-5"
-                  />
-                </div>
-                <div className="flex flex-1 justify-between items-center">
-                  <div className="flex flex-col">
-                    <label>Automatic</label>
-                    <p className="text-sm text-[#737373]">
-                      We&apos;ll automatically adjust the display based on your
-                      device&apos;s system preferences.
-                    </p>
-                  </div>
-                  <input
-                    type="radio"
-                    name="darkmode"
-                    className="flex justify-center items-center accent-[#5f94ff] w-5 h-5"
-                  />
-                </div>
-              </div>
+
+              {/* NEED TO ADD SOMETHING IN THE GENERAL TAB */}
+
+              {/*<div>*/}
+              {/*  <div className="block text-lg font-normal mb-4">Dark Mode</div>*/}
+              {/*  <div*/}
+              {/*    className="flex items-center my-2 w-full"*/}
+              {/*    role="separator"*/}
+              {/*    aria-label="or"*/}
+              {/*  >*/}
+              {/*    <div className="flex-grow h-px bg-gray-400 opacity-35" />*/}
+              {/*    <div className="flex-grow h-px bg-gray-400 opacity-35" />*/}
+              {/*  </div>*/}
+              {/*  <div className="flex flex-1 justify-between mb-6 items-center">*/}
+              {/*    <label>Off</label>*/}
+              {/*    <input*/}
+              {/*      className="flex justify-center items-center accent-[#000000] w-5 h-5"*/}
+              {/*      type="radio"*/}
+              {/*      name="darkmode"*/}
+              {/*    />*/}
+              {/*  </div>*/}
+              {/*  <div className="flex flex-1 justify-between items-center mb-6">*/}
+              {/*    <label>On</label>*/}
+              {/*    <input*/}
+              {/*      type="radio"*/}
+              {/*      name="darkmode"*/}
+              {/*      className="flex justify-center items-center accent-[#5f94ff] w-5 h-5"*/}
+              {/*    />*/}
+              {/*  </div>*/}
+              {/*  <div className="flex flex-1 justify-between items-center">*/}
+              {/*    <div className="flex flex-col">*/}
+              {/*      <label>Automatic</label>*/}
+              {/*      <p className="text-sm text-[#737373]">*/}
+              {/*        We&apos;ll automatically adjust the display based on your*/}
+              {/*        device&apos;s system preferences.*/}
+              {/*      </p>*/}
+              {/*    </div>*/}
+              {/*    <input*/}
+              {/*      type="radio"*/}
+              {/*      name="darkmode"*/}
+              {/*      className="flex justify-center items-center accent-[#5f94ff] w-5 h-5"*/}
+              {/*    />*/}
+              {/*  </div>*/}
+              {/*</div>*/}
             </div>
           )}
 
@@ -332,9 +335,9 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <p className="text-[#7A7A73] mt-1">
                   Choose auto-download preferences for media
                 </p>
-                <div className=" gap-2 mt-2">
+                <div className="gap-2 mt-2">
                   {mediaOptions.map((option) => (
-                    <label
+                    <div
                       key={option}
                       className="flex flex-row items-center gap-2 mb-2"
                     >
@@ -345,7 +348,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         className="w-4 h-4 accent-[#0077d4]"
                       />
                       <p>{option}</p>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>

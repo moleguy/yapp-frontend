@@ -306,6 +306,7 @@ export default function HomePage() {
                 <DirectMessages
                   friends={friends}
                   onSelectFriend={handleFriendClick}
+                  selectedFriend={selectedFriend}
                 />
               ) : null}
             </div>

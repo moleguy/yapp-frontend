@@ -91,7 +91,7 @@ export default function ProfileCard({
       >
         <div
             ref={profileRef}
-            className="bg-white shadow-lg w-[640px] max-w-full relative p-6 border border-[#dcd9d3] rounded-2xl"
+            className="bg-white shadow-lg w-[640px] max-w-full relative p-8 border border-[#dcd9d3] rounded-3xl"
             onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -102,13 +102,13 @@ export default function ProfileCard({
           </button>
 
           <div className="flex flex-col items-start text-center">
-            <div className="w-full h-40 bg-green-400 rounded-t-xl">banner</div>
+            <div className="w-full h-40 bg-green-800 rounded-t-2xl">banner</div>
             <Image
                 src={friend.avatarUrl || "/icons/default-avatar.png"}
                 alt={friend.name}
                 width={90}
                 height={90}
-                className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-2 bg-gray-500"
+                className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-2 bg-gray-200"
             />
 
             <div className={`flex flex-col justify-center items-start w-full py-8 px-8 border-b border-l border-r border-t-0 rounded-b-xl border-[#dcd9d3]`}>
