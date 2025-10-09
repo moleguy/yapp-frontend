@@ -16,14 +16,16 @@ type Friend = {
 interface DirectMessagesProps {
   friends: Friend[];
   onSelectFriend: (friend: Friend) => void;
+  selectedFriend: Friend | null;
 }
 
 const DirectMessages: React.FC<DirectMessagesProps> = ({
   friends,
   onSelectFriend,
+    selectedFriend,
 }) => {
   const [query, setQuery] = useState("");
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  // const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleClear = () => {
@@ -37,7 +39,7 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
   );
 
   return (
-    <div className=" space-y-2">
+    <div className=" space-y-2 select-none">
       <h2 className="text-lg font-medium px-4 py-2 tracking-wide">
         Direct Messages
       </h2>
@@ -74,29 +76,37 @@ const DirectMessages: React.FC<DirectMessagesProps> = ({
             )}
           </div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {filteredFriends.map((friend) => (
-              <li
-                key={friend.id}
-                className={`relative flex items-center justify-start gap-4 px-4 py-2 rounded-lg hover:bg-gray-100 cursor-pointer `}
-                onClick={() => onSelectFriend(friend)}
-              >
-                <div className="rounded-full w-10 h-10 bg-gray-500">
-                  {/* NEEDS TO FETCH USER IMAGE HERE*/}
-                  {/*<Image*/}
-                  {/*    // src={}*/}
-                  {/*    alt={`friends image`}*/}
-                  {/*/>*/}
-                </div>
-                <span className="absolute bottom-3 left-11 w-3 h-3 rounded-full bg-white flex items-center justify-center">
-                  <GoDotFill
-                    className={`w-4 h-4 ${friend.status === "online" ? "text-[#08cb00]" : "text-[#7e7f87]"} `}
-                  />
-                </span>
-                <div className="flex justify-center items-center gap-4">
-                  <span>{friend.name}</span>
-                </div>
-              </li>
+                <li
+                    key={friend.id}
+                    className={`relative flex items-center justify-start gap-3 mx-2 px-2 py-2 rounded-lg cursor-pointer group ${
+                        selectedFriend?.id === friend.id ? 'bg-[#dddde0]' : 'hover:bg-[#e7e7e9]'
+                    }`}
+                    onClick={() => {
+                        onSelectFriend(friend);
+                    }}
+                >
+                    <div className="rounded-full w-12 h-12 bg-gray-500">
+                        {/* NEEDS TO FETCH USER IMAGE HERE */}
+                        {/*<Image*/}
+                        {/*    // src={}*/}
+                        {/*    alt={`friends image`}*/}
+                        {/*/>*/}
+                    </div>
+                    <span className={`absolute bottom-3 left-11 w-4 h-4 rounded-full flex items-center justify-center duration-200 ${
+                        selectedFriend?.id === friend.id
+                            ? 'bg-[#dddde0]' 
+                            : 'bg-[#f3f3f4] group-hover:bg-[#e7e7e9]' 
+                    }`}>
+                        <GoDotFill
+                            className={`w-4 h-4 ${friend.status === "online" ? "text-[#08cb00]" : "text-[#7e7f87]"}`}
+                        />
+                    </span>
+                    <div className="flex justify-center items-center gap-4">
+                        <span>{friend.name}</span>
+                    </div>
+                </li>
             ))}
           </ul>
         )}

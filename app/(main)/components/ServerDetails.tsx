@@ -182,6 +182,18 @@ export default function ServerDetails({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [channelContextMenu]);
 
+  useEffect(() => {
+    const handleGlobalContextMenu = () => {
+      if(showContextMenu){
+        setShowContextMenu(false);
+      }
+    }
+
+    document.addEventListener("contextmenu", handleGlobalContextMenu);
+
+    return () => document.removeEventListener("contextmenu", handleGlobalContextMenu);
+  }, [showContextMenu]);
+
   // deleting a channel after delete channel button click
   const handleLeaveChannel = () => {
     if (!activeServer || !channelContextMenu) return;
@@ -362,6 +374,10 @@ export default function ServerDetails({
     e.preventDefault();
     const target = e.target as HTMLElement | null;
     if (!target) return;
+
+    if(showContextMenu){
+      setShowContextMenu(false);
+    }
 
     // ignoring if click happened inside the channel item, category header or add button
     if (
