@@ -24,7 +24,10 @@ interface Props {
   onClose: () => void;
 }
 
-const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
+export default function SettingsModal({
+                                        isOpen,
+                                        onClose,
+                                      }: Props){
   const mediaOptions = ["Photos", "Audio", "Video", "Document"];
   const [activeTab, setActiveTab] = useState("General");
   const [selected, setSelected] = useState<string[]>([]);
@@ -387,4 +390,4 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   );
 };
 
-export default SettingsModal;
+// export default SettingsModal;

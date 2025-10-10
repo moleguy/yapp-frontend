@@ -389,7 +389,7 @@ export default function ServerList({
       {addServerContextMenu && (
         <div
           ref={addServerMenuRef}
-          className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-lg border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+          className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48  bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
           style={{
             top: addServerContextMenu.y,
             left: addServerContextMenu.x,
@@ -408,6 +408,11 @@ export default function ServerList({
               >
                 {item.label}
               </button>
+              {
+                idx < arr.length -1 && (
+                    <div className={`h-px my-1 bg-gray-200 w-full`}/>
+                  )
+              }
             </React.Fragment>
           ))}
         </div>

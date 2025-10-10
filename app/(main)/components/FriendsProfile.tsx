@@ -51,9 +51,16 @@ const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
   return (
       <div className="w-full h-full bg-[#fbfbfb] flex flex-col select-none">
         <div className="flex-1 overflow-y-auto border-b border-[#dcd9d3]">
+          <div>
+          {/*  buttons:
+          help
+          add friend
+          hide user profile
+          */}
+          </div>
           <div className="relative">
             <div className="h-32 bg-[#3A6F43]" />
-            <div className="absolute -bottom-12 left-4">
+            <div className="absolute top-15 left-4">
               <div className="relative">
                 {/* User Avatar */}
                 <Image
@@ -64,7 +71,7 @@ const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
                     className="rounded-full bg-[#DCDCDC] m-3 object-cover"
                 />
                 {/* Status indicator */}
-                <span className="absolute bottom-1 right-3 w-7 h-7 rounded-full bg-white flex items-center justify-center">
+                <span className="absolute bottom-1 right-3 w-7 h-7 rounded-full bg-[#fbfbfb] flex items-center justify-center">
                 <GoDotFill
                     className={`w-10 h-10 ${
                         friend.status === "online"
@@ -88,7 +95,7 @@ const FriendsProfile: React.FC<{ friend: Friend | null }> = ({ friend }) => {
 
             {friend.memberSince && (
                 <div className="mt-4 border rounded-lg border-[#dcd9d3] p-3 flex flex-col gap-2">
-                  <h3 className="text-sm font-medium text-[#1e1e1e]">
+                  <h3 className="text-xs font-medium tracking-wide text-[#1e1e1e]">
                     Member Since
                   </h3>
                   <p className="text-sm text-[#1e1e1e]">{friend.memberSince}</p>
