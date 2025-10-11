@@ -47,6 +47,7 @@ export default function HomePage() {
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
+  const [showChannels, setShowChannels] = useState(false);
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(
     null,
@@ -285,6 +286,8 @@ export default function HomePage() {
               activeView={activeView}
               onCreateCategoryClick={handleCreateCategoryClick}
               isLoading={hallsLoading}
+              showChannels={showChannels}
+              setShowChannels={setShowChannels}
             />
 
             {/* Channels / DM section */}
@@ -301,6 +304,7 @@ export default function HomePage() {
                   }
                   onCloseCategoryPopup={() => setShowCategoryPopup(false)}
                   onOpenCategoryPopup={handleOpenCategoryPopup}
+                  showChannels={showChannels}
                 />
               ) : activeView === "dm" ? (
                 <DirectMessages
