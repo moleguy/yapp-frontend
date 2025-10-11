@@ -29,6 +29,8 @@ interface ServerListProps {
   activeView: "server" | "dm" | null;
   onCreateCategoryClick: (server: Server) => void;
   isLoading: boolean;
+  showChannels: boolean;
+  setShowChannels: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const MAX_VISIBLE = 7;
@@ -43,12 +45,19 @@ export default function ServerList({
   onServersToggle,
   activeView,
   onCreateCategoryClick,
+    showChannels,
+    setShowChannels,
 }: ServerListProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     serverId: string;
+  } | null>(null);
+  const [extraServerContextMenu, setExtraServerContextMenu] = useState<{
+    x: number,
+    y: number,
+    serverId: string,
   } | null>(null);
   const [addServerContextMenu, setAddServerContextMenu] = useState<{
     x: number;
@@ -63,6 +72,7 @@ export default function ServerList({
   const serverPopupRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const addServerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const extraServersMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { edgestore } = useEdgeStore();
 
@@ -96,25 +106,25 @@ export default function ServerList({
 
   // close context menu when clicking outside
   useEffect(() => {
-    if (!contextMenu && !addServerContextMenu) return;
+    if (!contextMenu && !addServerContextMenu && !extraServerContextMenu) return;
 
     const handleOutside = (e: MouseEvent) => {
       if (
-        (menuRef.current && menuRef.current.contains(e.target as Node)) ||
-        (addServerMenuRef.current &&
-          addServerMenuRef.current.contains(e.target as Node)) ||
-        (addServerButtonRef.current &&
-          addServerButtonRef.current.contains(e.target as Node))
+          (menuRef.current && menuRef.current.contains(e.target as Node)) ||
+          (addServerMenuRef.current && addServerMenuRef.current.contains(e.target as Node)) ||
+          (addServerButtonRef.current && addServerButtonRef.current.contains(e.target as Node)) ||
+          (extraServersMenuRef.current && extraServersMenuRef.current.contains(e.target as Node))
       ) {
         return;
       }
       setContextMenu(null);
       setAddServerContextMenu(null);
+      setExtraServerContextMenu(null);
     };
 
     window.addEventListener("mousedown", handleOutside);
     return () => window.removeEventListener("mousedown", handleOutside);
-  }, [contextMenu, addServerContextMenu]);
+  }, [contextMenu, addServerContextMenu, extraServerContextMenu]);
 
   const handleCreateServer = async (name: string, imageString?: string) => {
     const id = String(Date.now());
@@ -199,6 +209,10 @@ export default function ServerList({
     onServerClick(newServer);
   };
 
+  const toggleChannelsVisibility = () => {
+    setShowChannels(prev => !prev);
+  };
+
   // servers to show initially and the extra ones for "more"
   const visibleServers = servers.slice(0, MAX_VISIBLE);
   const extraServers = servers.slice(MAX_VISIBLE);
@@ -250,6 +264,34 @@ export default function ServerList({
         setShowPopup(true);
         setPopupStep("join");
         setAddServerContextMenu(null);
+      },
+    },
+  ];
+
+  const extraServerContextMenuItems = [
+    {
+      label: showChannels ? "Hide Channels" : "Show Channels",
+      danger: false,
+      onClick: () => {
+        setShowMorePopup(true);
+        toggleChannelsVisibility();
+        setExtraServerContextMenu(null);
+      },
+    },
+    {
+      label: "Server Settings",
+      danger: false,
+      onClick: () => {
+        console.log("Server Settings");
+        setExtraServerContextMenu(null);
+      },
+    },
+    {
+      label: "Manage Servers",
+      danger: false,
+      onClick: () => {
+        console.log("Manage Servers");
+        setExtraServerContextMenu(null);
       },
     },
   ];
@@ -350,6 +392,15 @@ export default function ServerList({
             <button
               ref={moreButtonRef}
               onClick={() => setShowMorePopup((prev) => !prev)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setExtraServerContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  serverId: "",
+                });
+              }}
               className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer"
             >
               <FaLayerGroup className="w-6 h-6 text-[#6164f2]" />
@@ -432,14 +483,6 @@ export default function ServerList({
                 onServerClick(server);
                 setShowMorePopup(false);
               }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  serverId: server.id,
-                });
-              }}
             >
               {server.icon_thumbnail_url ? (
                 <Image
@@ -459,6 +502,37 @@ export default function ServerList({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Add this with your other context menus */}
+      {extraServerContextMenu && (
+          <div
+              ref={extraServersMenuRef}
+              className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48 bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
+              style={{
+                top: extraServerContextMenu.y,
+                left: extraServerContextMenu.x,
+                minWidth: 120
+              }}
+          >
+            {extraServerContextMenuItems.map((item, idx, arr) => (
+                <React.Fragment key={item.label}>
+                  <button
+                      onClick={item.onClick}
+                      className={`text-left w-full py-2 px-2 rounded-md font-base cursor-pointer ${
+                          item.danger
+                              ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                              : "hover:bg-[#f2f2f3]"
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                  {idx < arr.length - 1 && (
+                      <div className="h-px bg-gray-200 w-full my-1" />
+                  )}
+                </React.Fragment>
+            ))}
+          </div>
       )}
 
       {/* Add server popup */}

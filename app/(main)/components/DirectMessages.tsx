@@ -58,7 +58,7 @@ export default function DirectMessages({
         return () => window.removeEventListener("mousedown", handleClickOutside);
     }, [friendContextMenu]);
 
-    const handleFriendDoubleClick = (e: React.MouseEvent, friend: Friend) => {
+    const handleFriendRightClick = (e: React.MouseEvent, friend: Friend) => {
         e.preventDefault();
         e.stopPropagation();
         setFriendContextMenu({
@@ -126,7 +126,7 @@ export default function DirectMessages({
                             onClick={() => {
                                 onSelectFriend(friend);
                             }}
-                            onContextMenu={(e) => handleFriendDoubleClick(e, friend)}
+                            onContextMenu={(e) => handleFriendRightClick(e, friend)}
                         >
                             <div className="rounded-full w-12 h-12 bg-gray-500">
                                 {/* NEEDS TO FETCH USER IMAGE HERE */}
@@ -174,21 +174,21 @@ export default function DirectMessages({
                         { label: "Block", action: "block" },
                         { label: "Mute", action: "mute" },
                     ].map((item, index, array) => (
-                        <React.Fragment key={item.action}>
-                            <button
-                                className={` w-full text-left hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 font-base tracking-wide ${
-                                    item.action === "block" ? "text-[#cb3b40] hover:bg-[#fbeff0]" : "text-[#1e1e1e]"
-                                }`}
-                            >
-                                {item.label}
-                            </button>
-                            {/*{*/}
-                            {/*    index<array.length -1 && (*/}
-                            {/*        <div className={`h-px bg-gray-200 w-full my-1`}/>*/}
-                            {/*    )*/}
-                            {/*}*/}
-                        </React.Fragment>
-                    ))
+                            <React.Fragment key={item.action}>
+                                <button
+                                    className={` w-full text-left hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 font-base tracking-wide ${
+                                        item.action === "block" ? "text-[#cb3b40] hover:bg-[#fbeff0]" : "text-[#1e1e1e]"
+                                    }`}
+                                >
+                                    {item.label}
+                                </button>
+                                {/*{*/}
+                                {/*    index<array.length -1 && (*/}
+                                {/*        <div className={`h-px bg-gray-200 w-full my-1`}/>*/}
+                                {/*    )*/}
+                                {/*}*/}
+                            </React.Fragment>
+                        ))
                     }
                 </div>
             )}
