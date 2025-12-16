@@ -182,7 +182,13 @@ export default function ChatArea({
 
     return (
         <div className="flex flex-col h-full bg-[#f8f9fa]">
-            <div className="flex-1 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
+            <div className="flex-1 mt-14 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
+                <div className={`absolute top-0 py-4 px-8 w-full bg-[#dddde0] border-b border-black`}>{isDm
+                    ? `${friendDisplayName}`
+                    : channelName
+                        ? `#${channelName}`
+                        : "Message"}
+                </div>
                 <div className="p-4">
                     <div className="space-y-0.5">
                         {allMessages.map((msg, index) => (
