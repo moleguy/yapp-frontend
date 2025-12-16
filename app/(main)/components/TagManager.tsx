@@ -122,7 +122,7 @@ const TagManager = () => {
                     className="fixed inset-0 flex items-center justify-center bg-black/30 bg-opacity-40 z-50 cursor-auto">
                     <div
                         ref={tagRef}
-                        className="bg-white rounded-lg p-5 w-80 shadow-lg">
+                        className="bg-white rounded-xl p-5 w-80 shadow-lg">
                         <label className="text-lg font-medium tracking-wide text-[#1e1e1e]">Describe yourself</label>
 
                         {/* Input */}

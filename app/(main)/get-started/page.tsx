@@ -47,7 +47,7 @@ export default function CoverPage() {
                 <div className="flex flex-1 flex-col justify-start items-center h-full w-full p-6 md:p-10">
                     {/* Headings */}
                     <motion.div
-                        className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-center mt-6 mb-8 leading-tight text-[#1e1e1e] font-Heading"
+                        className="text-center mt-6 mb-8 leading-tight text-[#1e1e1e] font-Heading text-[clamp(2rem,6vw,4.5rem)]"
                         variants={containerVariants}
                         initial="hidden"
                         animate="show"
@@ -60,7 +60,7 @@ export default function CoverPage() {
                     {/* Subtitle + Button */}
                     <div className="flex flex-col justify-center items-center z-10 text-center max-w-3xl">
                         <motion.p
-                            className="subtitle text-lg sm:text-2xl md:text-3xl text-[#1e1e1e] font-MyFont mb-8 tracking-tight"
+                            className="subtitle text-[#1e1e1e] font-MyFont mb-8 tracking-tight text-[clamp(1rem,3vw,2rem)]"
                             initial={{ opacity: 0, y: 50 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 1, ease: "easeOut" }}
@@ -82,11 +82,11 @@ export default function CoverPage() {
                                     transition={{ delay: 0.2, duration: 1 }}
                                     className="flex items-center gap-2"
                                 >
-                                    <p className="text-lg md:text-2xl font-[SF_Pro_Rounded]">
+                                    <p className="text-lg font-[SF_Pro_Rounded] text-[clamp(1rem,2.5vw,1.75rem)]">
                                         Get Started
                                     </p>
                                     <Image
-                                        className="w-4 h-4 md:w-5 md:h-5"
+                                        className="w-[clamp(14px,2vw,22px)] h-[clamp(14px,2vw,22px)]"
                                         src={right}
                                         alt="right-arrow"
                                         priority
@@ -97,11 +97,11 @@ export default function CoverPage() {
                     </div>
 
                     {/* Background image */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] sm:w-[85%] md:w-[80%] lg:w-[75%] xl:w-[70%] max-w-6xl opacity-100">
+                    <div className="relative w-full flex justify-center mt-auto">
                         <Image
                             src={comm}
                             alt="communication"
-                            className="w-full h-auto object-contain"
+                            className="w-[clamp(60%,85%,90%)] max-w-6xl h-auto object-contain"
                             priority
                         />
                     </div>

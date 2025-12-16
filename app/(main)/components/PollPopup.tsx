@@ -97,7 +97,6 @@ export default function PollPopup({onClose, onCreate}: PollPopupProps){
                             )}
                         </div>
                     ))}
-
                 </div>
 
 
