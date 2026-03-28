@@ -1,11 +1,10 @@
 // Centralized REST client for calling the Go backend from the Next.js frontend
 
-export const apiBase =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
-  "http://localhost:8080";
-export const protectedApiBase =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
-  "http://localhost:8080/api";
+const base =
+    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
+    "http://localhost:8080";
+export const apiBase = base;
+export const protectedApiBase = `${base}/api/v1`;
 
 // Generic helpers
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
@@ -14,6 +13,7 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...(init?.headers || {}),
     },
   });
@@ -154,7 +154,7 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
 
     return {
       ...result,
-      success: result.success === true, // Only true if server said so
+      success: result.success, // Only true if server said so
     };
   } catch (err: any) {
     // Convert thrown errors into a structured response
@@ -193,7 +193,7 @@ export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
 
   return {
     ...result,
-    success: result.success !== false,
+    success: result.success,
   };
 }
 

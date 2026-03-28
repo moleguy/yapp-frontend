@@ -6,11 +6,11 @@ import { FaChevronRight } from "react-icons/fa";
 import Image from "next/image";
 
 type Props = {
+  initialStep?: "choice" | "create" | "join";
   isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string, imageString?: string) => void;
   onJoin: (link: string) => void;
-  initialStep?: "choice" | "create" | "join";
 };
 
 export default function AddServerPopup({
