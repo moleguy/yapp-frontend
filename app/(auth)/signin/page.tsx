@@ -132,14 +132,16 @@ export default function SignIn() {
         }
         router.push("/home");
       } else {
-        const msg = "Invalid email or password";
+        const msg = res.error?.message || "Invalid email or password";
         setFormError(msg);
         setAnnounceError(msg);
+        console.error("[SignIn] Signin failed:", res.error);
       }
     } catch (err: any) {
       const msg = err?.message || "Sign In failed. Please try again.";
       setFormError(msg);
       setAnnounceError(msg);
+      console.error("[SignIn] Exception during signin:", err);
     } finally {
       setIsLoading(false);
     }

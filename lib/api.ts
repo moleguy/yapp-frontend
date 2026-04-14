@@ -1,26 +1,137 @@
 // Centralized REST client for calling the Go backend from the Next.js frontend
 
-const base =
-    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
-    "http://localhost:8080";
+// Use proxy during development to bypass CORS issues
+const isProxyEnabled = true; // Set to false to call backend directly
+const base = isProxyEnabled ? "" : (process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "http://localhost:8080");
 export const apiBase = base;
 export const protectedApiBase = `${base}/api/v1`;
 
+// API-host csrf cookie is not visible in document.cookie on another origin (e.g. two ngrok URLs).
+// Backend sends the same value in X-CSRF-Token (CORS-exposed); we cache it from responses.
+let csrfTokenFromApi: string | null = null;
+
+// Same host as API (e.g. localhost:3000 + localhost:8080 share host "localhost")
+function getCSRFTokenFromDocumentCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const name = "csrf_token=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split("; ");
+  for (let cookie of cookieArray) {
+    if (cookie.indexOf(name) === 0) {
+      return cookie.substring(name.length);
+    }
+  }
+  return null;
+}
+
+function resolveCSRFToken(): string | null {
+  return csrfTokenFromApi || getCSRFTokenFromDocumentCookie();
+}
+
+/** Must hit Gin (not nginx's static `location = /`). `/health` is always proxied. */
+async function primeCsrfFromApi(): Promise<void> {
+  if (resolveCSRFToken()) return;
+
+  const healthUrl = isProxyEnabled ? `/api/proxy?path=%2Fhealth` : `${apiBase}/health`;
+
+  const res = await fetch(healthUrl, {
+    method: "GET",
+    credentials: "include",
+    headers: { "ngrok-skip-browser-warning": "true" },
+  });
+  const echo = res.headers.get("x-csrf-token");
+  if (echo) {
+    csrfTokenFromApi = echo;
+  }
+}
+
 // Generic helpers
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, {
-    credentials: "include",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-      ...(init?.headers || {}),
-    },
-  });
+  // When using proxy, extract the path from the full URL
+  let requestPath = "";
+  if (isProxyEnabled && typeof input === "string") {
+    // Extract path from URL (e.g., "http://localhost:8080/auth/signin" -> "/auth/signin")
+    try {
+      const urlObj = new URL(input);
+      requestPath = urlObj.pathname + urlObj.search;
+    } catch {
+      requestPath = input; // fallback
+    }
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
+  };
+
+  // Merge existing headers if provided
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      // Convert Headers object to Record
+      init.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (typeof init.headers === "object") {
+      // Merge plain object headers
+      Object.assign(headers, init.headers as Record<string, string>);
+    }
+  }
+
+  // Add CSRF token for unsafe methods
+  const method = (init?.method || "GET").toUpperCase();
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    if (!resolveCSRFToken()) {
+      console.log("[Request] No CSRF token found, priming from /health");
+      await primeCsrfFromApi();
+    }
+    const csrfToken = resolveCSRFToken();
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+      console.log("[Request] Added CSRF token to headers");
+    } else {
+      console.warn("[Request] CSRF token not available for", method, input);
+    }
+  }
+
+  // Determine final URL
+  const finalUrl = isProxyEnabled ? `/api/proxy?path=${encodeURIComponent(requestPath)}` : input;
+  console.log("[Request]", method, finalUrl, "Headers:", Object.keys(headers));
+
+  let res;
+  try {
+    res = await fetch(finalUrl, {
+      credentials: "include",
+      ...init,
+      headers,
+    });
+  } catch (networkError: any) {
+    console.error("[Request] Network error - Backend unreachable:", {
+      url: finalUrl,
+      method,
+      message: networkError.message,
+    });
+    console.error("[Request] This usually means:");
+    console.error("  1. Backend is not running");
+    if (!isProxyEnabled) {
+      console.error("  2. CORS is not configured for localhost:3000");
+      console.error("  3. Network connection issue");
+    }
+    throw new Error(`Failed to reach backend: ${networkError.message}`);
+  }
+
+  console.log("[Request] Response status:", res.status, "for", method, finalUrl);
+
+  const csrfEcho = res.headers.get("x-csrf-token");
+  if (csrfEcho) {
+    csrfTokenFromApi = csrfEcho;
+    console.log("[Request] Updated CSRF token from response");
+  }
 
   const contentType = res.headers.get("content-type") || "";
   const isJSON = contentType.includes("application/json");
   const body = isJSON ? await res.json() : await res.text();
+
+  console.log("[Request] Response body:", body);
 
   if (!res.ok) {
     let message: string | undefined;
@@ -34,7 +145,16 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
     if (!message && typeof body === "string" && body.trim()) {
       message = body;
     }
-    throw new Error(message || res.statusText || "Request failed");
+    const errorMsg = message || res.statusText || "Request failed";
+    console.error("[Request] Error:", res.status, errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Backend wraps responses in { success, message, data } envelope
+  // Automatically extract data field if present
+  if (isJSON && body && typeof body === "object" && "data" in body && (body as any).data !== null) {
+    console.log("[Request] Extracting data field from envelope");
+    return (body as any).data as T;
   }
 
   return body as T;
@@ -102,11 +222,11 @@ export type UpdateUserMeRes = {
   avatar_thumbnail_url: string | null;
 };
 
-// Hall type
+// ========== HALL TYPES ==========
 export type CreateHallReq = {
   name: string;
   icon_url: string | null;
-  icon_thumbnail_url: string | null;
+  icon_thumbnail_url?: string | null;
   banner_color: string | null;
   description: string | null;
 };
@@ -115,7 +235,7 @@ export type Hall = {
   id: string;
   name: string;
   icon_url: string | null;
-  icon_thumbnail_url: string | null;
+  icon_thumbnail_url?: string | null;
   banner_color: string | null;
   description: string | null;
   created_at: string;
@@ -123,17 +243,273 @@ export type Hall = {
   owner_id: string;
 };
 
+export type UpdateHallReq = {
+  name?: string;
+  icon_url?: string | null;
+  icon_thumbnail_url?: string | null;
+  banner_color?: string | null;
+  description?: string | null;
+};
+
+// ========== FLOOR TYPES ==========
+export type Floor = {
+  id: string;
+  hall_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateFloorReq = {
+  name: string;
+  position?: number;
+};
+
+export type UpdateFloorReq = {
+  name?: string;
+  position?: number;
+};
+
+// ========== ROOM TYPES ==========
+export type RoomType = "text" | "audio";
+
+export type Room = {
+  id: string;
+  hall_id: string;
+  floor_id: string;
+  name: string;
+  room_type: RoomType;
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateRoomReq = {
+  name: string;
+  room_type: RoomType;
+  floor_id: string;
+  is_private?: boolean;
+};
+
+export type UpdateRoomReq = {
+  name?: string;
+  room_type?: RoomType;
+  is_private?: boolean;
+};
+
+export type MoveRoomReq = {
+  floor_id: string;
+  position?: number;
+};
+
+// ========== MESSAGE TYPES ==========
+export type Attachment = {
+  id: string;
+  message_id: string;
+  file_name: string;
+  url: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+};
+
+export type Reaction = {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+};
+
+export type Message = {
+  id: string;
+  room_id: string;
+  author_id: string;
+  content: string;
+  sent_at: string;
+  edited_at: string | null;
+  deleted_at: string | null;
+  attachments?: Attachment[];
+  reactions?: Reaction[];
+};
+
+export type CreateMessageReq = {
+  content: string;
+  attachments?: {
+    file_name: string;
+    url: string;
+    file_type: string;
+    file_size: number;
+  }[];
+};
+
+export type UpdateMessageReq = {
+  content: string;
+};
+
+export type MessagesResponse = {
+  messages: Message[];
+  has_more: boolean;
+};
+
+// Message cursor pagination
+export type FetchMessagesOpts = {
+  limit?: number;
+  before?: string; // message ID to fetch messages before
+  after?: string; // message ID to fetch messages after
+  around?: string; // message ID to fetch messages around
+};
+
+// ========== ROLE & PERMISSION TYPES ==========
+export type RolePermission = {
+  role_id: string;
+  admin: boolean;
+  create_hall: boolean;
+  manage_members: boolean;
+  manage_roles: boolean;
+  manage_bans: boolean;
+  create_invites: boolean;
+  create_floor: boolean;
+  delete_floor: boolean;
+  create_room: boolean;
+  delete_room: boolean;
+  manage_messages: boolean;
+  send_messages: boolean;
+  mention_everyone: boolean;
+  read_messages: boolean;
+  read_reactions: boolean;
+  react_to_messages: boolean;
+  attach_files: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Role = {
+  id: string;
+  hall_id: string;
+  name: string;
+  color: string;
+  is_admin: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateRoleReq = {
+  name: string;
+  color?: string;
+  is_admin?: boolean;
+};
+
+export type UpdateRoleReq = {
+  name?: string;
+  color?: string;
+};
+
+export type UpdateRolePermissionsReq = Partial<Omit<RolePermission, "role_id" | "created_at" | "updated_at">>;
+
+// ========== HALL MEMBER TYPES ==========
+export type HallMember = {
+  hall_id: string;
+  user_id: string;
+  role_id: string;
+  nickname: string | null;
+  joined_at: string;
+  updated_at: string;
+};
+
+export type UpdateHallMemberReq = {
+  role_id?: string;
+  nickname?: string | null;
+};
+
+// ========== BAN TYPES ==========
+export type HallBan = {
+  hall_id: string;
+  user_id: string;
+  banned_by: string;
+  reason: string | null;
+  banned_at: string;
+};
+
+export type CreateBanReq = {
+  user_id: string;
+  reason?: string;
+};
+
+// ========== INVITE TYPES ==========
+export type HallInvite = {
+  code: string;
+  hall_id: string;
+  created_by: string;
+  expires_at: string | null;
+  max_uses: number | null;
+  uses: number;
+  created_at: string;
+};
+
+export type CreateInviteReq = {
+  expires_at?: string;
+  max_uses?: number;
+};
+
+export type InviteInfo = {
+  code: string;
+  hall_id: string;
+  hall_name: string;
+  created_by: string;
+  expires_at: string | null;
+  max_uses: number | null;
+  uses: number;
+};
+
+// ========== WEBSOCKET MESSAGE TYPES ==========
+export type WSMessage = WSTextMessage | WSTypingMessage | WSReadMessage;
+
+export type WSTextMessage = {
+  type: "message";
+  data: Message;
+};
+
+export type WSTypingMessage = {
+  type: "typing";
+  data: {
+    user_id: string;
+    room_id: string;
+  };
+};
+
+export type WSReadMessage = {
+  type: "read";
+  data: {
+    user_id: string;
+    message_id: string;
+  };
+};
+
+// ========== ERROR TYPES ==========
+export type AppError = {
+  code: number;
+  message: string;
+};
+
 // Auth Functions
 
 export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
   try {
+    console.log("[AuthSignIn] Starting signin with email:", payload.email);
+    console.log("[AuthSignIn] API Base:", apiBase);
+
     const result = await request<SignInRes>(`${apiBase}/auth/signin`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
 
-    // Ensure result object
-    if (!result || typeof result !== "object") {
+    console.log("[AuthSignIn] Response received:", result);
+
+    // Ensure result object has required fields
+    if (!result || typeof result !== "object" || !result.id) {
+      console.error("[AuthSignIn] Invalid response - missing id field:", result);
       return {
         id: "",
         username: "",
@@ -148,17 +524,16 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
         updated_at: "",
         active: false,
         success: false,
-        message: "Invalid response from server",
+        message: "Invalid response from server - missing user ID",
       };
     }
 
-    return {
-      ...result,
-      success: result.success, // Only true if server said so
-    };
+    console.log("[AuthSignIn] Signin successful for user:", result.username);
+    return result;
   } catch (err: any) {
     // Convert thrown errors into a structured response
     const message = err?.message || "Sign in failed due to server error";
+    console.error("[AuthSignIn] Error:", message, err);
     return {
       id: "",
       username: "",
@@ -179,40 +554,49 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
 }
 
 export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
-  const result = await request<SignUpRes>(`${apiBase}/auth/signup`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  try {
+    const result = await request<SignUpRes>(`${apiBase}/auth/signup`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
 
-  if (!result || typeof result !== "object") {
+    if (!result || typeof result !== "object") {
+      return {
+        success: false,
+        message: "Invalid response from server",
+      };
+    }
+
+    return result;
+  } catch (err: any) {
     return {
       success: false,
-      message: "Invalid response from server",
+      message: err?.message || "Sign up failed",
     };
   }
-
-  return {
-    ...result,
-    success: result.success,
-  };
 }
 
 export async function authSignOut(): Promise<{ message?: string } | undefined> {
-  return request<{ message?: string }>(`${apiBase}/auth/signout`, {
-    method: "GET",
-  });
+  try {
+    return request<{ message?: string }>(`${apiBase}/auth/signout`, {
+      method: "GET",
+    });
+  } catch (err: any) {
+    return { message: err?.message || "Sign out failed" };
+  }
 }
 
 // User functions
 export async function getUserMe(): Promise<UserMeRes | null> {
   try {
+    console.log("[GetUserMe] Fetching user profile from:", `${protectedApiBase}/me/`);
     const result = await request<UserMeRes>(`${protectedApiBase}/me/`, {
       method: "GET",
     });
-    console.log("getUserMe response:", result);
+    console.log("[GetUserMe] User profile retrieved:", result?.username);
     return result;
   } catch (error) {
-    console.log("getUserMe error:", error);
+    console.error("[GetUserMe] Error fetching user profile:", error);
     return null;
   }
 }
@@ -253,4 +637,638 @@ export async function getUserHalls(): Promise<Hall[] | null> {
     console.log("Hall fetch failed:", error);
     return null;
   }
+}
+
+export async function getHall(hallId: string): Promise<Hall | null> {
+  try {
+    return await request<Hall>(`${protectedApiBase}/halls/${hallId}`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Hall fetch failed:", error);
+    return null;
+  }
+}
+
+export async function updateHall(
+  hallId: string,
+  payload: UpdateHallReq,
+): Promise<Hall | null> {
+  try {
+    return await request<Hall>(`${protectedApiBase}/halls/${hallId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.log("Hall update failed:", error);
+    return null;
+  }
+}
+
+export async function deleteHall(hallId: string): Promise<boolean> {
+  try {
+    await request<{ message: string }>(`${protectedApiBase}/halls/${hallId}`, {
+      method: "DELETE",
+    });
+    return true;
+  } catch (error) {
+    console.log("Hall delete failed:", error);
+    return false;
+  }
+}
+
+export async function joinHall(hallId: string): Promise<HallMember | null> {
+  try {
+    return await request<HallMember>(
+      `${protectedApiBase}/halls/${hallId}/join`,
+      {
+        method: "POST",
+      },
+    );
+  } catch (error) {
+    console.log("Hall join failed:", error);
+    return null;
+  }
+}
+
+export async function leaveHall(hallId: string): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/leave`,
+      {
+        method: "POST",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Hall leave failed:", error);
+    return false;
+  }
+}
+
+// ========== FLOOR FUNCTIONS ==========
+export async function getFloors(hallId: string): Promise<Floor[] | null> {
+  try {
+    return await request<Floor[]>(`${protectedApiBase}/halls/${hallId}/floors`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Floor fetch failed:", error);
+    return null;
+  }
+}
+
+export async function createFloor(
+  hallId: string,
+  payload: CreateFloorReq,
+): Promise<Floor | null> {
+  try {
+    return await request<Floor>(`${protectedApiBase}/halls/${hallId}/floors`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.log("Floor create failed:", error);
+    return null;
+  }
+}
+
+export async function updateFloor(
+  hallId: string,
+  floorId: string,
+  payload: UpdateFloorReq,
+): Promise<Floor | null> {
+  try {
+    return await request<Floor>(
+      `${protectedApiBase}/halls/${hallId}/floors/${floorId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Floor update failed:", error);
+    return null;
+  }
+}
+
+export async function deleteFloor(
+  hallId: string,
+  floorId: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/floors/${floorId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Floor delete failed:", error);
+    return false;
+  }
+}
+
+// ========== ROOM FUNCTIONS ==========
+export async function getRooms(hallId: string): Promise<Room[] | null> {
+  try {
+    return await request<Room[]>(
+      `${protectedApiBase}/halls/${hallId}/rooms`,
+      {
+        method: "GET",
+      },
+    );
+  } catch (error) {
+    console.log("Room fetch failed:", error);
+    return null;
+  }
+}
+
+export async function createRoom(
+  hallId: string,
+  payload: CreateRoomReq,
+): Promise<Room | null> {
+  try {
+    return await request<Room>(`${protectedApiBase}/halls/${hallId}/rooms`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.log("Room create failed:", error);
+    return null;
+  }
+}
+
+export async function updateRoom(
+  hallId: string,
+  roomId: string,
+  payload: UpdateRoomReq,
+): Promise<Room | null> {
+  try {
+    return await request<Room>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Room update failed:", error);
+    return null;
+  }
+}
+
+export async function deleteRoom(
+  hallId: string,
+  roomId: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Room delete failed:", error);
+    return false;
+  }
+}
+
+export async function moveRoom(
+  hallId: string,
+  roomId: string,
+  payload: MoveRoomReq,
+): Promise<Room | null> {
+  try {
+    return await request<Room>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/move`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Room move failed:", error);
+    return null;
+  }
+}
+
+// ========== MESSAGE FUNCTIONS ==========
+export async function getMessages(
+  hallId: string,
+  roomId: string,
+  opts?: FetchMessagesOpts,
+): Promise<MessagesResponse | null> {
+  try {
+    const searchParams = new URLSearchParams();
+    if (opts?.limit) searchParams.append("limit", opts.limit.toString());
+    if (opts?.before) searchParams.append("before", opts.before);
+    if (opts?.after) searchParams.append("after", opts.after);
+    if (opts?.around) searchParams.append("around", opts.around);
+
+    const query = searchParams.toString();
+    const url = `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages${query ? "?" + query : ""}`;
+
+    return await request<MessagesResponse>(url, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Message fetch failed:", error);
+    return null;
+  }
+}
+
+export async function getMessage(
+  hallId: string,
+  roomId: string,
+  messageId: string,
+): Promise<Message | null> {
+  try {
+    return await request<Message>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages/${messageId}`,
+      {
+        method: "GET",
+      },
+    );
+  } catch (error) {
+    console.log("Message fetch failed:", error);
+    return null;
+  }
+}
+
+export async function createMessage(
+  hallId: string,
+  roomId: string,
+  payload: CreateMessageReq,
+): Promise<Message | null> {
+  try {
+    return await request<Message>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Message create failed:", error);
+    return null;
+  }
+}
+
+export async function updateMessage(
+  hallId: string,
+  roomId: string,
+  messageId: string,
+  payload: UpdateMessageReq,
+): Promise<Message | null> {
+  try {
+    return await request<Message>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages/${messageId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Message update failed:", error);
+    return null;
+  }
+}
+
+export async function deleteMessage(
+  hallId: string,
+  roomId: string,
+  messageId: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages/${messageId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Message delete failed:", error);
+    return false;
+  }
+}
+
+// ========== REACTION FUNCTIONS ==========
+export async function addReaction(
+  hallId: string,
+  roomId: string,
+  messageId: string,
+  emoji: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages/${messageId}/reactions`,
+      {
+        method: "POST",
+        body: JSON.stringify({ emoji }),
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Reaction add failed:", error);
+    return false;
+  }
+}
+
+export async function removeReaction(
+  hallId: string,
+  roomId: string,
+  messageId: string,
+  emoji: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/rooms/${roomId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Reaction remove failed:", error);
+    return false;
+  }
+}
+
+// ========== HALL MEMBER FUNCTIONS ==========
+export async function getHallMembers(hallId: string): Promise<HallMember[] | null> {
+  try {
+    return await request<HallMember[]>(
+      `${protectedApiBase}/halls/${hallId}/settings/members`,
+      {
+        method: "GET",
+      },
+    );
+  } catch (error) {
+    console.log("Hall members fetch failed:", error);
+    return null;
+  }
+}
+
+export async function updateHallMember(
+  hallId: string,
+  userId: string,
+  payload: UpdateHallMemberReq,
+): Promise<HallMember | null> {
+  try {
+    return await request<HallMember>(
+      `${protectedApiBase}/halls/${hallId}/settings/members/${userId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Hall member update failed:", error);
+    return null;
+  }
+}
+
+export async function kickHallMember(
+  hallId: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/settings/members/${userId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Hall member kick failed:", error);
+    return false;
+  }
+}
+
+// ========== ROLE FUNCTIONS ==========
+export async function getRoles(hallId: string): Promise<Role[] | null> {
+  try {
+    return await request<Role[]>(`${protectedApiBase}/halls/${hallId}/settings/roles`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Roles fetch failed:", error);
+    return null;
+  }
+}
+
+export async function createRole(
+  hallId: string,
+  payload: CreateRoleReq,
+): Promise<Role | null> {
+  try {
+    return await request<Role>(`${protectedApiBase}/halls/${hallId}/settings/roles`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.log("Role create failed:", error);
+    return null;
+  }
+}
+
+export async function updateRole(
+  hallId: string,
+  roleId: string,
+  payload: UpdateRoleReq,
+): Promise<Role | null> {
+  try {
+    return await request<Role>(
+      `${protectedApiBase}/halls/${hallId}/settings/roles/${roleId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Role update failed:", error);
+    return null;
+  }
+}
+
+export async function deleteRole(hallId: string, roleId: string): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/settings/roles/${roleId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Role delete failed:", error);
+    return false;
+  }
+}
+
+export async function getRolePermissions(
+  hallId: string,
+  roleId: string,
+): Promise<RolePermission | null> {
+  try {
+    return await request<RolePermission>(
+      `${protectedApiBase}/halls/${hallId}/settings/roles/${roleId}/permissions`,
+      {
+        method: "GET",
+      },
+    );
+  } catch (error) {
+    console.log("Role permissions fetch failed:", error);
+    return null;
+  }
+}
+
+export async function updateRolePermissions(
+  hallId: string,
+  roleId: string,
+  payload: UpdateRolePermissionsReq,
+): Promise<RolePermission | null> {
+  try {
+    return await request<RolePermission>(
+      `${protectedApiBase}/halls/${hallId}/settings/roles/${roleId}/permissions`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Role permissions update failed:", error);
+    return null;
+  }
+}
+
+// ========== BAN FUNCTIONS ==========
+export async function getHallBans(hallId: string): Promise<HallBan[] | null> {
+  try {
+    return await request<HallBan[]>(`${protectedApiBase}/halls/${hallId}/settings/bans`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Hall bans fetch failed:", error);
+    return null;
+  }
+}
+
+export async function banUser(
+  hallId: string,
+  payload: CreateBanReq,
+): Promise<HallBan | null> {
+  try {
+    return await request<HallBan>(
+      `${protectedApiBase}/halls/${hallId}/settings/bans`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Ban user failed:", error);
+    return null;
+  }
+}
+
+export async function unbanUser(hallId: string, userId: string): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/settings/bans/${userId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Unban user failed:", error);
+    return false;
+  }
+}
+
+// ========== INVITE FUNCTIONS ==========
+export async function getHallInvites(hallId: string): Promise<HallInvite[] | null> {
+  try {
+    return await request<HallInvite[]>(
+      `${protectedApiBase}/halls/${hallId}/settings/invites`,
+      {
+        method: "GET",
+      },
+    );
+  } catch (error) {
+    console.log("Hall invites fetch failed:", error);
+    return null;
+  }
+}
+
+export async function createInvite(
+  hallId: string,
+  payload: CreateInviteReq,
+): Promise<HallInvite | null> {
+  try {
+    return await request<HallInvite>(
+      `${protectedApiBase}/halls/${hallId}/settings/invites`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  } catch (error) {
+    console.log("Invite create failed:", error);
+    return null;
+  }
+}
+
+export async function revokeInvite(
+  hallId: string,
+  inviteCode: string,
+): Promise<boolean> {
+  try {
+    await request<{ message: string }>(
+      `${protectedApiBase}/halls/${hallId}/settings/invites/${inviteCode}`,
+      {
+        method: "DELETE",
+      },
+    );
+    return true;
+  } catch (error) {
+    console.log("Invite revoke failed:", error);
+    return false;
+  }
+}
+
+// Public invite endpoint (no auth required)
+export async function getPublicInviteInfo(inviteCode: string): Promise<InviteInfo | null> {
+  try {
+    return await request<InviteInfo>(`${protectedApiBase}/invites/${inviteCode}`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("Public invite fetch failed:", error);
+    return null;
+  }
+}
+
+export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
+  try {
+    return await request<Hall>(`${protectedApiBase}/invites/${inviteCode}/accept`, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.log("Invite accept failed:", error);
+    return null;
+  }
+}
+
+// ========== WEBSOCKET HELPER ==========
+export function getWebSocketUrl(roomId: string): string {
+  const wsBase = apiBase.replace(/^http/, "ws");
+  return `${wsBase}/ws/rooms/${roomId}`;
 }

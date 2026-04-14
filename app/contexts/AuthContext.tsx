@@ -94,8 +94,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userData) setUserEdge(userData); // <- sync to EdgeStore
         return userData;
       } catch (err) {
-        const authErr = handleError(err, "Failed to fetch user data");
-        setError(authErr);
+        console.error("[AuthProvider.fetchUser] Error:", err);
+        // Silently fail - user is not authenticated or backend is unreachable
+        // This is expected on initial load
         setUser(null);
         setActive(false);
         clearUserEdge();
@@ -104,12 +105,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (showLoading) setLoading(false);
       }
     },
-    [clearError, handleError, setUserEdge, clearUserEdge, setActive],
+    [clearError, setUserEdge, clearUserEdge, setActive],
   );
 
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    // Check if user is already authenticated via existing JWT cookie
+    // This handles page reloads when user is already signed in
+    const initAuth = async () => {
+      try {
+        setLoading(true);
+        const userData = await getUserMe();
+        setUser(userData);
+        setActive(true);
+        if (userData) setUserEdge(userData);
+      } catch (err) {
+        console.error("[AuthProvider] Failed to initialize auth:", err);
+        setUser(null);
+        setActive(false);
+        clearUserEdge();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
 
   const signin = useCallback(
     async (email: string, password: string) => {
@@ -132,17 +152,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           password,
         };
 
+        console.log("[AuthContext.signin] Starting signin with payload:", { email: payload.email });
         const result = await authSignIn(payload);
+        console.log("[AuthContext.signin] authSignIn result:", result);
 
         if (!result.success) {
           const err: AuthError = {
             message: result.message || "Sign in failed",
             code: "SIGNIN_FAILED",
           };
+          console.error("[AuthContext.signin] Signin failed:", err.message);
           setError(err);
           return { success: false, error: err };
         }
 
+        console.log("[AuthContext.signin] Signin successful, fetching user profile");
         // Fetch full user profile
         const userData = await fetchUser(false);
         if (!userData) {
@@ -151,14 +175,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               "Signed in but failed to load user profile. Refresh the page.",
             code: "FETCH_USER_FAILED",
           };
+          console.error("[AuthContext.signin] Failed to fetch user profile after signin");
           setError(err);
           return { success: false, error: err };
         }
+        console.log("[AuthContext.signin] User profile loaded successfully:", userData.username);
         router.push("/home");
 
         return { success: true };
       } catch (err) {
         const authErr = handleError(err, "Sign in failed");
+        console.error("[AuthContext.signin] Exception:", authErr);
         setError(authErr);
         return { success: false, error: authErr };
       } finally {

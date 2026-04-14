@@ -42,3 +42,13 @@ next-env.d.ts
 
 # jetbrains/webstorm
 .idea/
+
+# specific files
+AUTH_VERIFICATION.md
+BACKEND_AUTH_VERIFICATION.md
+BACKEND_INTEGRATION_VERIFIED.md
+BACKEND_VERIFICATION_COMPLETE.md
+halls.json
+INTEGRATION_CHECKLIST.md
+INTEGRATION_GUIDE.ts
+signin.json
