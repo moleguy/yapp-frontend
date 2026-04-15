@@ -12,6 +12,10 @@ import {
     useFetchOlderMessages,
     useMessageLoading,
 } from "@/app/store/useMessageStore";
+import {
+    useAddReaction as useAddReactionStore,
+    useRemoveReaction as useRemoveReactionStore,
+} from "@/app/store/useReactionStore";
 import { useSelectedRoom } from "@/app/store/useRoomStore";
 import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
