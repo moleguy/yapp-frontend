@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { IoIosClose } from "react-icons/io";
 import { FaChevronRight } from "react-icons/fa";
 import Image from "next/image";
@@ -70,7 +70,7 @@ export default function AddServerPopup({
     }
   };
 
-  const handleCreateServer = () => {
+  const handleCreateServer = useCallback(() => {
     const spaceCount = (serverName.match(/ /g) || []).length;
 
     // Combined validation before creating
@@ -98,7 +98,7 @@ export default function AddServerPopup({
     setNameError(null);
     onCreate(serverName, serverImage);
     onClose();
-  };
+  }, [serverName, serverImage, onCreate, onClose]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -109,6 +109,7 @@ export default function AddServerPopup({
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep(initialStep);
     }
   }, [isOpen, initialStep]);
@@ -129,6 +130,7 @@ export default function AddServerPopup({
 
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep("choice");
       setServerName("");
       setServerImage(undefined);
@@ -145,7 +147,6 @@ export default function AddServerPopup({
     if (step === "join" && joinInputRef.current) {
       joinInputRef.current.focus();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, handleCreateServer]);
 
   useEffect(() => {
@@ -160,7 +161,7 @@ export default function AddServerPopup({
 
     document.addEventListener("keydown", handleGlobalKeyDown);
     return () => document.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [isOpen, step, serverName, serverImage]);
+  }, [isOpen, step, handleCreateServer]);
 
   if (!isOpen) return null;
 
@@ -297,8 +298,8 @@ export default function AddServerPopup({
                 onClick={handleCreateServer}
                 disabled={!!nameError || !serverName.trim()}
                 className={`py-2 px-6 rounded-lg text-white cursor-pointer ${nameError || !serverName.trim()
-                    ? "bg-gray-400 cursor-not-allowed hover:cursor-default"
-                    : "bg-[#6164f2] hover:bg-[#4c52bd]"
+                  ? "bg-gray-400 cursor-not-allowed hover:cursor-default"
+                  : "bg-[#6164f2] hover:bg-[#4c52bd]"
                   }`}
               >
                 Create

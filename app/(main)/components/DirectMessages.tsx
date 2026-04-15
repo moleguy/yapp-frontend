@@ -132,8 +132,8 @@ export default function DirectMessages({
                                     {/*/>*/}
                                 </div>
                                 <span className={`absolute bottom-3 left-11 w-4 h-4 rounded-full flex items-center justify-center duration-200 ${selectedFriend?.id === friend.id
-                                        ? 'bg-[#dddde0]'
-                                        : 'bg-[#f3f3f4] group-hover:bg-[#e7e7e9]'
+                                    ? 'bg-[#dddde0]'
+                                    : 'bg-[#f3f3f4] group-hover:bg-[#e7e7e9]'
                                     }`}
                                 >
                                     <GoDotFill className={`w-4 h-4 ${friend.status === "online" ? "text-[#08cb00]" : "text-[#7e7f87]"}`} />
@@ -168,7 +168,7 @@ export default function DirectMessages({
                         { label: "Invite to Server", action: "invite" },
                         { label: "Block", action: "block" },
                         { label: "Mute", action: "mute" },
-                    ].map((item, index, array) => (
+                    ].map((item) => (
                         <React.Fragment key={item.action}>
                             <button
                                 className={` w-full text-left hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 font-base tracking-wide ${item.action === "block" ? "text-[#cb3b40] hover:bg-[#fbeff0]" : "text-[#1e1e1e]"

@@ -11,13 +11,7 @@ import {
     useCanLoadOlderMessages,
     useFetchOlderMessages,
     useMessageLoading,
-    useMessageError,
 } from "@/app/store/useMessageStore";
-import {
-    useReactionsForMessage,
-    useAddReaction as useAddReactionStore,
-    useRemoveReaction as useRemoveReactionStore,
-} from "@/app/store/useReactionStore";
 import { useSelectedRoom } from "@/app/store/useRoomStore";
 import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
@@ -57,15 +51,13 @@ export default function ChatArea() {
     const canLoadOlder = useCanLoadOlderMessages(selectedRoom?.id || "");
     const fetchOlder = useFetchOlderMessages();
     const loading = useMessageLoading();
-    const error = useMessageError();
 
     // Reaction store hooks
-    const reactions = useReactionsForMessage(selectedRoom?.id || "", "");
     const addReactionStore = useAddReactionStore();
     const removeReactionStore = useRemoveReactionStore();
 
     // WebSocket hook
-    const { isConnected, sendMessage: sendWSMessage, sendTyping } = useWebSocket({
+    const { isConnected, sendMessage: sendWSMessage } = useWebSocket({
         roomId: selectedRoom?.id || null,
         hallId: selectedHallId || null,
         enabled: !!selectedRoom && !!selectedHallId,
@@ -100,7 +92,7 @@ export default function ChatArea() {
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages.length]);
+    }, [messages, selectedRoom]);
 
     // Handle scroll for pagination
     const handleScroll = useCallback(async () => {
@@ -324,7 +316,7 @@ export default function ChatArea() {
                             key={message.id}
                             message={message}
                             isOwnMessage={message.author_id === user?.id}
-                            reactions={useReactionsForMessage(selectedRoom.id, message.id)}
+                            reactions={[]}
                             onEdit={() => {
                                 setEditingMessageId(message.id);
                                 setEditingContent(message.content);
@@ -393,7 +385,7 @@ export default function ChatArea() {
 interface MessageItemProps {
     message: Message;
     isOwnMessage: boolean;
-    reactions: any[];
+    reactions: unknown[];
     onEdit: () => void;
     onDelete: () => void;
     onAddReaction: (emoji: string) => void;

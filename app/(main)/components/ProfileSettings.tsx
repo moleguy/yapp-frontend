@@ -13,7 +13,6 @@ import {
   useUpdateUser,
   useSetUser,
   useAvatar,
-  useUser,
 } from "@/app/store/useUserStore";
 import {
   authSignOut,

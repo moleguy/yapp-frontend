@@ -1,8 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { getWebSocketUrl } from "@/lib/api";
 import { WebSocketClient, getWebSocketClient } from "@/lib/ws";
-import { useAddMessage, useUpdateMessage } from "@/app/store/useMessageStore";
-import { useAddReaction, useRemoveReaction } from "@/app/store/useReactionStore";
+import { useAddMessage } from "@/app/store/useMessageStore";
 import { Message } from "@/lib/api";
 
 interface UseWebSocketOptions {
@@ -12,7 +11,6 @@ interface UseWebSocketOptions {
 }
 
 interface WebSocketState {
-    isConnected: boolean;
     isTyping: Map<string, { userId: string; timeout: NodeJS.Timeout }>;
 }
 
@@ -25,15 +23,12 @@ interface WebSocketState {
 export function useWebSocket(options: UseWebSocketOptions) {
     const { roomId, hallId, enabled = true } = options;
     const wsRef = useRef<WebSocketClient | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
     const stateRef = useRef<WebSocketState>({
-        isConnected: false,
         isTyping: new Map(),
     });
 
     const addMessage = useAddMessage();
-    const updateMessage = useUpdateMessage();
-    const addReaction = useAddReaction();
-    const removeReaction = useRemoveReaction();
 
     // Typing indicator cleanup
     const clearTypingIndicator = useCallback((userId: string) => {
@@ -95,13 +90,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
     // Open handler
     const handleOpen = useCallback(() => {
         console.log("WebSocket connected");
-        stateRef.current.isConnected = true;
+        setIsConnected(true);
     }, []);
 
     // Close handler
     const handleClose = useCallback(() => {
         console.log("WebSocket closed");
-        stateRef.current.isConnected = false;
+        setIsConnected(false);
         // Clear all typing indicators
         stateRef.current.isTyping.forEach(({ timeout }) => clearTimeout(timeout));
         stateRef.current.isTyping.clear();
@@ -114,7 +109,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
             if (wsRef.current) {
                 wsRef.current.disconnect();
                 wsRef.current = null;
-                stateRef.current.isConnected = false;
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setIsConnected(false);
             }
             return;
         }
@@ -152,7 +148,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
             if (wsRef.current) {
                 wsRef.current.disconnect();
                 wsRef.current = null;
-                stateRef.current.isConnected = false;
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setIsConnected(false);
             }
         };
     }, [roomId, hallId, enabled, handleMessage, handleTyping, handleRead, handleError, handleOpen, handleClose]);
@@ -187,13 +184,18 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
     }, []);
 
+    // Get typing users (wrapped in callback to avoid ref access during render)
+    const getTypingUsers = useCallback(() => {
+        return Array.from(stateRef.current.isTyping.keys());
+    }, []);
+
     return {
-        isConnected: stateRef.current.isConnected,
+        isConnected,
         sendMessage,
         sendTyping,
         sendRead,
         reconnect,
-        getTypingUsers: () => Array.from(stateRef.current.isTyping.keys()),
+        getTypingUsers,
     };
 }
 
@@ -203,7 +205,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
  */
 export function useTypingIndicator(roomId: string | null) {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const sendTyping = useWebSocket({ roomId, hallId: null }).sendTyping;
+    const { sendTyping } = useWebSocket({ roomId, hallId: null });
+
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const sendTypingIndicator = useCallback(() => {
         // Clear existing timeout
@@ -216,18 +226,9 @@ export function useTypingIndicator(roomId: string | null) {
 
         // Resend every 2 seconds while typing
         typingTimeoutRef.current = setTimeout(() => {
-            sendTypingIndicator();
+            sendTyping();
         }, 2000);
     }, [sendTyping]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
-            }
-        };
-    }, []);
 
     return { sendTypingIndicator };
 }

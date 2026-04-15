@@ -146,10 +146,11 @@ export async function GET(request: Request) {
             statusText: res.statusText,
             headers,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Proxy] GET error:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: message }),
             { status: 502, headers: { "Content-Type": "application/json" } }
         );
     }
@@ -227,10 +228,11 @@ export async function POST(request: Request) {
             statusText: res.statusText,
             headers,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Proxy] POST error:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: message }),
             { status: 502, headers: { "Content-Type": "application/json" } }
         );
     }
@@ -301,10 +303,11 @@ export async function PATCH(request: Request) {
             statusText: res.statusText,
             headers,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Proxy] PATCH error:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: message }),
             { status: 502, headers: { "Content-Type": "application/json" } }
         );
     }
@@ -372,10 +375,11 @@ export async function DELETE(request: Request) {
             statusText: res.statusText,
             headers,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("[Proxy] DELETE error:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({ error: message }),
             { status: 502, headers: { "Content-Type": "application/json" } }
         );
     }

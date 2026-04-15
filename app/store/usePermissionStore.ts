@@ -42,7 +42,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
     },
 
     // ===== Helpers =====
-    getUserPermissionsInHall: (_userId: string, _hallId: string) => {
+    getUserPermissionsInHall: () => {
         // This is a basic implementation; in a real scenario you'd fetch from server
         // or derive from hall members and roles
         const permissions = get().rolePermissions;

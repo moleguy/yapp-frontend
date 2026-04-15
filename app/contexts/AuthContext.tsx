@@ -129,7 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initAuth();
-  }, []);
+  }, [setActive, setUserEdge, clearUserEdge]);
 
   const signin = useCallback(
     async (email: string, password: string) => {

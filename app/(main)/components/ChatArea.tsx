@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PollPopup from "@/app/(main)/components/PollPopup";
 import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
@@ -55,8 +55,7 @@ export default function ChatArea({
     const [welcomeMessage, setWelcomeMessage] = useState<Message | null>(null);
 
     // Generate welcome message based on context
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const generateWelcomeMessage = (): Message | null => {
+    const generateWelcomeMessage = useCallback((): Message | null => {
         if (isDm && friendDisplayName) {
             return {
                 id: "welcome-dm",
@@ -77,24 +76,24 @@ export default function ChatArea({
             };
         }
         return null;
-    };
+    }, [isDm, friendDisplayName, channelName, serverName]);
 
     // Initialize or update welcome message when context changes
     useEffect(() => {
         const newWelcomeMessage = generateWelcomeMessage();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setWelcomeMessage(newWelcomeMessage);
         setMessages([]); // Clear user messages when context changes
         setMessageInput("");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName]);
+    }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName, generateWelcomeMessage]);
 
     // combining welcome message with user messages for rendering
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const allMessages = welcomeMessage ? [welcomeMessage, ...messages] : messages;
+    const allMessages = useMemo(() => {
+        return welcomeMessage ? [welcomeMessage, ...messages] : messages;
+    }, [welcomeMessage, messages]);
 
     // Scroll to bottom when messages change
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
@@ -161,17 +160,6 @@ export default function ChatArea({
         }) + ` at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     };
 
-    // Function to update welcome message (example of how you can modify it)
-    const updateWelcomeMessage = (newText: string) => {
-        if (welcomeMessage) {
-            setWelcomeMessage({
-                ...welcomeMessage,
-                text: newText,
-                timestamp: new Date(),
-            });
-        }
-    };
-
     return (
         <div className="flex flex-col h-full bg-[#f8f9fa]">
             <div className="flex-1 mt-14 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
@@ -183,7 +171,7 @@ export default function ChatArea({
                 </div>
                 <div className="p-4">
                     <div className="space-y-0.5">
-                        {allMessages.map((msg, index) => (
+                        {allMessages.map((msg) => (
                             <div
                                 key={msg.id}
                                 className={`group relative ${msg.isSystem ? 'justify-center' : ''}`}

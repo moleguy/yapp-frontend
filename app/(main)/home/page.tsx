@@ -43,7 +43,6 @@ export default function HomePage() {
     name: string;
   } | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [showServersOnly, setShowServersOnly] = useState(false);
   const [activeServer, setActiveServer] = useState<Server | null>(null);
   const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
@@ -144,7 +143,6 @@ export default function HomePage() {
         if (savedView === "server") {
           setActiveServer(savedServer);
           setSelectedChannel({ id: "1", name: "general" });
-          setShowServersOnly(true);
         }
       }
     }

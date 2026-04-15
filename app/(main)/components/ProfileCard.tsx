@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import { IoIosClose } from "react-icons/io";
 import { Friend } from "@/app/(main)/components/FriendsProfile";
 import Image from "next/image";
@@ -17,13 +17,13 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 	const profileRef = useRef<HTMLDivElement | null>(null);
 
 	// Safe close function
-	const handleClose = () => {
+	const handleClose = useCallback(() => {
 		if (typeof onCloseAction === "function") {
 			onCloseAction();
 		} else {
 			console.warn("onCloseAction is not a function");
 		}
-	};
+	}, [onCloseAction]);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -36,7 +36,7 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [isOpen]);
+	}, [isOpen, handleClose]);
 
 	useEffect(() => {
 		if (!isOpen) return;
