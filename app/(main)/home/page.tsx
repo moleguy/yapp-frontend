@@ -379,9 +379,7 @@ export default function HomePage() {
             ) : activeView === "dm" && selectedFriend ? (
               <ChatArea
                 friendDisplayName={selectedFriend.name}
-                friendUsername={selectedFriend.username || ""}
                 friendId={selectedFriend.id.toString()}
-                friendAvatar={selectedFriend.avatarUrl}
                 isDm={true}
               />
             ) : (
