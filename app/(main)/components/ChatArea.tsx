@@ -35,9 +35,7 @@ export default function ChatArea({
     channelName,
     channelId,
     friendDisplayName,
-    friendUsername,
     friendId,
-    friendAvatar,
     isDm = false,
 }: ChatAreaProps) {
     // const { user } = useAuth();
