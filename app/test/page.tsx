@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from "react";
 
+interface TestResult {
+    name: string;
+    status: string | number;
+    ok?: boolean;
+    duration: string;
+    url: string;
+    error?: string;
+}
+
 export default function TestPage() {
-    const [results, setResults] = useState<Record<string, unknown>[]>([]);
+    const [results, setResults] = useState<TestResult[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
