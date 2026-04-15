@@ -42,6 +42,7 @@ export default function ServerDetails({
   showCategoryPopup,
   onCloseCategoryPopup,
   onOpenCategoryPopup,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showChannels,
 }: ServerDetailsProps) {
   const [serverCategories, setServerCategories] = useState<
