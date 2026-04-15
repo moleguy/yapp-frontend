@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Send, Loader2, AlertCircle } from "lucide-react";
+import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 import {
     useMessagesForRoom,
     useFetchMessages,
@@ -42,6 +43,9 @@ import {
  * - Optimistic updates
  */
 export default function ChatArea() {
+    // Ensure persisted stores are hydrated from localStorage
+    useStoreHydration();
+
     const // Stores
         selectedRoom = useSelectedRoom();
     const selectedHallId = useSelectedHallId();
