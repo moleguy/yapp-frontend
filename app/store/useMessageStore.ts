@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { Message, getMessages, FetchMessagesOpts } from "@/lib/api";
 
 type MessageState = {
@@ -67,7 +67,7 @@ export const useMessageStore = create<MessageState>()(
                             const oldest = messages.length > 0 ? messages[0].id : undefined;
                             const newest = messages.length > 0 ? messages[messages.length - 1].id : undefined;
 
-                            return {
+                            const newState = {
                                 messagesByRoom: {
                                     ...state.messagesByRoom,
                                     [roomId]: messages,
@@ -82,6 +82,9 @@ export const useMessageStore = create<MessageState>()(
                                 },
                                 loading: false,
                             };
+
+                            console.log(`[MessageStore] Fetched ${messages.length} messages for room ${roomId}`);
+                            return newState;
                         });
                     } else {
                         set({ error: "Failed to fetch messages", loading: false });
@@ -271,7 +274,21 @@ export const useMessageStore = create<MessageState>()(
         }),
         {
             name: "yapp-messages-storage",
-            skipHydration: true,
+            storage: createJSONStorage(() => {
+                // Only use localStorage on client-side
+                if (typeof window === "undefined") {
+                    return {
+                        getItem: () => null,
+                        setItem: () => { },
+                        removeItem: () => { },
+                    };
+                }
+                return localStorage;
+            }),
+            partialize: (state) => ({
+                messagesByRoom: state.messagesByRoom,
+                cursorState: state.cursorState,
+            }),
         },
     ),
 );

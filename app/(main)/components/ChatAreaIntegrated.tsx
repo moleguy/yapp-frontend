@@ -83,11 +83,6 @@ export default function ChatArea() {
 
     // ===== EFFECTS =====
 
-    // Hydrate messages from localStorage on mount
-    useEffect(() => {
-        useMessageStore.persist.rehydrate();
-    }, []);
-
     // Load messages when room changes
     useEffect(() => {
         if (!selectedRoom || !selectedHallId) return;
