@@ -312,26 +312,26 @@ export default function HomePage() {
             </div>
 
             {/* Profile + controls */}
-            <div className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between">
-              <div className="flex items-center">
+            <div className="flex w-[320px] m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between gap-2">
+              <div className="flex items-center min-w-0">
                 {hasAvatar ? (
                   <Image
                     src={avatarThumbnailUrl}
                     alt="Profile"
-                    className="w-12 h-12 object-cover rounded-full"
+                    className="w-12 h-12 object-cover rounded-full flex-shrink-0"
                     width={90}
                     height={90}
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-medium">
+                  <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
                     {fallback}
                   </div>
                 )}
-                <div className="ml-2 font-MyFont text-[#393E46]">
-                  <p className="text-sm font-medium">
+                <div className="ml-2 font-MyFont text-[#393E46] min-w-0">
+                  <p className="text-sm font-medium truncate">
                     {user?.display_name || "No Name"}
                   </p>
-                  <p className="text-sm">@{user?.username || "no-username"}</p>
+                  <p className="text-sm truncate">@{user?.username || "no-username"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
