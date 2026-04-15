@@ -223,7 +223,6 @@ export default function HomePage() {
     } else {
       // Switch to server tab
       setActiveView("server");
-      setShowServersOnly(true);
 
       // Emulate last active hall click
       if (!hallDeselectedManually && lastActiveServer) {
@@ -243,7 +242,6 @@ export default function HomePage() {
       setFriendDeselectedManually(true);
     } else {
       setActiveView("dm");
-      setShowServersOnly(false);
       if (!friendDeselectedManually && selectedFriend)
         setSelectedFriend(selectedFriend);
     }

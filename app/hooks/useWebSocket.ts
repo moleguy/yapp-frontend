@@ -148,7 +148,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
             if (wsRef.current) {
                 wsRef.current.disconnect();
                 wsRef.current = null;
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setIsConnected(false);
             }
         };

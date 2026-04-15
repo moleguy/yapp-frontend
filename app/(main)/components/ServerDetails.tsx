@@ -33,7 +33,7 @@ interface ServerDetailsProps {
   onSelectChannel?: (channel: { id: string; name: string }) => void;
   showCategoryPopup: boolean;
   onCloseCategoryPopup: () => void;
-  onOpenCategoryPopup: () => void;
+  onOpenCategoryPopup: () => void; showChannels: boolean;
 }
 
 export default function ServerDetails({
@@ -42,6 +42,7 @@ export default function ServerDetails({
   showCategoryPopup,
   onCloseCategoryPopup,
   onOpenCategoryPopup,
+  showChannels,
 }: ServerDetailsProps) {
   const [serverCategories, setServerCategories] = useState<
     Record<string, Category[]>
