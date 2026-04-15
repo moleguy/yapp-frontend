@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { Message, getMessages, FetchMessagesOpts } from "@/lib/api";
 
 type MessageState = {
@@ -40,232 +41,240 @@ type MessageState = {
     canLoadOlderMessages: (roomId: string) => boolean;
 };
 
-export const useMessageStore = create<MessageState>((set, get) => ({
-    messagesByRoom: {},
-    loading: false,
-    error: null,
-    cursorState: {},
+export const useMessageStore = create<MessageState>()(
+    persist(
+        (set, get) => ({
+            messagesByRoom: {},
+            loading: false,
+            error: null,
+            cursorState: {},
 
-    // ===== Fetch Messages =====
-    fetchMessages: async (
-        hallId: string,
-        roomId: string,
-        opts?: FetchMessagesOpts,
-    ) => {
-        set({ loading: true, error: null });
-        try {
-            const response = await getMessages(hallId, roomId, opts);
-            if (response) {
+            // ===== Fetch Messages =====
+            fetchMessages: async (
+                hallId: string,
+                roomId: string,
+                opts?: FetchMessagesOpts,
+            ) => {
+                set({ loading: true, error: null });
+                try {
+                    const response = await getMessages(hallId, roomId, opts);
+                    if (response) {
+                        set((state) => {
+                            const messages = response.messages || [];
+                            const hasMore = response.has_more || false;
+
+                            // Determine cursors
+                            const oldest = messages.length > 0 ? messages[0].id : undefined;
+                            const newest = messages.length > 0 ? messages[messages.length - 1].id : undefined;
+
+                            return {
+                                messagesByRoom: {
+                                    ...state.messagesByRoom,
+                                    [roomId]: messages,
+                                },
+                                cursorState: {
+                                    ...state.cursorState,
+                                    [roomId]: {
+                                        oldest,
+                                        newest,
+                                        hasMore,
+                                    },
+                                },
+                                loading: false,
+                            };
+                        });
+                    } else {
+                        set({ error: "Failed to fetch messages", loading: false });
+                    }
+                } catch (error) {
+                    set({
+                        error:
+                            error instanceof Error ? error.message : "Failed to fetch messages",
+                        loading: false,
+                    });
+                }
+            },
+
+            fetchOlderMessages: async (hallId: string, roomId: string) => {
+                const state = get();
+                const cursor = state.cursorState[roomId]?.oldest;
+
+                if (!cursor) {
+                    console.warn("No cursor for fetching older messages");
+                    return;
+                }
+
+                set({ loading: true });
+                try {
+                    const response = await getMessages(hallId, roomId, { before: cursor });
+                    if (response) {
+                        set((state) => {
+                            const newMessages = response.messages || [];
+                            const existingMessages = state.messagesByRoom[roomId] || [];
+                            const hasMore = response.has_more || false;
+
+                            // Prepend new messages (older = earlier in time, at start of array)
+                            const allMessages = [...newMessages, ...existingMessages];
+
+                            const oldest = newMessages.length > 0 ? newMessages[0].id : cursor;
+
+                            return {
+                                messagesByRoom: {
+                                    ...state.messagesByRoom,
+                                    [roomId]: allMessages,
+                                },
+                                cursorState: {
+                                    ...state.cursorState,
+                                    [roomId]: {
+                                        ...state.cursorState[roomId],
+                                        oldest,
+                                        hasMore,
+                                    },
+                                },
+                                loading: false,
+                            };
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch older messages:", error);
+                    set({ loading: false });
+                }
+            },
+
+            fetchNewerMessages: async (hallId: string, roomId: string) => {
+                const state = get();
+                const cursor = state.cursorState[roomId]?.newest;
+
+                if (!cursor) {
+                    console.warn("No cursor for fetching newer messages");
+                    return;
+                }
+
+                set({ loading: true });
+                try {
+                    const response = await getMessages(hallId, roomId, { after: cursor });
+                    if (response) {
+                        set((state) => {
+                            const newMessages = response.messages || [];
+                            const existingMessages = state.messagesByRoom[roomId] || [];
+                            const hasMore = response.has_more || false;
+
+                            // Append new messages (newer = later in time, at end of array)
+                            const allMessages = [...existingMessages, ...newMessages];
+
+                            const newest = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : cursor;
+
+                            return {
+                                messagesByRoom: {
+                                    ...state.messagesByRoom,
+                                    [roomId]: allMessages,
+                                },
+                                cursorState: {
+                                    ...state.cursorState,
+                                    [roomId]: {
+                                        ...state.cursorState[roomId],
+                                        newest,
+                                        hasMore,
+                                    },
+                                },
+                                loading: false,
+                            };
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch newer messages:", error);
+                    set({ loading: false });
+                }
+            },
+
+            // ===== Add/Update/Delete Messages =====
+            addMessage: (roomId: string, message: Message) => {
                 set((state) => {
-                    const messages = response.messages || [];
-                    const hasMore = response.has_more || false;
-
-                    // Determine cursors
-                    const oldest = messages.length > 0 ? messages[0].id : undefined;
-                    const newest = messages.length > 0 ? messages[messages.length - 1].id : undefined;
-
+                    const existing = state.messagesByRoom[roomId] || [];
+                    // Check if message already exists (avoid duplicates)
+                    if (existing.some((m) => m.id === message.id)) {
+                        return state;
+                    }
                     return {
                         messagesByRoom: {
                             ...state.messagesByRoom,
-                            [roomId]: messages,
+                            [roomId]: [...existing, message],
                         },
-                        cursorState: {
-                            ...state.cursorState,
-                            [roomId]: {
-                                oldest,
-                                newest,
-                                hasMore,
-                            },
-                        },
-                        loading: false,
                     };
                 });
-            } else {
-                set({ error: "Failed to fetch messages", loading: false });
-            }
-        } catch (error) {
-            set({
-                error:
-                    error instanceof Error ? error.message : "Failed to fetch messages",
-                loading: false,
-            });
-        }
-    },
-
-    fetchOlderMessages: async (hallId: string, roomId: string) => {
-        const state = get();
-        const cursor = state.cursorState[roomId]?.oldest;
-
-        if (!cursor) {
-            console.warn("No cursor for fetching older messages");
-            return;
-        }
-
-        set({ loading: true });
-        try {
-            const response = await getMessages(hallId, roomId, { before: cursor });
-            if (response) {
-                set((state) => {
-                    const newMessages = response.messages || [];
-                    const existingMessages = state.messagesByRoom[roomId] || [];
-                    const hasMore = response.has_more || false;
-
-                    // Prepend new messages (older = earlier in time, at start of array)
-                    const allMessages = [...newMessages, ...existingMessages];
-
-                    const oldest = newMessages.length > 0 ? newMessages[0].id : cursor;
-
-                    return {
-                        messagesByRoom: {
-                            ...state.messagesByRoom,
-                            [roomId]: allMessages,
-                        },
-                        cursorState: {
-                            ...state.cursorState,
-                            [roomId]: {
-                                ...state.cursorState[roomId],
-                                oldest,
-                                hasMore,
-                            },
-                        },
-                        loading: false,
-                    };
-                });
-            }
-        } catch (error) {
-            console.error("Failed to fetch older messages:", error);
-            set({ loading: false });
-        }
-    },
-
-    fetchNewerMessages: async (hallId: string, roomId: string) => {
-        const state = get();
-        const cursor = state.cursorState[roomId]?.newest;
-
-        if (!cursor) {
-            console.warn("No cursor for fetching newer messages");
-            return;
-        }
-
-        set({ loading: true });
-        try {
-            const response = await getMessages(hallId, roomId, { after: cursor });
-            if (response) {
-                set((state) => {
-                    const newMessages = response.messages || [];
-                    const existingMessages = state.messagesByRoom[roomId] || [];
-                    const hasMore = response.has_more || false;
-
-                    // Append new messages (newer = later in time, at end of array)
-                    const allMessages = [...existingMessages, ...newMessages];
-
-                    const newest = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : cursor;
-
-                    return {
-                        messagesByRoom: {
-                            ...state.messagesByRoom,
-                            [roomId]: allMessages,
-                        },
-                        cursorState: {
-                            ...state.cursorState,
-                            [roomId]: {
-                                ...state.cursorState[roomId],
-                                newest,
-                                hasMore,
-                            },
-                        },
-                        loading: false,
-                    };
-                });
-            }
-        } catch (error) {
-            console.error("Failed to fetch newer messages:", error);
-            set({ loading: false });
-        }
-    },
-
-    // ===== Add/Update/Delete Messages =====
-    addMessage: (roomId: string, message: Message) => {
-        set((state) => {
-            const existing = state.messagesByRoom[roomId] || [];
-            // Check if message already exists (avoid duplicates)
-            if (existing.some((m) => m.id === message.id)) {
-                return state;
-            }
-            return {
-                messagesByRoom: {
-                    ...state.messagesByRoom,
-                    [roomId]: [...existing, message],
-                },
-            };
-        });
-    },
-
-    updateMessage: (roomId: string, messageId: string, updates: Partial<Message>) => {
-        set((state) => ({
-            messagesByRoom: {
-                ...state.messagesByRoom,
-                [roomId]: (state.messagesByRoom[roomId] || []).map((m) =>
-                    m.id === messageId ? { ...m, ...updates } : m,
-                ),
             },
-        }));
-    },
 
-    deleteMessage: (roomId: string, messageId: string) => {
-        set((state) => ({
-            messagesByRoom: {
-                ...state.messagesByRoom,
-                [roomId]: (state.messagesByRoom[roomId] || []).filter(
-                    (m) => m.id !== messageId,
-                ),
+            updateMessage: (roomId: string, messageId: string, updates: Partial<Message>) => {
+                set((state) => ({
+                    messagesByRoom: {
+                        ...state.messagesByRoom,
+                        [roomId]: (state.messagesByRoom[roomId] || []).map((m) =>
+                            m.id === messageId ? { ...m, ...updates } : m,
+                        ),
+                    },
+                }));
             },
-        }));
-    },
 
-    setMessages: (roomId: string, messages: Message[]) => {
-        set((state) => ({
-            messagesByRoom: {
-                ...state.messagesByRoom,
-                [roomId]: messages,
+            deleteMessage: (roomId: string, messageId: string) => {
+                set((state) => ({
+                    messagesByRoom: {
+                        ...state.messagesByRoom,
+                        [roomId]: (state.messagesByRoom[roomId] || []).filter(
+                            (m) => m.id !== messageId,
+                        ),
+                    },
+                }));
             },
-        }));
-    },
 
-    clearMessages: (roomId?: string) => {
-        if (roomId) {
-            set((state) => {
-                const newMap = { ...state.messagesByRoom };
-                delete newMap[roomId];
-                const newCursors = { ...state.cursorState };
-                delete newCursors[roomId];
-                return {
-                    messagesByRoom: newMap,
-                    cursorState: newCursors,
-                };
-            });
-        } else {
-            set({
-                messagesByRoom: {},
-                cursorState: {},
-            });
-        }
-    },
+            setMessages: (roomId: string, messages: Message[]) => {
+                set((state) => ({
+                    messagesByRoom: {
+                        ...state.messagesByRoom,
+                        [roomId]: messages,
+                    },
+                }));
+            },
 
-    // ===== Helpers =====
-    getMessagesForRoom: (roomId: string) => {
-        return get().messagesByRoom[roomId] || [];
-    },
+            clearMessages: (roomId?: string) => {
+                if (roomId) {
+                    set((state) => {
+                        const newMap = { ...state.messagesByRoom };
+                        delete newMap[roomId];
+                        const newCursors = { ...state.cursorState };
+                        delete newCursors[roomId];
+                        return {
+                            messagesByRoom: newMap,
+                            cursorState: newCursors,
+                        };
+                    });
+                } else {
+                    set({
+                        messagesByRoom: {},
+                        cursorState: {},
+                    });
+                }
+            },
 
-    getMessageById: (roomId: string, messageId: string) => {
-        const messages = get().messagesByRoom[roomId] || [];
-        return messages.find((m) => m.id === messageId) || null;
-    },
+            // ===== Helpers =====
+            getMessagesForRoom: (roomId: string) => {
+                return get().messagesByRoom[roomId] || [];
+            },
 
-    canLoadOlderMessages: (roomId: string) => {
-        return get().cursorState[roomId]?.hasMore ?? false;
-    },
-}));
+            getMessageById: (roomId: string, messageId: string) => {
+                const messages = get().messagesByRoom[roomId] || [];
+                return messages.find((m) => m.id === messageId) || null;
+            },
+
+            canLoadOlderMessages: (roomId: string) => {
+                return get().cursorState[roomId]?.hasMore ?? false;
+            },
+        }),
+        {
+            name: "yapp-messages-storage",
+            skipHydration: true,
+        },
+    ),
+);
 
 // Selectors
 export const useMessagesForRoom = (roomId: string) =>

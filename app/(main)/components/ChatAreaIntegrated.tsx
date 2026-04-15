@@ -11,6 +11,7 @@ import {
     useCanLoadOlderMessages,
     useFetchOlderMessages,
     useMessageLoading,
+    useMessageStore,
 } from "@/app/store/useMessageStore";
 import {
     useAddReaction as useAddReactionStore,
@@ -81,6 +82,11 @@ export default function ChatArea() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // ===== EFFECTS =====
+
+    // Hydrate messages from localStorage on mount
+    useEffect(() => {
+        useMessageStore.persist.rehydrate();
+    }, []);
 
     // Load messages when room changes
     useEffect(() => {
