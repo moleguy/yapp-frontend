@@ -389,7 +389,7 @@ export default function ChatArea() {
 interface MessageItemProps {
     message: Message;
     isOwnMessage: boolean;
-    reactions: unknown[];
+    reactions: Array<{ emoji: string; message_id: string; user_id: string }>;
     onEdit: () => void;
     onDelete: () => void;
     onAddReaction: (emoji: string) => void;
@@ -418,7 +418,10 @@ function MessageItem({
     // Count reactions by emoji
     const reactionCounts: Record<string, number> = {};
     reactions.forEach((r) => {
-        reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
+        if (r && typeof r === "object" && "emoji" in r) {
+            const reaction = r as { emoji: string };
+            reactionCounts[reaction.emoji] = (reactionCounts[reaction.emoji] || 0) + 1;
+        }
     });
 
     return (
