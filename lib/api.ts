@@ -621,6 +621,17 @@ export async function updateUserMe(
   }
 }
 
+export async function getUser(userId: string): Promise<UserMeRes | null> {
+  try {
+    return await request<UserMeRes>(`${protectedApiBase}/users/${userId}`, {
+      method: "GET",
+    });
+  } catch (error) {
+    console.log("User fetch failed.:", error);
+    return null;
+  }
+}
+
 // Hall functions
 export async function createHall(payload: CreateHallReq): Promise<Hall | null> {
   try {
