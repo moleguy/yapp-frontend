@@ -3,7 +3,21 @@
 import React, { useState } from "react";
 import { UserMeRes, UpdateUserMeReq } from "@/lib/api";
 import ProfileAvatar from "./ProfileAvatar";
-import { Save, X, Loader2 } from "lucide-react";
+import { Save, X, Loader2, Twitter, Linkedin, Github, Mail } from "lucide-react";
+
+interface UserProfileFormProps {
+    user: UserMeRes;
+    onSave: (updates: UpdateUserMeReq) => Promise<boolean>;
+    onCancel: () => void;
+    isLoading?: boolean;
+}
+
+interface SocialLinks {
+    twitter?: string;
+    linkedin?: string;
+    github?: string;
+    discord?: string;
+}
 
 interface UserProfileFormProps {
     user: UserMeRes;
@@ -23,9 +37,25 @@ export default function UserProfileForm({
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [socialLinks, setSocialLinks] = useState<SocialLinks>(() => {
+        // Load social links from localStorage
+        try {
+            const stored = localStorage.getItem(`social_links_${user.id}`);
+            return stored ? JSON.parse(stored) : {};
+        } catch {
+            return {};
+        }
+    });
 
     const handleAvatarChange = (file: File) => {
         setAvatarFile(file);
+    };
+
+    const handleSocialLinkChange = (platform: keyof SocialLinks, value: string) => {
+        setSocialLinks((prev) => ({
+            ...prev,
+            [platform]: value.trim() || undefined,
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -39,6 +69,9 @@ export default function UserProfileForm({
 
         setIsSaving(true);
         try {
+            // Save social links to localStorage
+            localStorage.setItem(`social_links_${user.id}`, JSON.stringify(socialLinks));
+
             const updateData: UpdateUserMeReq = {
                 display_name: displayName.trim(),
                 avatar_url: user.avatar_url,
@@ -115,6 +148,81 @@ export default function UserProfileForm({
                 <p className="text-xs text-gray-500 mt-1">
                     {description.length}/500
                 </p>
+            </div>
+
+            {/* Social Links Section */}
+            <div className="border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Social Links</h3>
+                <p className="text-sm text-gray-400 mb-4">Add your social media profiles (optional)</p>
+
+                {/* Twitter */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                        <Twitter size={16} /> Twitter
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">x.com/</span>
+                        <input
+                            type="text"
+                            value={socialLinks.twitter || ""}
+                            onChange={(e) => handleSocialLinkChange("twitter", e.target.value)}
+                            disabled={isSaving || isLoading}
+                            placeholder="username"
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        />
+                    </div>
+                </div>
+
+                {/* LinkedIn */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                        <Linkedin size={16} /> LinkedIn
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">linkedin.com/in/</span>
+                        <input
+                            type="text"
+                            value={socialLinks.linkedin || ""}
+                            onChange={(e) => handleSocialLinkChange("linkedin", e.target.value)}
+                            disabled={isSaving || isLoading}
+                            placeholder="username"
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        />
+                    </div>
+                </div>
+
+                {/* GitHub */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                        <Github size={16} /> GitHub
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">github.com/</span>
+                        <input
+                            type="text"
+                            value={socialLinks.github || ""}
+                            onChange={(e) => handleSocialLinkChange("github", e.target.value)}
+                            disabled={isSaving || isLoading}
+                            placeholder="username"
+                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        />
+                    </div>
+                </div>
+
+                {/* Discord */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                        <Mail size={16} /> Discord
+                    </label>
+                    <input
+                        type="text"
+                        value={socialLinks.discord || ""}
+                        onChange={(e) => handleSocialLinkChange("discord", e.target.value)}
+                        disabled={isSaving || isLoading}
+                        placeholder="username#0000 or just username"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    />
+                </div>
             </div>
 
             {/* Read-only Fields */}

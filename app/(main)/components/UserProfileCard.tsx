@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Calendar, Mail, User } from "lucide-react";
 import { UserMeRes } from "@/lib/api";
+import SocialLinksDisplay from "./SocialLinksDisplay";
 
 interface UserProfileCardProps {
     user: UserMeRes;
@@ -64,7 +65,7 @@ export default function UserProfileCard({
                 </div>
 
                 {/* Meta Info */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="flex items-center gap-2 text-gray-400 text-sm">
                         <Mail size={16} />
                         <span>{user.email}</span>
@@ -79,6 +80,11 @@ export default function UserProfileCard({
                             {user.active ? "Active" : "Inactive"}
                         </span>
                     </div>
+                </div>
+
+                {/* Social Links */}
+                <div className="flex items-center justify-center pt-4 border-t border-gray-700">
+                    <SocialLinksDisplay userId={user.id} className="mt-4" />
                 </div>
             </div>
         </div>
