@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { RolePermission } from "@/lib/api";
-import { useSelectedHallId } from "./useHallStore";
 import { useHallMembers, useHallRoles } from "./useHallStore";
 
 type PermissionState = {
@@ -43,7 +42,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
     },
 
     // ===== Helpers =====
-    getUserPermissionsInHall: (userId: string, hallId: string) => {
+    getUserPermissionsInHall: (_userId: string, _hallId: string) => {
         // This is a basic implementation; in a real scenario you'd fetch from server
         // or derive from hall members and roles
         const permissions = get().rolePermissions;

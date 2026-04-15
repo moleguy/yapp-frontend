@@ -8,7 +8,7 @@
  */
 
 const authDebug = {
-    log: (title: string, data: any) => {
+    log: (title: string, data: unknown) => {
         console.log(
             `%c[AUTH DEBUG] ${title}`,
             "color: #0077d4; font-weight: bold; font-size: 12px;",
@@ -16,7 +16,7 @@ const authDebug = {
         );
     },
 
-    error: (title: string, data: any) => {
+    error: (title: string, data: unknown) => {
         console.error(
             `%c[AUTH ERROR] ${title}`,
             "color: #d40077; font-weight: bold; font-size: 12px;",
@@ -240,7 +240,7 @@ const authDebug = {
 
 // Export to window for console access
 if (typeof window !== "undefined") {
-    (window as any).authDebug = authDebug;
+    (window as Record<string, unknown>).authDebug = authDebug;
     console.log(
         "%c🔐 Auth Debug Tools Loaded!",
         "color: green; font-weight: bold; font-size: 14px;",

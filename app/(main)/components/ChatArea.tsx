@@ -4,11 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import PollPopup from "@/app/(main)/components/PollPopup";
 import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
-import { FaPlus, FaUserPlus, FaHashtag } from "react-icons/fa6";
+import { FaPlus } from "react-icons/fa6";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
-import { MdOutlineGif } from "react-icons/md"; // gif icon
 // import { useAuth } from "@/app/contexts/AuthContext";
-import {useAvatar, useUser} from "@/app/store/useUserStore";
+import { useAvatar, useUser } from "@/app/store/useUserStore";
 import Image from "next/image";
 
 type Message = {
@@ -27,32 +26,29 @@ type ChatAreaProps = {
     channelName?: string;
     channelId?: string;
     friendDisplayName?: string;
-    friendUsername?: string;
     friendId?: string;
-    friendAvatar?: string;
     isDm: boolean;
 };
 
 export default function ChatArea({
-                                     serverName,
-                                     channelName,
-                                     channelId,
-                                     friendDisplayName,
-                                     friendUsername,
-                                     friendId,
-                                     friendAvatar,
-                                     isDm = false,
-                                 }: ChatAreaProps) {
+    serverName,
+    channelName,
+    channelId,
+    friendDisplayName,
+    friendUsername,
+    friendId,
+    friendAvatar,
+    isDm = false,
+}: ChatAreaProps) {
     // const { user } = useAuth();
     const user = useUser();
-    const {avatarUrl, avatarThumbnailUrl, fallback, hasAvatar} = useAvatar();
+    const { avatarThumbnailUrl } = useAvatar();
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const uploadRef = useRef<HTMLDivElement | null>(null);
 
     const [messageInput, setMessageInput] = useState("");
     const [showPopup, setShowPopup] = useState(false);
     const [showPollPopup, setShowPollPopup] = useState(false);
-    const [showInvitePopup, setShowInvitePopup] = useState(false);
 
     // Separate state for actual messages (user messages)
     const [messages, setMessages] = useState<Message[]>([]);
@@ -61,6 +57,7 @@ export default function ChatArea({
     const [welcomeMessage, setWelcomeMessage] = useState<Message | null>(null);
 
     // Generate welcome message based on context
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const generateWelcomeMessage = (): Message | null => {
         if (isDm && friendDisplayName) {
             return {
@@ -90,13 +87,16 @@ export default function ChatArea({
         setWelcomeMessage(newWelcomeMessage);
         setMessages([]); // Clear user messages when context changes
         setMessageInput("");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName]);
 
     // combining welcome message with user messages for rendering
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const allMessages = welcomeMessage ? [welcomeMessage, ...messages] : messages;
 
     // Scroll to bottom when messages change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
@@ -112,9 +112,9 @@ export default function ChatArea({
             timestamp: new Date(),
 
             isConsecutive: messages.length > 0 &&
-                messages[messages.length -1].sender === (user?.display_name || "Unknown") &&
-                !messages[messages.length-1].isSystem &&
-                !messages[messages.length -1].isWelcome
+                messages[messages.length - 1].sender === (user?.display_name || "Unknown") &&
+                !messages[messages.length - 1].isSystem &&
+                !messages[messages.length - 1].isWelcome
         };
 
         setMessages(prev => [...prev, newMessage]);
@@ -130,12 +130,6 @@ export default function ChatArea({
 
     const handleCreatePoll = (question: string, options: string[]) => {
         console.log("Poll created:", { question, options });
-    };
-
-    const handleCreateInvite = (expiry: string, maxUses: number) => {
-        console.log("Invite created:", { expiry, maxUses });
-        const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        return `https://discord.gg/${inviteCode}`;
     };
 
     // Close popup when clicking outside
@@ -197,7 +191,7 @@ export default function ChatArea({
                                 className={`group relative ${msg.isSystem ? 'justify-center' : ''}`}
                             >
                                 <div className={`flex gap-4 items-start group-hover:bg-[#eeeeef] rounded-lg px-2 transition-colors ${msg.isSystem ? 'flex items-start' : ''}`}>
-                                {!msg.isSystem && !msg.isConsecutive && (
+                                    {!msg.isSystem && !msg.isConsecutive && (
                                         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-start overflow-hidden">
                                             {avatarThumbnailUrl ? (
                                                 <Image

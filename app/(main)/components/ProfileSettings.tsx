@@ -42,7 +42,7 @@ export default function ProfileSettings() {
   });
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { avatarUrl, avatarThumbnailUrl, fallback, hasAvatar } = useAvatar();
+  const { avatarUrl, avatarThumbnailUrl } = useAvatar();
 
   // Close profile pic options when clicking outside
   useEffect(() => {
@@ -138,8 +138,9 @@ export default function ProfileSettings() {
       await updateUserMe(updatedUser);
 
       console.log("Deleted file at:", user.avatar_url);
-    } catch (err: any) {
-      console.error("EdgeStore delete failed:", err.message ?? err);
+    } catch (err: unknown) {
+      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : String(err);
+      console.error("EdgeStore delete failed:", errorMsg);
     } finally {
       updateUser({ avatar_url: null });
       setShowOptions(false);
@@ -180,8 +181,9 @@ export default function ProfileSettings() {
       updateUser(updatedUser);
       setHasChanges(false);
       setEditingField(null);
-    } catch (err: any) {
-      setErrorMessage("Failed to save changes." + err.message);
+    } catch (err: unknown) {
+      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : String(err);
+      setErrorMessage("Failed to save changes." + errorMsg);
       setTimeout(() => setErrorMessage(null), 3000);
     }
   };
@@ -203,8 +205,9 @@ export default function ProfileSettings() {
       }
 
       router.push("/signin");
-    } catch (err: any) {
-      console.error(err?.message || "Sign out failed");
+    } catch (err: unknown) {
+      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : "Sign out failed";
+      console.error(errorMsg);
     }
   };
 

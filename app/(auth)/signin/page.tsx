@@ -137,10 +137,10 @@ export default function SignIn() {
         setAnnounceError(msg);
         console.error("[SignIn] Signin failed:", res.error);
       }
-    } catch (err: any) {
-      const msg = err?.message || "Sign In failed. Please try again.";
-      setFormError(msg);
-      setAnnounceError(msg);
+    } catch (err: unknown) {
+      const message = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : "Sign In failed. Please try again.";
+      setFormError(message);
+      setAnnounceError(message);
       console.error("[SignIn] Exception during signin:", err);
     } finally {
       setIsLoading(false);

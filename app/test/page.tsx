@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 export default function TestPage() {
-    const [results, setResults] = useState<any[]>([]);
+    const [results, setResults] = useState<Record<string, unknown>[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,11 +28,12 @@ export default function TestPage() {
                     duration: `${duration.toFixed(0)}ms`,
                     url: `${backendUrl}/health`,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMsg = err instanceof Error ? err.message : String(err);
                 tests.push({
                     name: "GET /health",
                     status: "ERROR",
-                    error: err.message,
+                    error: errorMsg,
                     duration: "N/A",
                     url: `${backendUrl}/health`,
                 });
@@ -58,11 +59,12 @@ export default function TestPage() {
                     duration: `${duration.toFixed(0)}ms`,
                     url: `${backendUrl}/api/v1/auth/signin`,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMsg = err instanceof Error ? err.message : String(err);
                 tests.push({
                     name: "POST /api/v1/auth/signin",
                     status: "ERROR",
-                    error: err.message,
+                    error: errorMsg,
                     duration: "N/A",
                     url: `${backendUrl}/api/v1/auth/signin`,
                 });
@@ -84,11 +86,12 @@ export default function TestPage() {
                     duration: `${duration.toFixed(0)}ms`,
                     url: `${backendUrl}/api/v1/me/`,
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMsg = err instanceof Error ? err.message : String(err);
                 tests.push({
                     name: "GET /api/v1/me/",
                     status: "ERROR",
-                    error: err.message,
+                    error: errorMsg,
                     duration: "N/A",
                     url: `${backendUrl}/api/v1/me/`,
                 });

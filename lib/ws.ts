@@ -1,6 +1,6 @@
 // WebSocket client for real-time messaging
 
-import { Message, Reaction, WSMessage, WSTextMessage, WSTypingMessage, WSReadMessage } from "./api";
+import { Message, WSMessage, WSTextMessage, WSTypingMessage, WSReadMessage } from "./api";
 
 export type WebSocketEventListener = {
     onMessage?: (msg: Message) => void;

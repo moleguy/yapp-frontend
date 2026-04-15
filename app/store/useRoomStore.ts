@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { Room, Floor, getRooms, getFloors } from "@/lib/api";
-import { useSelectedHallId } from "./useHallStore";
 
 type RoomState = {
     // Data

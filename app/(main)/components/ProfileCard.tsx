@@ -49,7 +49,7 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 
 		document.addEventListener("keydown", handleEscape);
 		return () => document.removeEventListener("keydown", handleEscape);
-	}, [isOpen]);
+	}, [isOpen, handleClose]);
 
 	// Prevent body scroll
 	useEffect(() => {
@@ -62,7 +62,7 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 		return () => {
 			document.body.style.overflow = "unset";
 		};
-	}, [isOpen]);
+	}, [isOpen, handleClose]);
 
 	if (!isOpen) return null;
 

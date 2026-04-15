@@ -145,7 +145,8 @@ export default function AddServerPopup({
     if (step === "join" && joinInputRef.current) {
       joinInputRef.current.focus();
     }
-  }, [step]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, handleCreateServer]);
 
   useEffect(() => {
     if (!isOpen || step !== "create") return;
@@ -271,9 +272,8 @@ export default function AddServerPopup({
                 onChange={handleServerNameChange}
                 onKeyDown={handleKeyDown}
                 maxLength={MAX_LENGTH}
-                className={`w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide ${
-                  nameError ? "border-red-500" : ""
-                }`}
+                className={`w-full border-2 rounded-lg py-2 px-3 mt-1 border-[#dcd9d3] focus:outline-none focus:border-[#6090eb] tracking-wide ${nameError ? "border-red-500" : ""
+                  }`}
               />
               {nameError && (
                 <p className="text-red-500 text-sm mt-1 text-left">
@@ -296,11 +296,10 @@ export default function AddServerPopup({
               <button
                 onClick={handleCreateServer}
                 disabled={!!nameError || !serverName.trim()}
-                className={`py-2 px-6 rounded-lg text-white cursor-pointer ${
-                  nameError || !serverName.trim()
+                className={`py-2 px-6 rounded-lg text-white cursor-pointer ${nameError || !serverName.trim()
                     ? "bg-gray-400 cursor-not-allowed hover:cursor-default"
                     : "bg-[#6164f2] hover:bg-[#4c52bd]"
-                }`}
+                  }`}
               >
                 Create
               </button>

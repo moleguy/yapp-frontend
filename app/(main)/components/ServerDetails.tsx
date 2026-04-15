@@ -34,7 +34,6 @@ interface ServerDetailsProps {
   showCategoryPopup: boolean;
   onCloseCategoryPopup: () => void;
   onOpenCategoryPopup: () => void;
-  showChannels: boolean;
 }
 
 export default function ServerDetails({
@@ -43,7 +42,6 @@ export default function ServerDetails({
   showCategoryPopup,
   onCloseCategoryPopup,
   onOpenCategoryPopup,
-    showChannels,
 }: ServerDetailsProps) {
   const [serverCategories, setServerCategories] = useState<
     Record<string, Category[]>
@@ -114,6 +112,7 @@ export default function ServerDetails({
       setSelectedChannelId(generalChannel.id);
       onSelectChannel?.({ id: generalChannel.id, name: generalChannel.name });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeServer, onSelectChannel]);
 
   useEffect(() => {
@@ -186,7 +185,7 @@ export default function ServerDetails({
 
   useEffect(() => {
     const handleGlobalContextMenu = () => {
-      if(showContextMenu){
+      if (showContextMenu) {
         setShowContextMenu(false);
       }
     }
@@ -271,7 +270,6 @@ export default function ServerDetails({
 
     setOpenCategories((prev) => {
       const currentCategories = serverCategories[activeServer.id] || [];
-
       let categoryWithSelectedChannel: string | null = null;
 
       if (selectedChannelId) {
@@ -282,7 +280,7 @@ export default function ServerDetails({
           }
         }
       }
-      const newIds: string[] = []; // Empty array = all categories collapsed
+      const newIds: string[] = categoryWithSelectedChannel ? [categoryWithSelectedChannel] : []; // Keep only the category with selected channel open, or collapse all
 
       return { ...prev, [activeServer.id]: newIds };
     });
@@ -377,7 +375,7 @@ export default function ServerDetails({
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    if(showContextMenu){
+    if (showContextMenu) {
       setShowContextMenu(false);
     }
 
@@ -523,37 +521,37 @@ export default function ServerDetails({
                     </li>
                   ))
                 ) : // collapsed -> show only selected channel (if inside this category), otherwise nothing
-                selectedInThisCat ? (
-                  <li
-                    key={selectedInThisCat.id}
-                    className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dddde0] text-[#222831]"
-                    onClick={() => {
-                      setSelectedChannelId(selectedInThisCat.id);
-                      if (selectedInThisCat.type === "text") {
-                        onSelectChannel?.({
-                          id: selectedInThisCat.id,
-                          name: selectedInThisCat.name,
+                  selectedInThisCat ? (
+                    <li
+                      key={selectedInThisCat.id}
+                      className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dddde0] text-[#222831]"
+                      onClick={() => {
+                        setSelectedChannelId(selectedInThisCat.id);
+                        if (selectedInThisCat.type === "text") {
+                          onSelectChannel?.({
+                            id: selectedInThisCat.id,
+                            name: selectedInThisCat.name,
+                          });
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setChannelContextMenu({
+                          x: e.pageX,
+                          y: e.pageY,
+                          channelId: selectedInThisCat.id,
                         });
-                      }
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setChannelContextMenu({
-                        x: e.pageX,
-                        y: e.pageY,
-                        channelId: selectedInThisCat.id,
-                      });
-                    }}
-                  >
-                    {selectedInThisCat.type === "text" ? (
-                      <FaHashtag className={`w-6 h-6`} />
-                    ) : (
-                      <HiSpeakerWave className={`w-6 h-6`} />
-                    )}
-                    <span className="text-base">{selectedInThisCat.name}</span>
-                  </li>
-                ) : null}
+                      }}
+                    >
+                      {selectedInThisCat.type === "text" ? (
+                        <FaHashtag className={`w-6 h-6`} />
+                      ) : (
+                        <HiSpeakerWave className={`w-6 h-6`} />
+                      )}
+                      <span className="text-base">{selectedInThisCat.name}</span>
+                    </li>
+                  ) : null}
               </ul>
             </div>
           );
@@ -591,11 +589,10 @@ export default function ServerDetails({
             <React.Fragment key={item.label}>
               <button
                 onClick={item.onClick}
-                className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${
-                  item.danger
-                    ? "text-[#cb3b40] hover:bg-[#fbeff0]"
-                    : "hover:bg-[#f2f2f3]"
-                }`}
+                className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${item.danger
+                  ? "text-[#cb3b40] hover:bg-[#fbeff0]"
+                  : "hover:bg-[#f2f2f3]"
+                  }`}
               >
                 {item.label}
               </button>

@@ -178,9 +178,9 @@ export default function SignUp() {
         display_name: displayName.trim(),
       });
       router.push("/signin");
-    } catch (error: any) {
+    } catch (error: unknown) {
       let msg = "Registration failed. Please try again.";
-      if (error?.message) msg = error.message;
+      if (typeof error === 'object' && error !== null && 'message' in error) msg = String((error as Record<string, unknown>).message);
       else if (typeof error === "string") msg = error;
       setFormError(msg);
       setAnnounceError(msg);

@@ -14,7 +14,7 @@ let csrfTokenFromApi: string | null = null;
 function getCSRFTokenFromDocumentCookie(): string | null {
   if (typeof document === "undefined") return null;
   const name = "csrf_token=";
-  const decodedCookie = decodeURIComponent(document.cookie);
+  const decodedCookie = decodeURIComponent(document.cookie as string);
   const cookieArray = decodedCookie.split("; ");
   for (let cookie of cookieArray) {
     if (cookie.indexOf(name) === 0) {
@@ -71,7 +71,7 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
       init.headers.forEach((value, key) => {
         headers[key] = value;
       });
-    } else if (typeof init.headers === "object") {
+    } else if (typeof init.headers === "object" && init.headers !== null) {
       // Merge plain object headers
       Object.assign(headers, init.headers as Record<string, string>);
     }
@@ -104,11 +104,12 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
       ...init,
       headers,
     });
-  } catch (networkError: any) {
+  } catch (networkError: unknown) {
+    const message = networkError instanceof Error ? networkError.message : String(networkError);
     console.error("[Request] Network error - Backend unreachable:", {
       url: finalUrl,
       method,
-      message: networkError.message,
+      message: message,
     });
     console.error("[Request] This usually means:");
     console.error("  1. Backend is not running");
@@ -116,7 +117,7 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
       console.error("  2. CORS is not configured for localhost:3000");
       console.error("  3. Network connection issue");
     }
-    throw new Error(`Failed to reach backend: ${networkError.message}`);
+    throw new Error(`Failed to reach backend: ${message}`);
   }
 
   console.log("[Request] Response status:", res.status, "for", method, finalUrl);
@@ -152,13 +153,18 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 
   // Backend wraps responses in { success, message, data } envelope
   // Automatically extract data field if present
-  if (isJSON && body && typeof body === "object" && "data" in body && (body as any).data !== null) {
-    console.log("[Request] Extracting data field from envelope");
-    return (body as any).data as T;
+  if (isJSON && body && typeof body === "object" && "data" in body) {
+    const bodyData = body as { data: T };
+    if (bodyData.data !== null && bodyData.data !== undefined) {
+      console.log("[Request] Extracting data field from envelope");
+      return bodyData.data;
+    }
   }
 
   return body as T;
 }
+
+// ========== TYPES ==========
 
 // Auth Types
 export type SignInReq = {
@@ -530,9 +536,9 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
 
     console.log("[AuthSignIn] Signin successful for user:", result.username);
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Convert thrown errors into a structured response
-    const message = err?.message || "Sign in failed due to server error";
+    const message = err instanceof Error ? err.message : "Sign in failed due to server error";
     console.error("[AuthSignIn] Error:", message, err);
     return {
       id: "",
@@ -568,10 +574,10 @@ export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
     }
 
     return result;
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       success: false,
-      message: err?.message || "Sign up failed",
+      message: err instanceof Error ? err.message : "Sign up failed",
     };
   }
 }
@@ -581,8 +587,8 @@ export async function authSignOut(): Promise<{ message?: string } | undefined> {
     return request<{ message?: string }>(`${apiBase}/auth/signout`, {
       method: "GET",
     });
-  } catch (err: any) {
-    return { message: err?.message || "Sign out failed" };
+  } catch (err: unknown) {
+    return { message: err instanceof Error ? err.message : "Sign out failed" };
   }
 }
 

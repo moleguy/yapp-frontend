@@ -20,7 +20,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
     if (!user) {
         if (typeof window !== "undefined") {
-            window.location.href = "/signin";
+            useRouter().push("/signin");
         }
         return null; // Don’t render children while redirecting
     }
