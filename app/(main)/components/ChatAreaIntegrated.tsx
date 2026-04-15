@@ -96,7 +96,7 @@ export default function ChatArea() {
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages.length]);
+    }, [messages.length, selectedRoom?.id]);
 
     // Handle scroll for pagination
     const handleScroll = useCallback(async () => {
