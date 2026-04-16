@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UserMeRes, UpdateUserMeReq } from "@/lib/api";
 import ProfileAvatar from "./ProfileAvatar";
 import { Save, X, Loader2, Twitter, Linkedin, Github, Mail } from "lucide-react";
@@ -19,13 +19,6 @@ interface SocialLinks {
     discord?: string;
 }
 
-interface UserProfileFormProps {
-    user: UserMeRes;
-    onSave: (updates: UpdateUserMeReq) => Promise<boolean>;
-    onCancel: () => void;
-    isLoading?: boolean;
-}
-
 export default function UserProfileForm({
     user,
     onSave,
@@ -34,6 +27,12 @@ export default function UserProfileForm({
 }: UserProfileFormProps) {
     const [displayName, setDisplayName] = useState(user.display_name);
     const [description, setDescription] = useState(user.description || "");
+
+    // Sync form state with user prop (reflects server response)
+    useEffect(() => {
+        setDisplayName(user.display_name);
+        setDescription(user.description || "");
+    }, [user.display_name, user.description]);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);

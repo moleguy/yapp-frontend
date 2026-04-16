@@ -39,7 +39,16 @@ export default function ProfileSettingsPage() {
             setSaveMessage(null);
             const result = await updateUserMe(updates);
             if (result) {
-                setUser((prev) => (prev ? { ...prev, ...result } : null));
+                // Update user state with server response
+                // This ensures the form reflects the actual server-saved values
+                setUser((prev) =>
+                    prev ? {
+                        ...prev,
+                        display_name: result.display_name,
+                        avatar_url: result.avatar_url,
+                        avatar_thumbnail_url: result.avatar_thumbnail_url,
+                    } : null
+                );
                 setSaveMessage("Profile updated successfully");
                 setTimeout(() => setSaveMessage(null), 3000);
                 return true;
