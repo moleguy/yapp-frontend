@@ -188,6 +188,8 @@ export default function HomePage() {
 
   // Server / hall click
   const handleHallClick = (hall: Hall) => {
+    if (activeHall?.id === hall.id) return;
+
     setActiveHall(hall);
     setSelectedRoom(null); // ServerDetails will pick a default room
     setLastActiveHall(hall);

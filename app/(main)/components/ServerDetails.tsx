@@ -67,7 +67,17 @@ export default function ServerDetails({
 
   // Fetch floors and rooms when activeServer changes
   useEffect(() => {
-    if (!activeServer) return;
+    if (!activeServer) {
+      setTopLevelRooms([]);
+      setFloors([]);
+      setRoomsByFloor({});
+      return;
+    }
+
+    // Immediately clear current data before fetching new hall content
+    setTopLevelRooms([]);
+    setFloors([]);
+    setRoomsByFloor({});
 
     const fetchContent = async () => {
       const data = await getRooms(activeServer.id);
