@@ -287,32 +287,30 @@ export default function HomePage() {
               setShowChannels={setShowChannels}
             />
 
-              <div
-                className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeHall ? "border-t border-[#dcd9d3]" : ""}`}
-              >
-                <div style={{ display: activeView === "server" && activeHall ? 'block' : 'none', height: '100%' }}>
-                  {activeHall && (
-                    <ServerDetails
-                      activeServer={activeHall}
-                      onSelectChannel={(room) => setSelectedRoom(room as unknown as Room)}
-                      showCategoryPopup={
-                        showFloorPopup &&
-                        floorPopupHall?.id === activeHall.id
-                      }
-                      onCloseCategoryPopup={() => setShowFloorPopup(false)}
-                      onOpenCategoryPopup={handleOpenFloorPopup}
-                      showChannels={showChannels}
-                    />
-                  )}
-                </div>
-                {activeView === "dm" && (
-                  <DirectMessages
-                    friends={friends}
-                    onSelectFriend={handleFriendClick}
-                    selectedFriend={selectedFriend}
-                  />
-                )}
-              </div>
+            {/* Channels / DM section */}
+            <div
+              className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeHall ? "border-t border-[#dcd9d3]" : ""}`}
+            >
+              {activeView === "server" && activeHall ? (
+                <ServerDetails
+                  activeServer={activeHall}
+                  onSelectChannel={(room) => setSelectedRoom(room as unknown as Room)}
+                  showCategoryPopup={
+                    showFloorPopup &&
+                    floorPopupHall?.id === activeHall.id
+                  }
+                  onCloseCategoryPopup={() => setShowFloorPopup(false)}
+                  onOpenCategoryPopup={handleOpenFloorPopup}
+                  showChannels={showChannels}
+                />
+              ) : activeView === "dm" ? (
+                <DirectMessages
+                  friends={friends}
+                  onSelectFriend={handleFriendClick}
+                  selectedFriend={selectedFriend}
+                />
+              ) : null}
+            </div>
 
             {/* Profile + controls */}
             <div className="flex m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl select-none items-center justify-between gap-2 overflow-hidden">

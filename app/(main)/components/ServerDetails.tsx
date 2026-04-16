@@ -18,9 +18,6 @@ import {
   deleteRoom
 } from "@/lib/api";
 
-// Session-level cache for instantaneous switching
-const inMemoryHallCache = new Map<string, any>();
-
 interface ServerDetailsProps {
   activeServer: Hall | null;
   onSelectChannel?: (channel: { id: string; name: string }) => void;
@@ -39,14 +36,10 @@ export default function ServerDetails({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showChannels,
 }: ServerDetailsProps) {
-  // Consolidate data into a single state to ensure atomic updates and prevent jitter
-  const [hallData, setHallData] = useState<{
-    floors: Floor[];
-    roomsByFloor: Record<string, Room[]>;
-    topLevelRooms: Room[];
-  }>({ floors: [], roomsByFloor: {}, topLevelRooms: [] });
+  const [floors, setFloors] = useState<Floor[]>([]);
+  const [roomsByFloor, setRoomsByFloor] = useState<Record<string, Room[]>>({});
+  const [topLevelRooms, setTopLevelRooms] = useState<Room[]>([]);
 
-  const [loading, setLoading] = useState(false);
   const [openFloors, setOpenFloors] = useState<string[]>([]);
   const [popupFloorId, setPopupFloorId] = useState<string | null>(null);
   const [newFloorName, setNewFloorName] = useState("");
@@ -76,68 +69,48 @@ export default function ServerDetails({
   useEffect(() => {
     const hallId = activeServer?.id;
     if (!hallId) {
-      setHallData({ floors: [], roomsByFloor: {}, topLevelRooms: [] });
+      setTopLevelRooms([]);
+      setFloors([]);
+      setRoomsByFloor({});
       setSelectedRoomId(null);
       return;
     }
 
-    // 1. Try In-Memory Cache first (Instant)
-    const cached = inMemoryHallCache.get(hallId);
-    let initialRoomId: string | null = null;
+    const cacheKey = `hall_data_${hallId}`;
+    const cachedData = localStorage.getItem(cacheKey);
 
-    if (cached) {
-        setHallData({
-            floors: cached.floors,
-            roomsByFloor: cached.roomsByFloor,
-            topLevelRooms: cached.topLevelRooms
-        });
-        setOpenFloors(cached.floors.map((f: any) => f.id));
-        initialRoomId = cached.lastSelectedRoomId;
-    } else {
-        // 2. Fallback to LocalStorage (Fast)
-        const storageKey = `hall_data_${hallId}`;
-        const stored = localStorage.getItem(storageKey);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                inMemoryHallCache.set(hallId, parsed);
-                setHallData({
-                    floors: parsed.floors || [],
-                    roomsByFloor: parsed.roomsByFloor || {},
-                    topLevelRooms: parsed.topLevelRooms || []
-                });
-                setOpenFloors(parsed.floors?.map((f: any) => f.id) || []);
-                initialRoomId = parsed.lastSelectedRoomId;
-            } catch (e) {
-                console.error("Cache parse error", e);
-            }
-        } else {
-            // No cache at all - reset state
-            setHallData({ floors: [], roomsByFloor: {}, topLevelRooms: [] });
-        }
-    }
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setTopLevelRooms(parsed.topLevelRooms || []);
+        setFloors(parsed.floors || []);
+        setRoomsByFloor(parsed.roomsByFloor || {});
+        setOpenFloors(parsed.floors?.map((f: any) => f.id) || []);
 
-    // Immediately set selected room from cache if available
-    if (initialRoomId) {
-        setSelectedRoomId(initialRoomId);
-        // Find room details for parent notification
-        const flatRooms = [
-            ...(cached?.topLevelRooms || hallData.topLevelRooms || []),
-            ...Object.values(cached?.roomsByFloor || hallData.roomsByFloor || {}).flat() as Room[]
-        ];
-        const room = flatRooms.find(r => r.id === initialRoomId);
-        if (room && room.room_type === "text") {
-            // Use a microtask to sync parent without blocking render
-            Promise.resolve().then(() => onSelectChannel?.({ id: room.id, name: room.name }));
+        if (parsed.lastSelectedRoomId) {
+          setSelectedRoomId(parsed.lastSelectedRoomId);
+          // Find the room to notify parent
+          const allRooms = [...(parsed.topLevelRooms || []), ...Object.values(parsed.roomsByFloor || {}).flat() as Room[]];
+          const lastRoom = allRooms.find(r => r.id === parsed.lastSelectedRoomId);
+          if (lastRoom && lastRoom.room_type === "text") {
+            onSelectChannel?.({ id: lastRoom.id, name: lastRoom.name });
+          }
         }
+      } catch (e) {
+        console.error("Failed to parse cached hall data", e);
+      }
     } else {
+        // Immediately clear current data if no cache
+        setTopLevelRooms([]);
+        setFloors([]);
+        setRoomsByFloor({});
         setSelectedRoomId(null);
     }
 
     const fetchContent = async () => {
-      setLoading(true);
       const data = await getRooms(hallId);
       if (data) {
+        const newTopLevelRooms = data.top_level;
         const newFloors = data.floors.map(f => ({
           id: f.id,
           hall_id: f.hall_id,
@@ -153,33 +126,41 @@ export default function ServerDetails({
           newRoomsMap[f.id] = f.rooms;
         });
 
-        const newData = {
-            topLevelRooms: data.top_level,
-            floors: newFloors,
-            roomsByFloor: newRoomsMap
-        };
+        setTopLevelRooms(newTopLevelRooms);
+        setFloors(newFloors);
+        setRoomsByFloor(newRoomsMap);
+        setOpenFloors(data.floors.map(f => f.id));
 
-        // Determine final selected room
-        const allNewRooms = [...data.top_level, ...Object.values(newRoomsMap).flat()];
-        let finalRoomId = initialRoomId;
-
-        if (!finalRoomId || !allNewRooms.some(r => r.id === finalRoomId)) {
-            const firstText = allNewRooms.find(r => r.room_type === "text");
-            if (firstText) {
-                finalRoomId = firstText.id;
-                onSelectChannel?.({ id: firstText.id, name: firstText.name });
-            }
+        // Sync to cache
+        const currentCache = localStorage.getItem(cacheKey);
+        let lastId: string | null = null;
+        if (currentCache) {
+            try { lastId = JSON.parse(currentCache).lastSelectedRoomId; } catch(e) {}
         }
 
-        const cacheEntry = { ...newData, lastSelectedRoomId: finalRoomId };
-        inMemoryHallCache.set(hallId, cacheEntry);
-        localStorage.setItem(`hall_data_${hallId}`, JSON.stringify(cacheEntry));
+        // Auto-select if nothing cached or cached room doesn't exist anymore
+        const allNewRooms = [...newTopLevelRooms, ...Object.values(newRoomsMap).flat()];
+        const roomStillExists = allNewRooms.some(r => r.id === lastId);
 
-        setHallData(newData);
-        setOpenFloors(newFloors.map(f => f.id));
-        setSelectedRoomId(finalRoomId);
+        if (!lastId || !roomStillExists) {
+            const firstRoom = newTopLevelRooms.find(r => r.room_type === "text") ||
+                             allNewRooms.find(r => r.room_type === "text");
+            if (firstRoom) {
+                setSelectedRoomId(firstRoom.id);
+                onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
+                lastId = firstRoom.id;
+            }
+        } else {
+            setSelectedRoomId(lastId);
+        }
+
+        localStorage.setItem(cacheKey, JSON.stringify({
+            topLevelRooms: newTopLevelRooms,
+            floors: newFloors,
+            roomsByFloor: newRoomsMap,
+            lastSelectedRoomId: lastId
+        }));
       }
-      setLoading(false);
     };
 
     fetchContent();
@@ -247,22 +228,18 @@ export default function ServerDetails({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [roomContextMenu]);
 
-  const { floors, roomsByFloor, topLevelRooms } = hallData;
-
   const handleDeleteRoom = async () => {
     if (!activeServer || !roomContextMenu?.roomId) return;
     const success = await deleteRoom(activeServer.id, roomContextMenu.roomId);
     if (success) {
-      setHallData(prev => {
-        const nextRoomsByFloor = { ...prev.roomsByFloor };
-        Object.keys(nextRoomsByFloor).forEach(floorId => {
-          nextRoomsByFloor[floorId] = nextRoomsByFloor[floorId].filter(r => r.id !== roomContextMenu.roomId);
+      // Refresh local state
+      setTopLevelRooms(prev => prev.filter(r => r.id !== roomContextMenu.roomId));
+      setRoomsByFloor(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(floorId => {
+          next[floorId] = next[floorId].filter(r => r.id !== roomContextMenu.roomId);
         });
-        return {
-          ...prev,
-          topLevelRooms: prev.topLevelRooms.filter(r => r.id !== roomContextMenu.roomId),
-          roomsByFloor: nextRoomsByFloor
-        };
+        return next;
       });
     }
     setRoomContextMenu(null);
@@ -277,14 +254,11 @@ export default function ServerDetails({
     if (!activeServer) return;
     const success = await deleteFloor(activeServer.id, floorId);
     if (success) {
-      setHallData(prev => {
-        const nextRoomsByFloor = { ...prev.roomsByFloor };
-        delete nextRoomsByFloor[floorId];
-        return {
-          ...prev,
-          floors: prev.floors.filter(f => f.id !== floorId),
-          roomsByFloor: nextRoomsByFloor
-        };
+      setFloors(prev => prev.filter(f => f.id !== floorId));
+      setRoomsByFloor(prev => {
+          const next = {...prev};
+          delete next[floorId];
+          return next;
       });
     }
     setFloorContextMenu(null);
@@ -308,23 +282,16 @@ export default function ServerDetails({
     });
 
     if (newRoom) {
-        setHallData(prev => {
-            if (popupFloorId) {
-                return {
-                    ...prev,
-                    roomsByFloor: {
-                        ...prev.roomsByFloor,
-                        [popupFloorId]: [...(prev.roomsByFloor[popupFloorId] || []), newRoom]
-                    }
-                };
-            }
-            return {
+        if (popupFloorId) {
+            setRoomsByFloor(prev => ({
                 ...prev,
-                topLevelRooms: [...prev.topLevelRooms, newRoom]
-            };
-        });
-        if (popupFloorId && !openFloors.includes(popupFloorId)) {
-            setOpenFloors(prev => [...prev, popupFloorId]);
+                [popupFloorId]: [...(prev[popupFloorId] || []), newRoom]
+            }));
+            if (!openFloors.includes(popupFloorId)) {
+                setOpenFloors(prev => [...prev, popupFloorId]);
+            }
+        } else {
+            setTopLevelRooms(prev => [...prev, newRoom]);
         }
     }
     setPopupFloorId(null);
@@ -340,11 +307,8 @@ export default function ServerDetails({
     });
 
     if (floor) {
-        setHallData(prev => ({
-            ...prev,
-            floors: [...prev.floors, floor],
-            roomsByFloor: { ...prev.roomsByFloor, [floor.id]: [] }
-        }));
+        setFloors(prev => [...prev, floor]);
+        setRoomsByFloor(prev => ({ ...prev, [floor.id]: [] }));
         setOpenFloors(prev => [...prev, floor.id]);
     }
     setNewFloorName("");
@@ -391,9 +355,6 @@ export default function ServerDetails({
           <h2 className="text-lg font-base text-[#333]">
             {activeServer.name}
           </h2>
-          {loading && (
-            <div className="ml-auto animate-spin h-4 w-4 border-2 border-[#6164f2] border-t-transparent rounded-full" />
-          )}
         </div>
       </div>
 
