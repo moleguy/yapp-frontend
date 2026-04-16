@@ -8,26 +8,18 @@ import AddServerPopup from "./AddServerPopup";
 import { FaLayerGroup } from "react-icons/fa6";
 import Image from "next/image";
 import { useEdgeStore } from "@/lib/edgestore";
-
-type Server = {
-	id: string;
-	name: string;
-	icon_url?: string;
-	icon_thumbnail_url?: string;
-	banner_color?: string;
-	description?: string;
-};
+import { Hall, createHall } from "@/lib/api";
 
 interface ServerListProps {
-	servers: Server[];
-	setServers: React.Dispatch<React.SetStateAction<Server[]>>;
-	activeServer: Server | null;
-	onServerClick: (server: Server) => void;
+	servers: Hall[];
+	setServers: React.Dispatch<React.SetStateAction<Hall[]>>;
+	activeServer: Hall | null;
+	onServerClick: (server: Hall) => void;
 	onLeaveServer: (serverId: string) => void;
 	onDirectMessagesClick: () => void;
 	onServersToggle: () => void;
 	activeView: "server" | "dm" | null;
-	onCreateCategoryClick: (server: Server) => void;
+	onCreateCategoryClick: (server: Hall) => void;
 	isLoading: boolean;
 	showChannels: boolean;
 	setShowChannels: React.Dispatch<React.SetStateAction<boolean>>;
@@ -74,15 +66,10 @@ export default function ServerList({
 
 	const { edgestore } = useEdgeStore();
 
-	// load / save from localStorage
+	// load / save from localStorage is removed as we sync with backend
 	useEffect(() => {
-		const saved = localStorage.getItem("servers");
-		if (saved) setServers(JSON.parse(saved));
-	}, [setServers]);
-
-	useEffect(() => {
-		localStorage.setItem("servers", JSON.stringify(servers));
-	}, [servers]);
+		// No-op for now as parent handles fetching
+	}, []);
 
 	useEffect(() => {
 		if (!showMorePopup) return;
@@ -122,20 +109,11 @@ export default function ServerList({
 	}, [contextMenu, addServerContextMenu, extraServerContextMenu]);
 
 	const handleCreateServer = async (name: string, imageString?: string) => {
-		const id = String(Date.now());
-		const newServer: Server = {
-			id: String(Date.now()),
-			name,
-			icon_thumbnail_url: imageString,
-		};
-		setServers((prev) => [...prev, newServer]);
-		onServerClick(newServer);
-
 		// Create new hall - Backend
 		let hallIconUrl: string | null = null;
 		let hallIconThumbnailUrl: string | null = null;
 		if (imageString) {
-			const hallIcon = base64ToFile(imageString || "", `${id}.png`);
+			const hallIcon = base64ToFile(imageString || "", `hall-icon.png`);
 			const res = await uploadImage(hallIcon);
 			if (res) {
 				hallIconUrl = res.url;
@@ -145,15 +123,19 @@ export default function ServerList({
 
 		// Create new hall
 		try {
-			const { createHall } = await import("@/lib/api");
-			const newhall = await createHall({
+			const newHall = await createHall({
 				name: name,
+				is_private: false,
 				icon_url: hallIconUrl ?? null,
 				icon_thumbnail_url: hallIconThumbnailUrl ?? null,
 				banner_color: "#ffffff",
 				description: "",
 			});
-			console.log(newhall);
+
+			if (newHall) {
+				setServers((prev) => [...prev, newHall]);
+				onServerClick(newHall);
+			}
 		} catch (err) {
 			console.warn("Failed to create hall:", err);
 			return;
@@ -196,9 +178,8 @@ export default function ServerList({
 	}
 
 	const handleJoinServer = () => {
-		const newServer: Server = { id: String(Date.now()), name: "Joined Server" };
-		setServers((prev) => [...prev, newServer]);
-		onServerClick(newServer);
+		// TODO: Implement join logic with code popup
+		console.log("Join Hall clicked");
 	};
 
 	const toggleChannelsVisibility = () => {
@@ -216,7 +197,7 @@ export default function ServerList({
 			onClick: () => {},
 		},
 		{
-			label: "Create Category",
+			label: "Create Floor",
 			danger: false,
 			onClick: () => {
 				if (contextMenu) {
@@ -241,7 +222,7 @@ export default function ServerList({
 
 	const addServerContextMenuItems = [
 		{
-			label: "Create Server",
+			label: "Create Hall",
 			danger: false,
 			onClick: () => {
 				setShowPopup(true);
@@ -250,7 +231,7 @@ export default function ServerList({
 			},
 		},
 		{
-			label: "Join Server",
+			label: "Join Hall",
 			danger: false,
 			onClick: () => {
 				setShowPopup(true);
@@ -262,7 +243,7 @@ export default function ServerList({
 
 	const extraServerContextMenuItems = [
 		{
-			label: showChannels ? "Hide Channels" : "Show Channels",
+			label: showChannels ? "Hide Rooms" : "Show Rooms",
 			danger: false,
 			onClick: () => {
 				setShowMorePopup(true);
@@ -271,18 +252,18 @@ export default function ServerList({
 			},
 		},
 		{
-			label: "Server Settings",
+			label: "Hall Settings",
 			danger: false,
 			onClick: () => {
-				console.log("Server Settings");
+				console.log("Hall Settings");
 				setExtraServerContextMenu(null);
 			},
 		},
 		{
-			label: "Manage Servers",
+			label: "Manage Halls",
 			danger: false,
 			onClick: () => {
-				console.log("Manage Servers");
+				console.log("Manage Halls");
 				setExtraServerContextMenu(null);
 			},
 		},

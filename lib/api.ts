@@ -231,6 +231,7 @@ export type UpdateUserMeRes = {
 // ========== HALL TYPES ==========
 export type CreateHallReq = {
   name: string;
+  is_private?: boolean;
   icon_url: string | null;
   icon_thumbnail_url?: string | null;
   banner_color: string | null;
@@ -240,6 +241,7 @@ export type CreateHallReq = {
 export type Hall = {
   id: string;
   name: string;
+  is_private: boolean;
   icon_url: string | null;
   icon_thumbnail_url?: string | null;
   banner_color: string | null;
@@ -251,6 +253,7 @@ export type Hall = {
 
 export type UpdateHallReq = {
   name?: string;
+  is_private?: boolean;
   icon_url?: string | null;
   icon_thumbnail_url?: string | null;
   banner_color?: string | null;
@@ -263,18 +266,20 @@ export type Floor = {
   hall_id: string;
   name: string;
   position: number;
+  is_private: boolean;
   created_at: string;
   updated_at: string;
 };
 
 export type CreateFloorReq = {
+  hall_id: string;
   name: string;
-  position?: number;
+  is_private: boolean;
 };
 
 export type UpdateFloorReq = {
   name?: string;
-  position?: number;
+  is_private?: boolean;
 };
 
 // ========== ROOM TYPES ==========
@@ -283,30 +288,41 @@ export type RoomType = "text" | "audio";
 export type Room = {
   id: string;
   hall_id: string;
-  floor_id: string;
+  floor_id: string | null;
   name: string;
   room_type: RoomType;
+  position: number;
   is_private: boolean;
   created_at: string;
   updated_at: string;
 };
 
 export type CreateRoomReq = {
+  hall_id: string;
+  floor_id: string | null;
   name: string;
   room_type: RoomType;
-  floor_id: string;
   is_private?: boolean;
 };
 
 export type UpdateRoomReq = {
   name?: string;
-  room_type?: RoomType;
   is_private?: boolean;
 };
 
 export type MoveRoomReq = {
-  floor_id: string;
-  position?: number;
+  hall_id: string;
+  new_floor_id: string | null;
+  after_id: string | null;
+};
+
+export type FloorWithRooms = Floor & {
+  rooms: Room[];
+};
+
+export type GetHallRoomsRes = {
+  top_level: Room[];
+  floors: FloorWithRooms[];
 };
 
 // ========== MESSAGE TYPES ==========
@@ -788,9 +804,9 @@ export async function deleteFloor(
 }
 
 // ========== ROOM FUNCTIONS ==========
-export async function getRooms(hallId: string): Promise<Room[] | null> {
+export async function getRooms(hallId: string): Promise<GetHallRoomsRes | null> {
   try {
-    return await request<Room[]>(
+    return await request<GetHallRoomsRes>(
       `${protectedApiBase}/halls/${hallId}/rooms`,
       {
         method: "GET",

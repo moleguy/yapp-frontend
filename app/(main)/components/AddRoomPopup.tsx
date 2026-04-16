@@ -3,26 +3,28 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaHashtag } from "react-icons/fa";
 import { HiSpeakerWave } from "react-icons/hi2";
+import { RoomType } from "@/lib/api";
 
-export interface AddChannelPopupProps {
+export interface AddRoomPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddChannel: (
-    category: "text" | "voice",
-    type: "text" | "voice",
+  onAddRoom: (
     name: string,
+    type: RoomType,
+    isPrivate: boolean
   ) => void;
-  category: "text" | "voice";
+  floorName?: string;
 }
 
-export default function AddChannelPopup({
+export default function AddRoomPopup({
   isOpen,
   onClose,
-  onAddChannel,
-  category,
-}: AddChannelPopupProps) {
-  const [type, setType] = useState<"text" | "voice">("text");
+  onAddRoom,
+  floorName,
+}: AddRoomPopupProps) {
+  const [type, setType] = useState<RoomType>("text");
   const [name, setName] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -49,9 +51,10 @@ export default function AddChannelPopup({
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    onAddChannel(category, type, name.trim());
+    onAddRoom(name.trim(), type, isPrivate);
     setName("");
     setType("text");
+    setIsPrivate(false);
     onClose();
   };
 
@@ -66,16 +69,16 @@ export default function AddChannelPopup({
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
       <div ref={modalRef} className="bg-white rounded-lg p-6 w-120 shadow-lg">
         <h2 className="text-2xl font-medium mb-4 text-[#323339] tracking-wide">
-          Create Channel
+          Create Room {floorName ? `in ${floorName}` : ""}
         </h2>
 
-        {/* Channel Type Section */}
+        {/* Room Type Section */}
         <div className="mb-6">
           <label className="block text-lg font-base mb-2 text-[#222831] tracking-wide">
-            Channel Type
+            Room Type
           </label>
           <div className="flex flex-col gap-3">
-            {/* Text Channel */}
+            {/* Text Room */}
             <div
               onClick={() => setType("text")}
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition text-[#222831] tracking-wide
@@ -98,23 +101,23 @@ export default function AddChannelPopup({
               </div>
             </div>
 
-            {/* Voice Channel */}
+            {/* Audio Room */}
             <div
-              onClick={() => setType("voice")}
+              onClick={() => setType("audio")}
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition
-                                ${type === "voice" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-100"}`}
+                                ${type === "audio" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-100"}`}
             >
               <div
                 className={`w-4 h-4 rounded-full border flex items-center justify-center
-                                    ${type === "voice" ? "border-blue-500" : "border-gray-400 hover:bg-[#efefef]"}`}
+                                    ${type === "audio" ? "border-blue-500" : "border-gray-400 hover:bg-[#efefef]"}`}
               >
-                {type === "voice" && (
+                {type === "audio" && (
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                 )}
               </div>
               <HiSpeakerWave className="text-[#7d7e82] w-6 h-6" />
               <div>
-                <div className="text-lg font-base text-[#7d7e82]">Voice</div>
+                <div className="text-lg font-base text-[#7d7e82]">Audio</div>
                 <div className="text-sm text-[#7d7e82]">
                   Hang out with voice, video, and screen share
                 </div>
@@ -123,10 +126,10 @@ export default function AddChannelPopup({
           </div>
         </div>
 
-        {/* Channel Name Input */}
+        {/* Room Name Input */}
         <div className="mb-6">
           <label className="block text-lg font-base mb-2 text-[#222831] tracking-wide">
-            Channel Name
+            Room Name
           </label>
           <div className="flex items-center border border-gray-300 rounded-lg py-1 px-2">
             {type === "text" ? (
@@ -139,10 +142,24 @@ export default function AddChannelPopup({
               value={name}
               onKeyDown={handleKeyDown}
               onChange={(e) => setName(e.target.value)}
-              placeholder="new-channel"
+              placeholder="new-room"
               className="w-full p-2 outline-none text"
             />
           </div>
+        </div>
+
+        {/* Private Toggle */}
+        <div className="mb-6 flex items-center justify-between">
+            <div className="flex flex-col">
+                <span className="text-lg font-base text-[#222831] tracking-wide">Private Room</span>
+                <span className="text-sm text-gray-500">Only selected members and roles will be able to view this room.</span>
+            </div>
+            <input
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="w-5 h-5"
+            />
         </div>
 
         {/* Buttons */}
@@ -157,7 +174,7 @@ export default function AddChannelPopup({
             onClick={handleSubmit}
             className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
           >
-            Create Channel
+            Create Room
           </button>
         </div>
       </div>

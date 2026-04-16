@@ -11,18 +11,9 @@ import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
-import { Hall, getUserHalls } from "@/lib/api";
+import { Hall, getUserHalls, Room } from "@/lib/api";
 import { useResizable } from "@/app/hooks/useResizable";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-
-type Server = {
-  id: string;
-  name: string;
-  icon_url?: string;
-  icon_thumbnail_url?: string;
-  banner_color?: string;
-  description?: string;
-};
 
 type Friend = {
   id: number;
@@ -40,17 +31,14 @@ export default function HomePage() {
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
-  const [selectedChannel, setSelectedChannel] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [activeServer, setActiveServer] = useState<Server | null>(null);
-  const [lastActiveServer, setLastActiveServer] = useState<Server | null>(null);
-  const [servers, setServers] = useState<Server[]>([]);
+  const [activeHall, setActiveHall] = useState<Hall | null>(null);
+  const [lastActiveHall, setLastActiveHall] = useState<Hall | null>(null);
+  const [halls, setHalls] = useState<Hall[]>([]);
   const [showChannels, setShowChannels] = useState(false);
-  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
-  const [categoryPopupServer, setCategoryPopupServer] = useState<Server | null>(
+  const [showFloorPopup, setShowFloorPopup] = useState(false);
+  const [floorPopupHall, setFloorPopupHall] = useState<Hall | null>(
     null,
   );
 
@@ -111,19 +99,10 @@ export default function HomePage() {
     const fetchUserHalls = async () => {
       try {
         setHallsLoading(true);
-        const halls = await getUserHalls();
-        setUserHalls(halls);
-
-        if (halls && Array.isArray(halls)) {
-          const convertedServers: Server[] = halls.map((hall) => ({
-            id: hall.id ?? "",
-            name: hall.name ?? "",
-            icon_url: hall.icon_url ?? "",
-            icon_thumbnail_url: hall.icon_thumbnail_url ?? "",
-            banner_color: hall.banner_color ?? "",
-            description: hall.description ?? "",
-          }));
-          setServers(convertedServers);
+        const fetchedHalls = await getUserHalls();
+        if (fetchedHalls && Array.isArray(fetchedHalls)) {
+          setHalls(fetchedHalls);
+          setUserHalls(fetchedHalls);
         }
       } catch (error) {
         console.error("Error fetching user halls:", error);
@@ -187,10 +166,10 @@ export default function HomePage() {
       JSON.stringify(friendDeselectedManually),
     );
 
-    if (activeServer?.id)
-      localStorage.setItem("lastActiveServerId", activeServer.id);
-    else if (lastActiveServer?.id)
-      localStorage.setItem("lastActiveServerId", lastActiveServer.id);
+    if (activeHall?.id)
+      localStorage.setItem("lastActiveServerId", activeHall.id);
+    else if (lastActiveHall?.id)
+      localStorage.setItem("lastActiveServerId", lastActiveHall.id);
 
     if (selectedFriend)
       localStorage.setItem(
@@ -200,56 +179,54 @@ export default function HomePage() {
     else localStorage.removeItem("lastSelectedFriendId");
   }, [
     activeView,
-    activeServer,
-    lastActiveServer,
+    activeHall,
+    lastActiveHall,
     hallDeselectedManually,
     selectedFriend,
     friendDeselectedManually,
   ]);
 
   // Server / hall click
-  const handleServerClick = (server: Server) => {
-    setActiveServer(server);
-    setSelectedChannel({ id: "1", name: "general" });
-    setLastActiveServer(server);
+  const handleHallClick = (hall: Hall) => {
+    setActiveHall(hall);
+    setSelectedRoom(null); // ServerDetails will pick a default room
+    setLastActiveHall(hall);
     setHallDeselectedManually(false);
     setActiveView("server");
   };
 
-  const handleLeaveServer = (serverId: string) => {
-    const serverIndex = servers.findIndex((s) => s.id === serverId);
-    if (serverIndex !== -1) {
-      const newServers = servers.filter((s) => s.id !== serverId);
-      setServers(newServers);
+  const handleLeaveHall = (hallId: string) => {
+    const hallIndex = halls.findIndex((h) => h.id === hallId);
+    if (hallIndex !== -1) {
+      const newHalls = halls.filter((h) => h.id !== hallId);
+      setHalls(newHalls);
 
-      if (activeServer?.id === serverId) {
-        const nextServer =
-          newServers.length > 0
-            ? newServers[Math.min(serverIndex, newServers.length - 1)]
+      if (activeHall?.id === hallId) {
+        const nextHall =
+          newHalls.length > 0
+            ? newHalls[Math.min(hallIndex, newHalls.length - 1)]
             : null;
-        setActiveServer(nextServer);
+        setActiveHall(nextHall);
       }
     }
   };
 
   // Server tab click
-  const handleServersTabClick = () => {
-    if (activeView === "server" && activeServer) {
+  const handleHallsTabClick = () => {
+    if (activeView === "server" && activeHall) {
       // Deselect hall if already on server tab
-      setActiveServer(null);
-      setSelectedChannel(null);
+      setActiveHall(null);
+      setSelectedRoom(null);
       setHallDeselectedManually(true);
     } else {
       // Switch to server tab
       setActiveView("server");
 
       // Emulate last active hall click
-      if (!hallDeselectedManually && lastActiveServer) {
-        setActiveServer(lastActiveServer);
-        setSelectedChannel({ id: "1", name: "general" });
-      } else if (servers.length > 0 && !hallDeselectedManually) {
-        setActiveServer(servers[0]);
-        setSelectedChannel({ id: "1", name: "general" });
+      if (!hallDeselectedManually && lastActiveHall) {
+        setActiveHall(lastActiveHall);
+      } else if (halls.length > 0 && !hallDeselectedManually) {
+        setActiveHall(halls[0]);
       }
     }
   };
@@ -272,15 +249,15 @@ export default function HomePage() {
     setActiveView("dm");
   };
 
-  const handleCreateCategoryClick = (server: Server) => {
-    setCategoryPopupServer(server);
-    setShowCategoryPopup(true);
+  const handleCreateFloorClick = (hall: Hall) => {
+    setFloorPopupHall(hall);
+    setShowFloorPopup(true);
   };
 
-  const handleOpenCategoryPopup = () => {
-    if (activeServer) {
-      setCategoryPopupServer(activeServer);
-      setShowCategoryPopup(true);
+  const handleOpenFloorPopup = () => {
+    if (activeHall) {
+      setFloorPopupHall(activeHall);
+      setShowFloorPopup(true);
     }
   };
 
@@ -294,15 +271,15 @@ export default function HomePage() {
             className="flex flex-col h-full bg-[#f3f3f4] rounded-l-lg transition-[width] duration-75 ease-out relative flex-shrink-0"
           >
             <ServerList
-              servers={servers}
-              setServers={setServers}
-              activeServer={activeServer}
-              onServerClick={handleServerClick}
-              onLeaveServer={handleLeaveServer}
+              servers={halls}
+              setServers={setHalls}
+              activeServer={activeHall}
+              onServerClick={handleHallClick}
+              onLeaveServer={handleLeaveHall}
               onDirectMessagesClick={handleDMTabClick}
-              onServersToggle={handleServersTabClick}
+              onServersToggle={handleHallsTabClick}
               activeView={activeView}
-              onCreateCategoryClick={handleCreateCategoryClick}
+              onCreateCategoryClick={handleCreateFloorClick}
               isLoading={hallsLoading}
               showChannels={showChannels}
               setShowChannels={setShowChannels}
@@ -310,18 +287,18 @@ export default function HomePage() {
 
             {/* Channels / DM section */}
             <div
-              className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeServer ? "border-t border-[#dcd9d3]" : ""}`}
+              className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeHall ? "border-t border-[#dcd9d3]" : ""}`}
             >
-              {activeView === "server" && activeServer && selectedChannel ? (
+              {activeView === "server" && activeHall ? (
                 <ServerDetails
-                  activeServer={activeServer}
-                  onSelectChannel={setSelectedChannel}
+                  activeServer={activeHall}
+                  onSelectChannel={(room) => setSelectedRoom(room as unknown as Room)}
                   showCategoryPopup={
-                    showCategoryPopup &&
-                    categoryPopupServer?.id === activeServer.id
+                    showFloorPopup &&
+                    floorPopupHall?.id === activeHall.id
                   }
-                  onCloseCategoryPopup={() => setShowCategoryPopup(false)}
-                  onOpenCategoryPopup={handleOpenCategoryPopup}
+                  onCloseCategoryPopup={() => setShowFloorPopup(false)}
+                  onOpenCategoryPopup={handleOpenFloorPopup}
                   showChannels={showChannels}
                 />
               ) : activeView === "dm" ? (
@@ -395,11 +372,12 @@ export default function HomePage() {
               <div className="flex-1 flex items-center justify-center text-gray-500">
                 Loading your halls...
               </div>
-            ) : activeView === "server" && activeServer && selectedChannel ? (
+            ) : activeView === "server" && activeHall && selectedRoom ? (
               <ChatArea
-                serverName={activeServer.name}
-                channelName={selectedChannel.name}
-                channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`}
+                serverName={activeHall.name}
+                channelName={selectedRoom.name}
+                hallId={activeHall.id}
+                roomId={selectedRoom.id}
                 isDm={false}
                 onToggleRightSidebar={rightSidebar.toggleCollapse}
                 isRightSidebarCollapsed={rightSidebar.isCollapsed}
@@ -448,7 +426,7 @@ export default function HomePage() {
                 />
 
                 <div className="h-full flex flex-col overflow-y-auto overflow-x-hidden">
-                  {activeView === "server" && activeServer ? (
+                  {activeView === "server" && activeHall ? (
                     <div className="py-6 px-3">
                       <label className="text-sm px-3 font-base text-[#73726e] tracking-wide mb-2 block">
                         Online — {onlineFriends.length}

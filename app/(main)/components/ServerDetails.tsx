@@ -4,36 +4,27 @@ import React, { useState, useEffect, useRef } from "react";
 import { FaHashtag, FaPlus } from "react-icons/fa";
 import { HiSpeakerWave } from "react-icons/hi2";
 import { FiChevronRight } from "react-icons/fi";
-import AddChannelPopup from "@/app/(main)/components/AddChannelPopup";
+import AddRoomPopup from "@/app/(main)/components/AddRoomPopup";
 import Image from "next/image";
-
-type Server = {
-  id: string;
-  name: string;
-  icon_url?: string;
-  icon_thumbnail_url?: string;
-  banner_color?: string;
-  description?: string;
-};
-
-type Channel = {
-  id: string;
-  name: string;
-  type: "text" | "voice";
-};
-
-type Category = {
-  id: string;
-  name: string;
-  channels: Channel[];
-};
+import {
+  Hall,
+  Floor,
+  Room,
+  RoomType,
+  getRooms,
+  createFloor,
+  createRoom,
+  deleteFloor,
+  deleteRoom
+} from "@/lib/api";
 
 interface ServerDetailsProps {
-  activeServer: Server | null;
+  activeServer: Hall | null;
   onSelectChannel?: (channel: { id: string; name: string }) => void;
   showCategoryPopup: boolean;
   onCloseCategoryPopup: () => void;
-  onOpenCategoryPopup: () => void; showChannels: boolean;
+  onOpenCategoryPopup: () => void;
+  showChannels: boolean;
 }
 
 export default function ServerDetails({
@@ -45,77 +36,76 @@ export default function ServerDetails({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showChannels,
 }: ServerDetailsProps) {
-  const [serverCategories, setServerCategories] = useState<
-    Record<string, Category[]>
-  >({});
-  const [openCategories, setOpenCategories] = useState<
-    Record<string, string[]>
-  >({});
-  const [popupCategoryId, setPopupCategoryId] = useState<string | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
-    null,
-  );
+  const [floors, setFloors] = useState<Floor[]>([]);
+  const [roomsByFloor, setRoomsByFloor] = useState<Record<string, Room[]>>({});
+  const [topLevelRooms, setTopLevelRooms] = useState<Room[]>([]);
+
+  const [openFloors, setOpenFloors] = useState<string[]>([]);
+  const [popupFloorId, setPopupFloorId] = useState<string | null>(null);
+  const [newFloorName, setNewFloorName] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenu, setContextMenu] = useState({
-    x: 0,
-    y: 0,
-  });
-  const [categoryContextMenu, setCategoryContextMenu] = useState<{
+  const [contextMenu, setContextMenu] = useState({ x: 0, y: 0 });
+
+  const [floorContextMenu, setFloorContextMenu] = useState<{
     x: number;
     y: number;
-    categoryId: string | null;
+    floorId: string | null;
   } | null>(null);
+
+  const [roomContextMenu, setRoomContextMenu] = useState<{
+    x: number;
+    y: number;
+    roomId: string | null;
+  } | null>(null);
+
   const channelsAreaRef = useRef<HTMLDivElement | null>(null);
   const categoryPopupRef = useRef<HTMLDivElement | null>(null);
-  const deleteCategoryMenuRef = useRef<HTMLDivElement | null>(null);
-  const [channelContextMenu, setChannelContextMenu] = useState<{
-    x: number;
-    y: number;
-    channelId: string | null;
-  } | null>(null);
+  const deleteFloorMenuRef = useRef<HTMLDivElement | null>(null);
+  const roomMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const channelMenuRef = useRef<HTMLDivElement | null>(null);
-
-  // default categories (used to initialize a server)
-  const initialCategories: Category[] = [
-    {
-      id: "cat1",
-      name: "Text Channels",
-      channels: [{ id: "1", name: "general", type: "text" }],
-    },
-    {
-      id: "cat2",
-      name: "Voice Channels",
-      channels: [{ id: "3", name: "voice-chat", type: "voice" }],
-    },
-  ];
-
-  // setting initial categories which is only once
+  // Fetch floors and rooms when activeServer changes
   useEffect(() => {
     if (!activeServer) return;
 
-    setServerCategories((prev) => {
-      if (prev[activeServer.id]) return prev;
-      return { ...prev, [activeServer.id]: initialCategories };
-    });
+    const fetchContent = async () => {
+      const data = await getRooms(activeServer.id);
+      if (data) {
+        setTopLevelRooms(data.top_level);
+        setFloors(data.floors.map(f => ({
+          id: f.id,
+          hall_id: f.hall_id,
+          name: f.name,
+          position: f.position,
+          is_private: f.is_private,
+          created_at: f.created_at,
+          updated_at: f.updated_at
+        })));
 
-    setOpenCategories((prev) => {
-      if (prev[activeServer.id]) return prev;
-      // default categories are expanded which can be changed when set to [] if preferred collapsed
-      return { ...prev, [activeServer.id]: initialCategories.map((c) => c.id) };
-    });
+        const roomsMap: Record<string, Room[]> = {};
+        data.floors.forEach(f => {
+          roomsMap[f.id] = f.rooms;
+        });
+        setRoomsByFloor(roomsMap);
 
-    const generalChannel = initialCategories
-      .flatMap((c) => c.channels)
-      .find((ch) => ch.name === "general" && ch.type === "text");
+        // Auto-open all floors by default
+        setOpenFloors(data.floors.map(f => f.id));
 
-    if (generalChannel) {
-      setSelectedChannelId(generalChannel.id);
-      onSelectChannel?.({ id: generalChannel.id, name: generalChannel.name });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeServer, onSelectChannel]);
+        // Select first text room if none selected
+        if (!selectedRoomId) {
+            const firstRoom = data.top_level.find(r => r.room_type === "text") ||
+                             data.floors.flatMap(f => f.rooms).find(r => r.room_type === "text");
+            if (firstRoom) {
+                setSelectedRoomId(firstRoom.id);
+                onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
+            }
+        }
+      }
+    };
+
+    fetchContent();
+  }, [activeServer, onSelectChannel, selectedRoomId]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -127,562 +117,340 @@ export default function ServerDetails({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        categoryPopupRef.current &&
-        !categoryPopupRef.current.contains(e.target as Node)
-      ) {
+      if (categoryPopupRef.current && !categoryPopupRef.current.contains(e.target as Node)) {
         onCloseCategoryPopup();
       }
     }
-
     if (showCategoryPopup) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
-
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showCategoryPopup, onCloseCategoryPopup]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        categoryContextMenu &&
-        deleteCategoryMenuRef.current &&
-        !deleteCategoryMenuRef.current.contains(e.target as Node)
-      ) {
-        setCategoryContextMenu(null);
+      if (floorContextMenu && deleteFloorMenuRef.current && !deleteFloorMenuRef.current.contains(e.target as Node)) {
+        setFloorContextMenu(null);
       }
     }
-
-    if (categoryContextMenu) {
+    if (floorContextMenu) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
-
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [categoryContextMenu]);
+  }, [floorContextMenu]);
 
-  // logic for click outside for delete channel popup to disappear
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        channelContextMenu &&
-        channelMenuRef.current &&
-        !channelMenuRef.current.contains(e.target as Node)
-      ) {
-        setChannelContextMenu(null);
+      if (roomContextMenu && roomMenuRef.current && !roomMenuRef.current.contains(e.target as Node)) {
+        setRoomContextMenu(null);
       }
     }
-
-    if (channelContextMenu) {
+    if (roomContextMenu) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
-
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [channelContextMenu]);
+  }, [roomContextMenu]);
 
-  useEffect(() => {
-    const handleGlobalContextMenu = () => {
-      if (showContextMenu) {
-        setShowContextMenu(false);
-      }
-    }
-
-    document.addEventListener("contextmenu", handleGlobalContextMenu);
-
-    return () => document.removeEventListener("contextmenu", handleGlobalContextMenu);
-  }, [showContextMenu]);
-
-  // deleting a channel after delete channel button click
-  const handleLeaveChannel = () => {
-    if (!activeServer || !channelContextMenu) return;
-
-    setServerCategories((prev) => {
-      const updatedCategories = (prev[activeServer.id] || []).map((cat) => {
-        if (cat.channels.some((ch) => ch.id === channelContextMenu.channelId)) {
-          const newChannels = cat.channels.filter(
-            (ch) => ch.id !== channelContextMenu.channelId,
-          );
-
-          if (
-            newChannels.length > 0 &&
-            selectedChannelId === channelContextMenu.channelId
-          ) {
-            setSelectedChannelId(newChannels[0].id);
-            const selCh = newChannels[0];
-            onSelectChannel?.({ id: selCh.id, name: selCh.name });
-          } else if (
-            newChannels.length === 0 &&
-            selectedChannelId === channelContextMenu.channelId
-          ) {
-            setSelectedChannelId(null); // no channels left
-            onSelectChannel?.({ id: "", name: "" });
-          }
-
-          return { ...cat, channels: newChannels };
-        }
-        return cat;
+  const handleDeleteRoom = async () => {
+    if (!activeServer || !roomContextMenu?.roomId) return;
+    const success = await deleteRoom(activeServer.id, roomContextMenu.roomId);
+    if (success) {
+      // Refresh local state
+      setTopLevelRooms(prev => prev.filter(r => r.id !== roomContextMenu.roomId));
+      setRoomsByFloor(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(floorId => {
+          next[floorId] = next[floorId].filter(r => r.id !== roomContextMenu.roomId);
+        });
+        return next;
       });
-
-      return { ...prev, [activeServer.id]: updatedCategories };
-    });
-
-    setChannelContextMenu(null);
+    }
+    setRoomContextMenu(null);
   };
 
-  // handling contextMenu for deleting category with a popup over the channel when right click happens
-  const handleCategoryContextMenu = (
-    e: React.MouseEvent,
-    categoryId: string,
-  ) => {
+  const handleFloorContextMenu = (e: React.MouseEvent, floorId: string) => {
     e.preventDefault();
-    setCategoryContextMenu({ x: e.pageX, y: e.pageY, categoryId });
+    setFloorContextMenu({ x: e.pageX, y: e.pageY, floorId });
   };
 
-  // deleting a category when clicking a button: Delete Category
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteFloor = async (floorId: string) => {
     if (!activeServer) return;
-    setServerCategories((prev) => {
-      const updated = (prev[activeServer.id] || []).filter(
-        (c) => c.id !== categoryId,
-      );
-      return { ...prev, [activeServer.id]: updated };
+    const success = await deleteFloor(activeServer.id, floorId);
+    if (success) {
+      setFloors(prev => prev.filter(f => f.id !== floorId));
+      setRoomsByFloor(prev => {
+          const next = {...prev};
+          delete next[floorId];
+          return next;
+      });
+    }
+    setFloorContextMenu(null);
+  };
+
+  const toggleFloor = (floorId: string) => {
+    setOpenFloors(prev =>
+      prev.includes(floorId) ? prev.filter(id => id !== floorId) : [...prev, floorId]
+    );
+  };
+
+  const handleAddRoom = async (name: string, type: RoomType, isPrivate: boolean) => {
+    if (!activeServer) return;
+
+    const newRoom = await createRoom(activeServer.id, {
+        hall_id: activeServer.id,
+        floor_id: popupFloorId,
+        name,
+        room_type: type,
+        is_private: isPrivate
     });
-    setCategoryContextMenu(null);
-  };
 
-  // collapsing a specific category with only selected channel opened
-  const handleCollapseCategory = (categoryId: string) => {
-    if (!activeServer) return;
-    setOpenCategories((prev) => {
-      const ids = prev[activeServer.id] || [];
-      const newIds = ids.filter((id) => id !== categoryId);
-      return { ...prev, [activeServer.id]: newIds };
-    });
-    setCategoryContextMenu(null);
-  };
-
-  // collapsing all categories except the one containing the selected channel
-  const handleCollapseAllCategories = () => {
-    if (!activeServer) return;
-
-    setOpenCategories((prev) => {
-      const currentCategories = serverCategories[activeServer.id] || [];
-      let categoryWithSelectedChannel: string | null = null;
-
-      if (selectedChannelId) {
-        for (const category of currentCategories) {
-          if (category.channels.some((ch) => ch.id === selectedChannelId)) {
-            categoryWithSelectedChannel = category.id;
-            break;
-          }
+    if (newRoom) {
+        if (popupFloorId) {
+            setRoomsByFloor(prev => ({
+                ...prev,
+                [popupFloorId]: [...(prev[popupFloorId] || []), newRoom]
+            }));
+            if (!openFloors.includes(popupFloorId)) {
+                setOpenFloors(prev => [...prev, popupFloorId]);
+            }
+        } else {
+            setTopLevelRooms(prev => [...prev, newRoom]);
         }
-      }
-      const newIds: string[] = categoryWithSelectedChannel ? [categoryWithSelectedChannel] : []; // Keep only the category with selected channel open, or collapse all
-
-      return { ...prev, [activeServer.id]: newIds };
-    });
-
-    setCategoryContextMenu(null);
+    }
+    setPopupFloorId(null);
   };
 
-  // if any hall isn't open then default message is shown.
+  const handleCreateFloor = async () => {
+    if (!activeServer || !newFloorName.trim()) return;
+
+    const floor = await createFloor(activeServer.id, {
+        hall_id: activeServer.id,
+        name: newFloorName.trim(),
+        is_private: false
+    });
+
+    if (floor) {
+        setFloors(prev => [...prev, floor]);
+        setRoomsByFloor(prev => ({ ...prev, [floor.id]: [] }));
+        setOpenFloors(prev => [...prev, floor.id]);
+    }
+    setNewFloorName("");
+    onCloseCategoryPopup();
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if ((e.target as HTMLElement).closest(".channel-item") ||
+        (e.target as HTMLElement).closest(".category-header") ||
+        (e.target as HTMLElement).closest(".add-channel-btn")) {
+      return;
+    }
+    setContextMenu({ x: e.pageX, y: e.pageY });
+    setShowContextMenu(true);
+  };
+
   if (!activeServer) {
     return (
       <div className="h-full w-full flex items-center justify-center text-center text-[#222831] text-xl font-medium">
-        Create a server to view its details.
+        Select or create a Hall to view its details.
       </div>
     );
   }
 
-  const categories = serverCategories[activeServer.id] || [];
-  const openIds = openCategories[activeServer.id] || [];
-
-  const isCategoryOpen = (catId: string) => openIds.includes(catId);
-
-  // state update where for the expand/collapsed state of category
-  const toggleCategory = (catId: string) => {
-    setOpenCategories((prev) => {
-      const ids = prev[activeServer.id] || [];
-      const exists = ids.includes(catId);
-      const newIds = exists
-        ? ids.filter((id) => id !== catId)
-        : [...ids, catId];
-      return { ...prev, [activeServer.id]: newIds };
-    });
-  };
-
-  // handling adding a channel to the category and ensures when a channel is added by opening a category if its is collapsed
-  const handleAddChannel = (
-    categoryId: string | null,
-    type: "text" | "voice",
-    name: string,
-  ) => {
-    if (!categoryId) return; // if no category id provided, return
-    setServerCategories((prev) => {
-      const updated = [...(prev[activeServer.id] || [])];
-      const catIndex = updated.findIndex((c) => c.id === categoryId);
-      if (catIndex !== -1) {
-        updated[catIndex] = {
-          ...updated[catIndex],
-          channels: [
-            ...updated[catIndex].channels,
-            { id: Date.now().toString(), name, type },
-          ],
-        };
-      }
-      return { ...prev, [activeServer.id]: updated };
-    });
-
-    // ensuring category is opened when a channel is added
-    setOpenCategories((prev) => {
-      const ids = prev[activeServer.id] || [];
-      return {
-        ...prev,
-        [activeServer.id]: ids.includes(categoryId)
-          ? ids
-          : [...ids, categoryId],
-      };
-    });
-  };
-
-  const handleCreateCategory = () => {
-    const name = newCategoryName.trim();
-    const newId = Date.now().toString();
-    if (!name) return;
-    setServerCategories((prev) => ({
-      ...prev,
-      [activeServer.id]: [
-        ...(prev[activeServer.id] || []),
-        { id: newId, name, channels: [] },
-      ],
-    }));
-    // opening the newly created category
-    setOpenCategories((prev) => ({
-      ...prev,
-      [activeServer.id]: [...(prev[activeServer.id] || []), newId],
-    }));
-    // reseting the category popup to be blank
-    setNewCategoryName("");
-    onCloseCategoryPopup();
-  };
-
-  // context menu handler: only open when right-click is not on a channel or header
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-
-    if (showContextMenu) {
-      setShowContextMenu(false);
-    }
-
-    // ignoring if click happened inside the channel item, category header or add button
-    if (
-      (e.target as HTMLElement).closest(".channel-item") ||
-      (e.target as HTMLElement).closest(".category-header") ||
-      (e.target as HTMLElement).closest(".add-channel-btn")
-    ) {
-      return;
-    }
-
-    // getting the position relative to the channels area container
-    setContextMenu({
-      x: e.pageX,
-      y: e.pageY,
-    });
-    setShowContextMenu(true);
-  };
-
-  const handleCreateCategoryClick = () => {
-    setShowContextMenu(false);
-    onOpenCategoryPopup();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleCreateCategory();
-    }
-  };
-
   return (
     <div className="h-full w-full p-4 flex flex-col relative select-none">
-      {/* server heder */}
+      {/* Hall Header */}
       <div className="border-b border-[#dcd9d3] pt-0 pb-4">
         <div className="flex items-center gap-2">
           {activeServer.icon_thumbnail_url ? (
             <Image
               src={activeServer.icon_thumbnail_url}
               alt={activeServer.name}
-              width={90}
-              height={90}
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-xl object-cover"
             />
           ) : (
             <div className="w-10 h-10 rounded-xl bg-[#dcdcdc] text-[#1e1e1e] flex items-center justify-center text-xl">
-              {activeServer.name
-                .trim()
-                .split(/\s+/)
-                .map((word) => word[0].toUpperCase())
-                .join("") ?? "?"}
+              {activeServer.name.trim().charAt(0).toUpperCase()}
             </div>
           )}
           <h2 className="text-lg font-base text-[#333]">
-            {activeServer.name.trim().charAt(0).toUpperCase() +
-              activeServer.name.trim().slice(1)}
+            {activeServer.name}
           </h2>
         </div>
       </div>
 
-      {/* channels and categories container where it listens for right click for category popup */}
       <div
         ref={channelsAreaRef}
         className="flex-1 min-h-0 overflow-y-auto pr-2 mt-2 relative"
         onContextMenu={handleContextMenu}
       >
-        {categories.map((cat) => {
-          const selectedInThisCat = cat.channels.find(
-            (ch) => ch.id === selectedChannelId,
-          );
+        {/* Top Level Rooms */}
+        {topLevelRooms.map(room => (
+            <div key={room.id}
+                 className={`channel-item flex items-center gap-3 p-2 mb-1 rounded-lg cursor-pointer
+                            ${selectedRoomId === room.id ? "bg-[#dddde0] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
+                 onClick={() => {
+                     setSelectedRoomId(room.id);
+                     if (room.room_type === "text") onSelectChannel?.({ id: room.id, name: room.name });
+                 }}
+                 onContextMenu={(e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     setRoomContextMenu({ x: e.pageX, y: e.pageY, roomId: room.id });
+                 }}
+            >
+                {room.room_type === "text" ? <FaHashtag className="w-5 h-5" /> : <HiSpeakerWave className="w-5 h-5" />}
+                <span className="text-base">{room.name}</span>
+            </div>
+        ))}
 
-          const open = isCategoryOpen(cat.id);
+        {/* Floors */}
+        {floors.map((floor) => {
+          const isOpen = openFloors.includes(floor.id);
+          const floorRooms = roomsByFloor[floor.id] || [];
+          const hasSelectedInFloor = floorRooms.some(r => r.id === selectedRoomId);
 
           return (
-            <div key={cat.id} className="relative mb-3">
+            <div key={floor.id} className="relative mb-3">
               <div
                 className="relative flex items-center justify-between category-header cursor-pointer select-none"
-                onClick={() => toggleCategory(cat.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleCategory(cat.id);
-                  }
-                }}
-                onContextMenu={(e) => handleCategoryContextMenu(e, cat.id)}
+                onClick={() => toggleFloor(floor.id)}
+                onContextMenu={(e) => handleFloorContextMenu(e, floor.id)}
               >
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium tracking-wide text-[#222831]">
-                    {cat.name}
+                  <p className="text-sm font-medium tracking-wide text-[#222831] uppercase">
+                    {floor.name}
                   </p>
-                  <FiChevronRight
-                    className={`transition-transform ${open ? "rotate-90" : ""}`}
-                  />
+                  <FiChevronRight className={`transition-transform ${isOpen ? "rotate-90" : ""}`} />
                 </div>
 
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPopupCategoryId(cat.id);
+                    setPopupFloorId(floor.id);
                   }}
                   className="p-1 rounded-lg hover:bg-[#dcd9d3] add-channel-btn cursor-pointer"
-                  aria-label={`Add channel to ${cat.name}`}
                 >
-                  <FaPlus className="text-[#555]" />
+                  <FaPlus className="text-[#555] w-3 h-3" />
                 </button>
               </div>
 
-              <ul
-                className={`flex flex-col gap-1 tracking-wide cursor-pointer`}
-              >
-                {open ? (
-                  // expanded -> show all channels
-                  cat.channels.map((ch) => (
-                    <li
-                      key={ch.id}
-                      className={`channel-item flex items-center gap-3 p-2 rounded-lg cursor-pointer
-                                            ${selectedChannelId === ch.id ? "bg-[#dddde0] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
-                      onClick={() => {
-                        setSelectedChannelId(ch.id);
-                        if (ch.type === "text") {
-                          onSelectChannel?.({ id: ch.id, name: ch.name });
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setChannelContextMenu({
-                          x: e.pageX,
-                          y: e.pageY,
-                          channelId: ch.id,
-                        });
-                      }}
-                    >
-                      {ch.type === "text" ? (
-                        <FaHashtag className={`w-6 h-6`} />
-                      ) : (
-                        <HiSpeakerWave className={`w-6 h-6`} />
-                      )}
-                      <span className="text-base">{ch.name}</span>
-                    </li>
-                  ))
-                ) : // collapsed -> show only selected channel (if inside this category), otherwise nothing
-                  selectedInThisCat ? (
-                    <li
-                      key={selectedInThisCat.id}
-                      className="channel-item flex items-center gap-3 p-2 rounded-lg bg-[#dddde0] text-[#222831]"
-                      onClick={() => {
-                        setSelectedChannelId(selectedInThisCat.id);
-                        if (selectedInThisCat.type === "text") {
-                          onSelectChannel?.({
-                            id: selectedInThisCat.id,
-                            name: selectedInThisCat.name,
-                          });
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setChannelContextMenu({
-                          x: e.pageX,
-                          y: e.pageY,
-                          channelId: selectedInThisCat.id,
-                        });
-                      }}
-                    >
-                      {selectedInThisCat.type === "text" ? (
-                        <FaHashtag className={`w-6 h-6`} />
-                      ) : (
-                        <HiSpeakerWave className={`w-6 h-6`} />
-                      )}
-                      <span className="text-base">{selectedInThisCat.name}</span>
-                    </li>
-                  ) : null}
-              </ul>
+              {(isOpen || hasSelectedInFloor) && (
+                <ul className="flex flex-col gap-1 mt-1">
+                  {floorRooms.map((room) => {
+                    const isSelected = selectedRoomId === room.id;
+                    if (!isOpen && !isSelected) return null;
+
+                    return (
+                      <li
+                        key={room.id}
+                        className={`channel-item flex items-center gap-3 p-2 rounded-lg cursor-pointer
+                                  ${isSelected ? "bg-[#dddde0] text-[#222831]" : "hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]"}`}
+                        onClick={() => {
+                          setSelectedRoomId(room.id);
+                          if (room.room_type === "text") onSelectChannel?.({ id: room.id, name: room.name });
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRoomContextMenu({ x: e.pageX, y: e.pageY, roomId: room.id });
+                        }}
+                      >
+                        {room.room_type === "text" ? <FaHashtag className="w-5 h-5" /> : <HiSpeakerWave className="w-5 h-5" />}
+                        <span className="text-base">{room.name}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           );
         })}
       </div>
 
-      {categoryContextMenu && (
+      {/* Floor Context Menu */}
+      {floorContextMenu && (
         <div
-          ref={deleteCategoryMenuRef}
-          className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48  bg-[#ffffff] text-[#1e1e1e] text-sm tracking-wide font-base"
-          style={{ top: categoryContextMenu.y, left: categoryContextMenu.x }}
-          onClick={() => setCategoryContextMenu(null)}
-        >
-          {[
-            {
-              label: "Collapse Category",
-              danger: false,
-              onClick: () => {
-                handleCollapseCategory(categoryContextMenu.categoryId!);
-              },
-            },
-            {
-              label: "Collapse All Categories",
-              danger: false,
-              onClick: handleCollapseAllCategories,
-            },
-            {
-              label: "Delete Category",
-              danger: true,
-              onClick: () => {
-                handleDeleteCategory(categoryContextMenu.categoryId!);
-              },
-            },
-          ].map((item, idx, arr) => (
-            <React.Fragment key={item.label}>
-              <button
-                onClick={item.onClick}
-                className={`text-left w-full py-2 px-2 font-base cursor-pointer rounded-md ${item.danger
-                  ? "text-[#cb3b40] hover:bg-[#fbeff0]"
-                  : "hover:bg-[#f2f2f3]"
-                  }`}
-              >
-                {item.label}
-              </button>
-              {idx < arr.length - 1 && (
-                <div className="h-px bg-gray-200 w-full my-1" />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-
-      {channelContextMenu && (
-        <div
-          ref={channelMenuRef}
-          className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2"
-          style={{ top: channelContextMenu.y, left: channelContextMenu.x }}
+          ref={deleteFloorMenuRef}
+          className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-48 bg-[#ffffff] text-[#1e1e1e] text-sm tracking-wide font-base"
+          style={{ top: floorContextMenu.y, left: floorContextMenu.x }}
         >
           <button
-            className="block w-full text-left text-[#cb3b40] hover:bg-[#fbeff0]  rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
-            onClick={handleLeaveChannel}
+            onClick={() => handleDeleteFloor(floorContextMenu.floorId!)}
+            className="text-left w-full py-2 px-2 font-base cursor-pointer rounded-md text-[#cb3b40] hover:bg-[#fbeff0]"
           >
-            Delete Channel
+            Delete Floor
           </button>
         </div>
       )}
 
-      {/* add channel popup for specific or each category  */}
-      {popupCategoryId && (
-        <AddChannelPopup
-          isOpen={!!popupCategoryId}
-          onClose={() => setPopupCategoryId(null)}
-          onAddChannel={(category, type, name) =>
-            handleAddChannel(popupCategoryId, type, name)
-          }
-          category="text"
+      {/* Room Context Menu */}
+      {roomContextMenu && (
+        <div
+          ref={roomMenuRef}
+          className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2 w-40"
+          style={{ top: roomContextMenu.y, left: roomContextMenu.x }}
+        >
+          <button
+            className="block w-full text-left text-[#cb3b40] hover:bg-[#fbeff0] rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
+            onClick={handleDeleteRoom}
+          >
+            Delete Room
+          </button>
+        </div>
+      )}
+
+      {/* Add Room Popup */}
+      {popupFloorId !== null && (
+        <AddRoomPopup
+          isOpen={true}
+          onClose={() => setPopupFloorId(null)}
+          onAddRoom={handleAddRoom}
+          floorName={floors.find(f => f.id === popupFloorId)?.name}
         />
       )}
 
-      {/* updating the context menu rendering section*/}
-      {showContextMenu && contextMenu && (
+      {/* Main Area Context Menu */}
+      {showContextMenu && (
         <div
           className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2"
-          style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
-            transform: "translate(0, 0)",
-          }}
-          onClick={() => setShowContextMenu(false)}
+          style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           <button
             className="block w-full text-left text-[#1e1e1e] hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
-            onClick={handleCreateCategoryClick}
+            onClick={() => {
+              setShowContextMenu(false);
+              onOpenCategoryPopup();
+            }}
           >
-            Create Category
+            Create Floor
           </button>
         </div>
       )}
 
-      {/* creating category popup when right click in empty space of channels */}
+      {/* Create Floor Popup */}
       {showCategoryPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
           <div ref={categoryPopupRef} className="bg-white p-6 rounded-lg w-100">
-            <h2 className="text-xl text-[#323339] font-medium mb-3 tracking-wide">
-              Create Category
-            </h2>
-            <label className={`text-lg text-[#404146] tracking-wide`}>
-              Category Name
-            </label>
+            <h2 className="text-xl text-[#323339] font-medium mb-3 tracking-wide">Create Floor</h2>
+            <label className="text-lg text-[#404146] tracking-wide">Floor Name</label>
             <input
               type="text"
-              value={newCategoryName}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="New Category"
-              className="w-full border rounded-lg py-2 px-3 mt-2 mb-4 border-[#cdcccf] focus:outline-none focus:border-[#6090eb]"
+              value={newFloorName}
+              onChange={(e) => setNewFloorName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateFloor()}
+              placeholder="New Floor"
+              className="w-full border rounded-lg py-2 px-3 mt-2 mb-4 border-[#cdcccf] focus:outline-none focus:border-[#6164f2]"
+              autoFocus
             />
             <div className="flex justify-between gap-2">
-              <button
-                onClick={onCloseCategoryPopup}
-                className="px-4 py-2 border rounded-lg bg-[#eeeef0] border-[#dcdce0] cursor-pointer"
-              >
+              <button onClick={onCloseCategoryPopup} className="px-4 py-2 border rounded-lg bg-[#eeeef0] border-[#dcdce0] cursor-pointer">
                 Cancel
               </button>
-              <button
-                onClick={handleCreateCategory}
-                className="px-4 py-2 rounded-lg bg-[#6164f2] text-[#FAF7F3] cursor-pointer hover:bg-[#4c52bd]"
-              >
-                Create Category
+              <button onClick={handleCreateFloor} className="px-4 py-2 rounded-lg bg-[#6164f2] text-white cursor-pointer hover:bg-[#4c52bd]">
+                Create Floor
               </button>
             </div>
           </div>

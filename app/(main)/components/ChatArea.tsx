@@ -10,6 +10,13 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react";
 // import { useAuth } from "@/app/contexts/AuthContext";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import Image from "next/image";
+import {
+    getMessages,
+    createMessage,
+    Message as ApiMessage,
+    getWebSocketUrl,
+    WSMessage
+} from "@/lib/api";
 
 type Message = {
     id: string;
@@ -25,7 +32,8 @@ type Message = {
 type ChatAreaProps = {
     serverName?: string;
     channelName?: string;
-    channelId?: string;
+    hallId?: string;
+    roomId?: string;
     friendDisplayName?: string;
     friendId?: string;
     isDm: boolean;
@@ -36,7 +44,8 @@ type ChatAreaProps = {
 export default function ChatArea({
     serverName,
     channelName,
-    channelId,
+    hallId,
+    roomId,
     friendDisplayName,
     friendId,
     isDm = false,
@@ -90,7 +99,25 @@ export default function ChatArea({
         setWelcomeMessage(newWelcomeMessage);
         setMessages([]); // Clear user messages when context changes
         setMessageInput("");
-    }, [isDm, channelId, friendId, serverName, channelName, friendDisplayName, generateWelcomeMessage]);
+
+        // Fetch messages from backend if it's a room
+        if (!isDm && hallId && roomId) {
+            const fetchMessages = async () => {
+                const res = await getMessages(hallId, roomId);
+                if (res && res.messages) {
+                    const convertedMessages: Message[] = res.messages.map((m, index, array) => ({
+                        id: m.id,
+                        sender: m.author_id, // We might need to fetch usernames separately or they might be in the author object if added later
+                        text: m.content,
+                        timestamp: new Date(m.sent_at),
+                        isConsecutive: index > 0 && array[index-1].author_id === m.author_id
+                    }));
+                    setMessages(convertedMessages);
+                }
+            };
+            fetchMessages();
+        }
+    }, [isDm, roomId, hallId, friendId, serverName, channelName, friendDisplayName, generateWelcomeMessage]);
 
     // combining welcome message with user messages for rendering
     const allMessages = useMemo(() => {
@@ -104,23 +131,43 @@ export default function ChatArea({
         }
     }, [allMessages]);
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         if (!messageInput.trim()) return;
 
-        const newMessage: Message = {
-            id: Date.now().toString(),
-            sender: user?.display_name || "Unknown",
-            text: messageInput.trim(),
-            timestamp: new Date(),
-
-            isConsecutive: messages.length > 0 &&
-                messages[messages.length - 1].sender === (user?.display_name || "Unknown") &&
-                !messages[messages.length - 1].isSystem &&
-                !messages[messages.length - 1].isWelcome
-        };
-
-        setMessages(prev => [...prev, newMessage]);
+        const content = messageInput.trim();
         setMessageInput("");
+
+        if (!isDm && hallId && roomId) {
+            try {
+                const res = await createMessage(hallId, roomId, { content });
+                if (res) {
+                    const newMessage: Message = {
+                        id: res.id,
+                        sender: user?.display_name || "Unknown",
+                        text: res.content,
+                        timestamp: new Date(res.sent_at),
+                        isConsecutive: messages.length > 0 &&
+                            messages[messages.length - 1].sender === (user?.display_name || "Unknown")
+                    };
+                    setMessages(prev => [...prev, newMessage]);
+                }
+            } catch (error) {
+                console.error("Failed to send message:", error);
+            }
+        } else {
+            // Local fallback for now (e.g. DMs not yet implemented in backend)
+            const newMessage: Message = {
+                id: Date.now().toString(),
+                sender: user?.display_name || "Unknown",
+                text: content,
+                timestamp: new Date(),
+                isConsecutive: messages.length > 0 &&
+                    messages[messages.length - 1].sender === (user?.display_name || "Unknown") &&
+                    !messages[messages.length - 1].isSystem &&
+                    !messages[messages.length - 1].isWelcome
+            };
+            setMessages(prev => [...prev, newMessage]);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
