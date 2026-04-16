@@ -313,7 +313,7 @@ export default function ServerList({
 
 			{/* Server Grid */}
 			{activeView === "server" && (
-				<div className="grid grid-cols-3 gap-8 p-4">
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-4 p-4 w-full justify-items-center">
 					{/* Add server button */}
 					<button
 						ref={addServerButtonRef}
@@ -328,7 +328,7 @@ export default function ServerList({
 								y: e.clientY,
 							});
 						}}
-						className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white cursor-pointer"
+						className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-[#6164f2] hover:text-white cursor-pointer transition-colors"
 					>
 						<FaPlus size={24} />
 					</button>
@@ -337,7 +337,7 @@ export default function ServerList({
 					{visibleServers.map((server) => (
 						<div
 							key={server.id}
-							className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer `}
+							className={`relative w-16 h-16 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200`}
 							onClick={() => onServerClick(server)}
 							onContextMenu={(e) => {
 								e.preventDefault();
@@ -359,11 +359,11 @@ export default function ServerList({
 									alt={server.name}
 									width={90}
 									height={90}
-									className={`w-16 h-16 border-1 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-none`}`}
+									className={`w-16 h-16 border-1 rounded-lg object-cover ${activeServer?.id === server.id ? `border-[#d4c9be]` : `border-transparent`}`}
 								/>
 							) : (
 								<div
-									className={`w-16 h-16 border-1 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-none`}`}
+									className={`w-16 h-16 border-1 rounded-lg text-black text-xl flex items-center justify-center color-primary-button ${activeServer?.id === server.id ? `border-[#D4C9BE]` : `border-transparent`}`}
 								>
 									{server.name.trim().charAt(0).toUpperCase()}
 								</div>
@@ -385,7 +385,7 @@ export default function ServerList({
 									serverId: "",
 								});
 							}}
-							className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer"
+							className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer transition-colors"
 						>
 							<FaLayerGroup className="w-6 h-6 text-[#6164f2]" />
 						</button>

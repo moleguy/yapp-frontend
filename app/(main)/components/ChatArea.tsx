@@ -6,6 +6,7 @@ import { FiSend } from "react-icons/fi";
 import { BiPoll } from "react-icons/bi";
 import { FaPlus } from "react-icons/fa6";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 // import { useAuth } from "@/app/contexts/AuthContext";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import Image from "next/image";
@@ -28,6 +29,8 @@ type ChatAreaProps = {
     friendDisplayName?: string;
     friendId?: string;
     isDm: boolean;
+    onToggleRightSidebar?: () => void;
+    isRightSidebarCollapsed?: boolean;
 };
 
 export default function ChatArea({
@@ -37,6 +40,8 @@ export default function ChatArea({
     friendDisplayName,
     friendId,
     isDm = false,
+    onToggleRightSidebar,
+    isRightSidebarCollapsed,
 }: ChatAreaProps) {
     // const { user } = useAuth();
     const user = useUser();
@@ -163,11 +168,23 @@ export default function ChatArea({
     return (
         <div className="flex flex-col h-full bg-[#f8f9fa]">
             <div className="flex-1 mt-14 flex flex-col-reverse overflow-y-auto min-h-0 bg-[#fbfbfb]">
-                <div className={`absolute top-0 py-4 px-8 w-full bg-[#dddde0] border-b border-black`}>{isDm
-                    ? `${friendDisplayName}`
-                    : channelName
-                        ? `#${channelName}`
-                        : "Message"}
+                <div className={`absolute top-0 py-3 px-8 w-full bg-[#fbfbfb] border-b border-[#dcd9d3] flex items-center justify-between z-10`}>
+                    <span className="font-semibold text-lg text-[#1e1e1e]">
+                        {isDm
+                            ? `${friendDisplayName}`
+                            : channelName
+                                ? `#${channelName}`
+                                : "Message"}
+                    </span>
+                    {onToggleRightSidebar && (
+                        <button
+                            onClick={onToggleRightSidebar}
+                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-600"
+                            title={isRightSidebarCollapsed ? "Show Member List" : "Hide Member List"}
+                        >
+                            {isRightSidebarCollapsed ? <PanelRightOpen size={20} /> : <PanelRightClose size={20} />}
+                        </button>
+                    )}
                 </div>
                 <div className="p-4">
                     <div className="space-y-0.5">

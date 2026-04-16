@@ -401,12 +401,16 @@ export default function HomePage() {
                 channelName={selectedChannel.name}
                 channelId={`server-${activeServer.id}-channel-${selectedChannel.id}`}
                 isDm={false}
+                onToggleRightSidebar={rightSidebar.toggleCollapse}
+                isRightSidebarCollapsed={rightSidebar.isCollapsed}
               />
             ) : activeView === "dm" && selectedFriend ? (
               <ChatArea
                 friendDisplayName={selectedFriend.name}
                 friendId={selectedFriend.id.toString()}
                 isDm={true}
+                onToggleRightSidebar={rightSidebar.toggleCollapse}
+                isRightSidebarCollapsed={rightSidebar.isCollapsed}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-500">
