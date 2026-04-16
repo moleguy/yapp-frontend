@@ -67,10 +67,12 @@ export default function ServerDetails({
 
   // Fetch floors and rooms when activeServer changes
   useEffect(() => {
-    if (!activeServer) {
+    const hallId = activeServer?.id;
+    if (!hallId) {
       setTopLevelRooms([]);
       setFloors([]);
       setRoomsByFloor({});
+      setSelectedRoomId(null);
       return;
     }
 
@@ -78,9 +80,10 @@ export default function ServerDetails({
     setTopLevelRooms([]);
     setFloors([]);
     setRoomsByFloor({});
+    setSelectedRoomId(null);
 
     const fetchContent = async () => {
-      const data = await getRooms(activeServer.id);
+      const data = await getRooms(hallId);
       if (data) {
         setTopLevelRooms(data.top_level);
         setFloors(data.floors.map(f => ({
@@ -102,20 +105,20 @@ export default function ServerDetails({
         // Auto-open all floors by default
         setOpenFloors(data.floors.map(f => f.id));
 
-        // Select first text room if none selected
-        if (!selectedRoomId) {
-            const firstRoom = data.top_level.find(r => r.room_type === "text") ||
-                             data.floors.flatMap(f => f.rooms).find(r => r.room_type === "text");
-            if (firstRoom) {
-                setSelectedRoomId(firstRoom.id);
-                onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
-            }
+        // Select first text room automatically upon hall entry
+        const firstRoom = data.top_level.find(r => r.room_type === "text") ||
+                         data.floors.flatMap(f => f.rooms).find(r => r.room_type === "text");
+        if (firstRoom) {
+            setSelectedRoomId(firstRoom.id);
+            onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
         }
       }
     };
 
     fetchContent();
-  }, [activeServer, onSelectChannel, selectedRoomId]);
+    // We only re-fetch when the Hall itself changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeServer?.id]);
 
   useEffect(() => {
     const handleClickOutside = () => {
