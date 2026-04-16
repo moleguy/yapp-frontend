@@ -134,13 +134,13 @@ export default function HomePage() {
     if (savedView) setActiveView(savedView);
 
     // Restore last server if not manually deselected
-    if (!hallDeselected && savedServerId && servers.length > 0) {
-      const savedServer = servers.find((s) => s.id === savedServerId);
-      if (savedServer) {
-        setLastActiveServer(savedServer);
+    if (!hallDeselected && savedServerId && halls.length > 0) {
+      const savedHall = halls.find((h) => h.id === savedServerId);
+      if (savedHall) {
+        setLastActiveHall(savedHall);
         if (savedView === "server") {
-          setActiveServer(savedServer);
-          setSelectedChannel({ id: "1", name: "general" });
+          setActiveHall(savedHall);
+          setSelectedRoom(null);
         }
       }
     }
@@ -152,7 +152,7 @@ export default function HomePage() {
       );
       if (savedFriend) setSelectedFriend(savedFriend);
     }
-  }, [servers, friends]);
+  }, [halls, friends]);
 
   // Persist state
   useEffect(() => {
