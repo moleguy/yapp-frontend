@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import HallSettingsNav from "../../components/HallSettingsNav";
+import HallSettingsNav from "@/app/(main)/halls/components/HallSettingsNav";
 import { useParams, useRouter } from "next/navigation";
 import { IoIosClose } from "react-icons/io";
 

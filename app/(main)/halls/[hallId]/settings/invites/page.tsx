@@ -8,7 +8,7 @@ import {
   useSelectedHall
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
-import InviteList from "../../components/InviteList";
+import InviteList from "@/app/(main)/halls/components/InviteList";
 import { createInvite, revokeInvite } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
 

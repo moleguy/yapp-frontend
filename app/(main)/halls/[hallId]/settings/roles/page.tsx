@@ -8,8 +8,8 @@ import {
   useSelectedHall
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
-import RoleList from "../../components/RoleList";
-import RolePermissionEditor from "../../components/RolePermissionEditor";
+import RoleList from "@/app/(main)/halls/components/RoleList";
+import RolePermissionEditor from "@/app/(main)/halls/components/RolePermissionEditor";
 import {
   Role,
   RolePermission,

@@ -9,7 +9,7 @@ import {
   useSelectedHall
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
-import MembersList from "../../components/MembersList";
+import MembersList from "@/app/(main)/halls/components/MembersList";
 import { kickHallMember, updateHallMember } from "@/lib/api";
 
 export default function HallMembersSettings() {

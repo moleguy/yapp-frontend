@@ -8,7 +8,7 @@ import {
   useSelectedHall
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
-import BanList from "../../components/BanList";
+import BanList from "@/app/(main)/halls/components/BanList";
 import { unbanUser } from "@/lib/api";
 
 export default function HallBansSettings() {
