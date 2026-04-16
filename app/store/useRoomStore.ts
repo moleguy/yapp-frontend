@@ -39,13 +39,18 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     fetchRoomsAndFloors: async (hallId: string) => {
         set({ loading: true, error: null });
         try {
-            const [rooms, floors] = await Promise.all([
+            const [roomsRes, floors] = await Promise.all([
                 getRooms(hallId),
                 getFloors(hallId),
             ]);
 
-            if (rooms && floors) {
-                set({ rooms, floors, loading: false });
+            if (roomsRes && floors) {
+                // Flatten all rooms from the response into a single array for the store
+                const allRooms = [
+                    ...roomsRes.top_level,
+                    ...roomsRes.floors.flatMap(f => f.rooms)
+                ];
+                set({ rooms: allRooms, floors, loading: false });
             } else {
                 set({ error: "Failed to fetch rooms or floors", loading: false });
             }
