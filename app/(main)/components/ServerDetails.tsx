@@ -76,17 +76,42 @@ export default function ServerDetails({
       return;
     }
 
-    // Immediately clear current data before fetching new hall content
-    setTopLevelRooms([]);
-    setFloors([]);
-    setRoomsByFloor({});
-    setSelectedRoomId(null);
+    const cacheKey = `hall_data_${hallId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setTopLevelRooms(parsed.topLevelRooms || []);
+        setFloors(parsed.floors || []);
+        setRoomsByFloor(parsed.roomsByFloor || {});
+        setOpenFloors(parsed.floors?.map((f: any) => f.id) || []);
+
+        if (parsed.lastSelectedRoomId) {
+          setSelectedRoomId(parsed.lastSelectedRoomId);
+          // Find the room to notify parent
+          const allRooms = [...(parsed.topLevelRooms || []), ...Object.values(parsed.roomsByFloor || {}).flat() as Room[]];
+          const lastRoom = allRooms.find(r => r.id === parsed.lastSelectedRoomId);
+          if (lastRoom && lastRoom.room_type === "text") {
+            onSelectChannel?.({ id: lastRoom.id, name: lastRoom.name });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse cached hall data", e);
+      }
+    } else {
+        // Immediately clear current data if no cache
+        setTopLevelRooms([]);
+        setFloors([]);
+        setRoomsByFloor({});
+        setSelectedRoomId(null);
+    }
 
     const fetchContent = async () => {
       const data = await getRooms(hallId);
       if (data) {
-        setTopLevelRooms(data.top_level);
-        setFloors(data.floors.map(f => ({
+        const newTopLevelRooms = data.top_level;
+        const newFloors = data.floors.map(f => ({
           id: f.id,
           hall_id: f.hall_id,
           name: f.name,
@@ -94,31 +119,70 @@ export default function ServerDetails({
           is_private: f.is_private,
           created_at: f.created_at,
           updated_at: f.updated_at
-        })));
+        }));
 
-        const roomsMap: Record<string, Room[]> = {};
+        const newRoomsMap: Record<string, Room[]> = {};
         data.floors.forEach(f => {
-          roomsMap[f.id] = f.rooms;
+          newRoomsMap[f.id] = f.rooms;
         });
-        setRoomsByFloor(roomsMap);
 
-        // Auto-open all floors by default
+        setTopLevelRooms(newTopLevelRooms);
+        setFloors(newFloors);
+        setRoomsByFloor(newRoomsMap);
         setOpenFloors(data.floors.map(f => f.id));
 
-        // Select first text room automatically upon hall entry
-        const firstRoom = data.top_level.find(r => r.room_type === "text") ||
-                         data.floors.flatMap(f => f.rooms).find(r => r.room_type === "text");
-        if (firstRoom) {
-            setSelectedRoomId(firstRoom.id);
-            onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
+        // Sync to cache
+        const currentCache = localStorage.getItem(cacheKey);
+        let lastId: string | null = null;
+        if (currentCache) {
+            try { lastId = JSON.parse(currentCache).lastSelectedRoomId; } catch(e) {}
         }
+
+        // Auto-select if nothing cached or cached room doesn't exist anymore
+        const allNewRooms = [...newTopLevelRooms, ...Object.values(newRoomsMap).flat()];
+        const roomStillExists = allNewRooms.some(r => r.id === lastId);
+
+        if (!lastId || !roomStillExists) {
+            const firstRoom = newTopLevelRooms.find(r => r.room_type === "text") ||
+                             allNewRooms.find(r => r.room_type === "text");
+            if (firstRoom) {
+                setSelectedRoomId(firstRoom.id);
+                onSelectChannel?.({ id: firstRoom.id, name: firstRoom.name });
+                lastId = firstRoom.id;
+            }
+        } else {
+            setSelectedRoomId(lastId);
+        }
+
+        localStorage.setItem(cacheKey, JSON.stringify({
+            topLevelRooms: newTopLevelRooms,
+            floors: newFloors,
+            roomsByFloor: newRoomsMap,
+            lastSelectedRoomId: lastId
+        }));
       }
     };
 
     fetchContent();
-    // We only re-fetch when the Hall itself changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeServer?.id]);
+
+  // Persist last selected room
+  useEffect(() => {
+    if (activeServer?.id && selectedRoomId) {
+        const cacheKey = `hall_data_${activeServer.id}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (parsed.lastSelectedRoomId !== selectedRoomId) {
+                    parsed.lastSelectedRoomId = selectedRoomId;
+                    localStorage.setItem(cacheKey, JSON.stringify(parsed));
+                }
+            } catch(e) {}
+        }
+    }
+  }, [selectedRoomId, activeServer?.id]);
 
   useEffect(() => {
     const handleClickOutside = () => {

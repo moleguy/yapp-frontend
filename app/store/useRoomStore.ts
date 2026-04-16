@@ -25,6 +25,10 @@ type RoomState = {
     getRoomsByFloor: (floorId: string) => Room[];
     getFloorById: (floorId: string) => Floor | null;
     getRoomById: (roomId: string) => Room | null;
+
+    // Persistence
+    saveHallData: (hallId: string, data: { floors: Floor[], rooms: Room[], selectedRoomId: string | null }) => void;
+    getHallData: (hallId: string) => { floors: Floor[], rooms: Room[], selectedRoomId: string | null } | null;
 };
 
 export const useRoomStore = create<RoomState>((set, get) => ({
@@ -132,6 +136,26 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
     getRoomById: (roomId: string) => {
         return get().rooms.find((r) => r.id === roomId) || null;
+    },
+
+    // ===== Persistence =====
+    saveHallData: (hallId: string, data) => {
+        const key = `hall_cache_${hallId}`;
+        localStorage.setItem(key, JSON.stringify(data));
+    },
+
+    getHallData: (hallId: string) => {
+        const key = `hall_cache_${hallId}`;
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            try {
+                return JSON.parse(cached);
+            } catch (e) {
+                console.error("Failed to parse hall cache", e);
+                return null;
+            }
+        }
+        return null;
     },
 }));
 
