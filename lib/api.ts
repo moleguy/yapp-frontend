@@ -695,28 +695,19 @@ export async function authSignOut(): Promise<{ message?: string } | undefined> {
 // User functions
 export async function getUserMe(): Promise<UserMeRes | null> {
   try {
-    const backendUrl = `${protectedApiBase}/me/`;
-    const res = await fetch(isProxyEnabled ? `/api/proxy?path=${encodeURIComponent("/me/")}` : backendUrl, {
+    // We use request helper here because it's reliable for CSRF and proxying
+    const result = await request<UserMeRes>(`${protectedApiBase}/me/`, {
       method: "GET",
-      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-      credentials: "include", // Ensure cookies are sent to the proxy
     });
 
-    if (!res.ok) return null;
-
-    const body = await res.json();
-    const userData = body.data || body;
-
-    // Check for the custom proxy header
-    const token = res.headers.get("X-Yapp-Token");
-    if (token) {
-      console.log("[GetUserMe] Token found in header. Storing in localStorage.");
-      localStorage.setItem("yapp_access_token", token);
-      // Attach to returned object so Context can see it
-      return { ...userData, access_token: token };
+    // We don't strictly need to extract the token here because authSignIn already did it
+    // But we check localStorage to ensure it's there
+    const token = localStorage.getItem("yapp_access_token");
+    if (result && token) {
+      return { ...result, access_token: token };
     }
 
-    return userData;
+    return result;
   } catch (error) {
     console.error("[GetUserMe] Error fetching user profile:", error);
     return null;
