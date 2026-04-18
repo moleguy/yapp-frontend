@@ -1388,6 +1388,12 @@ export function getWebSocketUrl(roomId: string): string {
   }
 
   const finalUrl = `${wsBase}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
-  console.log("[getWebSocketUrl] Final WS URL:", finalUrl.split('?')[0] + (token ? "?token=REDACTED" : " (NO TOKEN)"));
+
+  if (typeof window !== 'undefined') {
+    (window as any).__LAST_WS_URL = finalUrl;
+    (window as any).__WS_TOKEN_FOUND = !!token;
+  }
+
+  console.log("[getWebSocketUrl] Room:", roomId, "Token Found:", !!token);
   return finalUrl;
 }
