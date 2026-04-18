@@ -594,6 +594,9 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
       throw new Error(body.message || body.error || "Signin failed");
     }
 
+    // Capture token from the custom proxy header (extracted from HttpOnly cookie)
+    const accessToken = res.headers.get("X-Yapp-Token") || body.data?.access_token || body.access_token;
+
     // Combine the fields for the frontend SignInRes type
     const result: SignInRes = {
       ...(body.data?.user_me || body.data || {}),
