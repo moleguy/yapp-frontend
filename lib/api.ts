@@ -1362,18 +1362,32 @@ export function getWebSocketUrl(roomId: string): string {
   const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
   const wsBase = backendUrl.replace(/^http/, "ws");
 
-  // Try to get token from user store if possible, or cookies
-  // Since this is a library function, we'll try to get it from localStorage where Zustand persists it
+  // Try to get token from user store if possible
   let token = "";
   try {
-    const userStorage = localStorage.getItem('user-storage');
-    if (userStorage) {
-      const parsed = JSON.parse(userStorage);
-      token = parsed.state?.user?.access_token || "";
+    if (typeof window !== 'undefined') {
+      const userStorage = localStorage.getItem('user-storage');
+      if (userStorage) {
+        const parsed = JSON.parse(userStorage);
+        // Robust check for the token path in Zustand persist state
+        token = parsed?.state?.user?.access_token || "";
+        console.log("[getWebSocketUrl] Token found in localStorage:", !!token);
+      }
+
+      // Fallback: Check cookies if localStorage fails
+      if (!token) {
+        const match = document.cookie.match(/(^| )access_token=([^;]+)/);
+        if (match) {
+          token = match[2];
+          console.log("[getWebSocketUrl] Token found in cookies");
+        }
+      }
     }
   } catch (e) {
-    console.warn("Failed to get token from localStorage", e);
+    console.warn("[getWebSocketUrl] Failed to get token", e);
   }
 
-  return `${wsBase}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
+  const finalUrl = `${wsBase}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
+  console.log("[getWebSocketUrl] Final WS URL:", finalUrl.split('?')[0] + (token ? "?token=REDACTED" : " (NO TOKEN)"));
+  return finalUrl;
 }

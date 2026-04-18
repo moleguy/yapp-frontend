@@ -19,9 +19,11 @@ import {
   UserMeRes,
 } from "@/lib/api";
 import {
+  useUserStore,
   useSetUser,
   useClearUser,
   useSetActive,
+  useUpdateUser,
 } from "@/app/store/useUserStore";
 
 export interface AuthError {
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const setUserEdge = useSetUser(); // <- EdgeStore user setter
   const clearUserEdge = useClearUser(); // <- EdgeStore user clear
   const setActive = useSetActive(); // <- EdgeStore user active setter
+  const updateUserEdge = useUpdateUser(); // <- EdgeStore user updater
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -89,9 +92,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearError();
 
         const userData = await getUserMe();
-        setUser(userData);
-        setActive(true);
-        if (userData) setUserEdge(userData); // <- sync to EdgeStore
+        if (userData) {
+          const currentToken = useUserStore.getState().user?.access_token;
+          const mergedData = { ...userData, access_token: currentToken || userData.access_token };
+          setUser(mergedData);
+          setUserEdge(mergedData);
+          setActive(true);
+        } else {
+          setUser(null);
+          setActive(false);
+          clearUserEdge();
+        }
         return userData;
       } catch (err) {
         console.error("[AuthProvider.fetchUser] Error:", err);
@@ -115,9 +126,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         setLoading(true);
         const userData = await getUserMe();
-        setUser(userData);
-        setActive(true);
-        if (userData) setUserEdge(userData);
+        if (userData) {
+          const currentToken = useUserStore.getState().user?.access_token;
+          const mergedData = { ...userData, access_token: currentToken || userData.access_token };
+          setUser(mergedData);
+          setUserEdge(mergedData);
+          setActive(true);
+        } else {
+          setUser(null);
+          setActive(false);
+          clearUserEdge();
+        }
       } catch (err) {
         console.error("[AuthProvider] Failed to initialize auth:", err);
         setUser(null);
