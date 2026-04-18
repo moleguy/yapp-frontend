@@ -584,6 +584,7 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
       method: "POST",
       headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
       body: JSON.stringify(payload),
+      credentials: "include", // Ensure cookies are handled
     });
 
     const body = await res.json();
@@ -701,6 +702,7 @@ export async function getUserMe(): Promise<UserMeRes | null> {
     const res = await fetch(isProxyEnabled ? `/api/proxy?path=${encodeURIComponent("/me/")}` : backendUrl, {
       method: "GET",
       headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+      credentials: "include", // Ensure cookies are sent to the proxy
     });
 
     if (!res.ok) return null;
