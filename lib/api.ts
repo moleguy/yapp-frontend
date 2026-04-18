@@ -593,15 +593,18 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
       throw new Error(body.message || body.error || "Signin failed");
     }
 
-    // Combine the envelope fields (success, access_token) with the user data
+    // Capture token from where it actually lives in your backend: body.data.access_token
+    const accessToken = body.data?.access_token || body.access_token;
+
+    // Combine the fields for the frontend SignInRes type
     const result: SignInRes = {
-      ...(body.data || {}),
+      ...(body.data?.user_me || body.data || {}),
       success: body.success,
       message: body.message,
-      access_token: body.access_token,
+      access_token: accessToken,
     };
 
-    console.log("[AuthSignIn] Processed result with token:", !!result.access_token);
+    console.log("[AuthSignIn] Processed result. Token found:", !!result.access_token);
 
     // Ensure result object has required fields
     if (!result || typeof result !== "object" || !result.id) {
