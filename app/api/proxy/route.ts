@@ -125,10 +125,25 @@ export async function GET(request: Request) {
 
         const headers = createSafeHeaders(res.headers);
 
+        // Also check if the request ALREADY had a JWT in its cookies and pass it back
+        const requestCookies = request.headers.get("cookie") || "";
+        const reqJwtMatch = requestCookies.match(/jwt=([^;]+)/);
+        if (reqJwtMatch && reqJwtMatch[1]) {
+            headers.set("X-Yapp-Token", reqJwtMatch[1]);
+        }
+
         // Copy set-cookie if present and modify for proxy domain
         const setCookie = res.headers.get("set-cookie");
         if (setCookie) {
             console.log("[Proxy] GET Set-Cookie:", setCookie.substring(0, 100));
+
+            // Extract the JWT token from the cookie
+            const resJwtMatch = setCookie.match(/jwt=([^;]+)/);
+            if (resJwtMatch && resJwtMatch[1]) {
+                headers.set("X-Yapp-Token", resJwtMatch[1]);
+                console.log("[Proxy] Extracted JWT from Set-Cookie and set X-Yapp-Token header");
+            }
+
             // Remove Domain attribute to make it work with localhost:3000
             let modifiedCookie = setCookie
                 .split(';')
@@ -205,21 +220,26 @@ export async function POST(request: Request) {
             headers.set("x-csrf-token", csrfToken);
         }
 
-        // Copy set-cookie if present (for JWT)
+        // Copy set-cookie if present and modify for proxy domain
         const setCookie = res.headers.get("set-cookie");
         if (setCookie) {
             console.log("[Proxy] Raw Set-Cookie header:", setCookie);
+
+            // Extract the JWT token from the cookie for the frontend to use in WebSockets
+            const jwtMatch = setCookie.match(/jwt=([^;]+)/);
+            if (jwtMatch && jwtMatch[1]) {
+                headers.set("X-Yapp-Token", jwtMatch[1]);
+                console.log("[Proxy] Extracted JWT and set X-Yapp-Token header");
+            }
+
             // Modify the cookie to work with our proxy domain
-            // Remove Domain attribute to make it work with localhost:3000
             let modifiedCookie = setCookie
                 .split(';')
                 .filter(part => !part.trim().toLowerCase().startsWith('domain='))
                 .join(';');
-            // Ensure Path is set to /
             if (!modifiedCookie.toLowerCase().includes('path=')) {
                 modifiedCookie += '; Path=/';
             }
-            console.log("[Proxy] Modified Set-Cookie:", modifiedCookie);
             headers.set("set-cookie", modifiedCookie);
         }
 

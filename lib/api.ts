@@ -593,8 +593,10 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
       throw new Error(body.message || body.error || "Signin failed");
     }
 
-    // Capture token from where it actually lives in your backend: body.data.access_token
-    const accessToken = body.data?.access_token || body.access_token;
+    // Capture token from:
+    // 1. The custom proxy header (extracted from HttpOnly cookie)
+    // 2. The data object (if backend was updated)
+    const accessToken = res.headers.get("X-Yapp-Token") || body.data?.access_token || body.access_token;
 
     // Combine the fields for the frontend SignInRes type
     const result: SignInRes = {
@@ -603,6 +605,13 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
       message: body.message,
       access_token: accessToken,
     };
+
+    if (accessToken) {
+      console.log("[AuthSignIn] Token found in header/body. Storing in localStorage.");
+      localStorage.setItem("yapp_access_token", accessToken);
+    } else {
+      console.warn("[AuthSignIn] No token found in X-Yapp-Token header or response body!");
+    }
 
     console.log("[AuthSignIn] Processed result. Token found:", !!result.access_token);
 
@@ -688,12 +697,27 @@ export async function authSignOut(): Promise<{ message?: string } | undefined> {
 // User functions
 export async function getUserMe(): Promise<UserMeRes | null> {
   try {
-    console.log("[GetUserMe] Fetching user profile from:", `${protectedApiBase}/me/`);
-    const result = await request<UserMeRes>(`${protectedApiBase}/me/`, {
+    const backendUrl = `${protectedApiBase}/me/`;
+    const res = await fetch(isProxyEnabled ? `/api/proxy?path=${encodeURIComponent("/me/")}` : backendUrl, {
       method: "GET",
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
     });
-    console.log("[GetUserMe] User profile retrieved:", result?.username);
-    return result;
+
+    if (!res.ok) return null;
+
+    const body = await res.json();
+    const userData = body.data || body;
+
+    // Check for the custom proxy header
+    const token = res.headers.get("X-Yapp-Token");
+    if (token) {
+      console.log("[GetUserMe] Token found in header. Storing in localStorage.");
+      localStorage.setItem("yapp_access_token", token);
+      // Attach to returned object so Context can see it
+      return { ...userData, access_token: token };
+    }
+
+    return userData;
   } catch (error) {
     console.error("[GetUserMe] Error fetching user profile:", error);
     return null;
