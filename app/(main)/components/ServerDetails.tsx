@@ -25,6 +25,9 @@ interface ServerDetailsProps {
   onCloseCategoryPopup: () => void;
   onOpenCategoryPopup: () => void;
   showChannels: boolean;
+  showRoomPopup?: boolean;
+  onCloseRoomPopup?: () => void;
+  onOpenRoomPopup?: () => void;
 }
 
 export default function ServerDetails({
@@ -35,6 +38,9 @@ export default function ServerDetails({
   onOpenCategoryPopup,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   showChannels,
+  showRoomPopup,
+  onCloseRoomPopup,
+  onOpenRoomPopup,
 }: ServerDetailsProps) {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [roomsByFloor, setRoomsByFloor] = useState<Record<string, Room[]>>({});
@@ -480,12 +486,15 @@ export default function ServerDetails({
       )}
 
       {/* Add Room Popup */}
-      {popupFloorId !== null && (
+      {(popupFloorId !== null || !!showRoomPopup) && (
         <AddRoomPopup
           isOpen={true}
-          onClose={() => setPopupFloorId(null)}
+          onClose={() => {
+            setPopupFloorId(null);
+            onCloseRoomPopup?.();
+          }}
           onAddRoom={handleAddRoom}
-          floorName={floors.find(f => f.id === popupFloorId)?.name}
+          floorName={popupFloorId ? floors.find(f => f.id === popupFloorId)?.name : undefined}
         />
       )}
 

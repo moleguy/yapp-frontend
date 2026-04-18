@@ -20,6 +20,7 @@ interface ServerListProps {
 	onServersToggle: () => void;
 	activeView: "server" | "dm" | null;
 	onCreateCategoryClick: (server: Hall) => void;
+	onCreateRoomClick: (server: Hall) => void;
 	isLoading: boolean;
 	showChannels: boolean;
 	setShowChannels: React.Dispatch<React.SetStateAction<boolean>>;
@@ -37,6 +38,7 @@ export default function ServerList({
 	onServersToggle,
 	activeView,
 	onCreateCategoryClick,
+	onCreateRoomClick,
 	showChannels,
 	setShowChannels,
 }: ServerListProps) {
@@ -256,6 +258,16 @@ export default function ServerList({
 			danger: false,
 			onClick: () => {
 				console.log("Hall Settings");
+				setExtraServerContextMenu(null);
+			},
+		},
+		{
+			label: "Create Room",
+			danger: false,
+			onClick: () => {
+				if (activeServer) {
+					onCreateRoomClick(activeServer);
+				}
 				setExtraServerContextMenu(null);
 			},
 		},

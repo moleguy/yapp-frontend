@@ -38,6 +38,7 @@ export default function HomePage() {
   const [halls, setHalls] = useState<Hall[]>([]);
   const [showChannels, setShowChannels] = useState(false);
   const [showFloorPopup, setShowFloorPopup] = useState(false);
+  const [showRoomPopup, setShowRoomPopup] = useState(false);
   const [floorPopupHall, setFloorPopupHall] = useState<Hall | null>(
     null,
   );
@@ -256,6 +257,11 @@ export default function HomePage() {
     setShowFloorPopup(true);
   };
 
+  const handleCreateRoomClick = (hall: Hall) => {
+    setActiveHall(hall);
+    setShowRoomPopup(true);
+  };
+
   const handleOpenFloorPopup = () => {
     if (activeHall) {
       setFloorPopupHall(activeHall);
@@ -282,6 +288,7 @@ export default function HomePage() {
               onServersToggle={handleHallsTabClick}
               activeView={activeView}
               onCreateCategoryClick={handleCreateFloorClick}
+              onCreateRoomClick={handleCreateRoomClick}
               isLoading={hallsLoading}
               showChannels={showChannels}
               setShowChannels={setShowChannels}
@@ -302,6 +309,9 @@ export default function HomePage() {
                   onCloseCategoryPopup={() => setShowFloorPopup(false)}
                   onOpenCategoryPopup={handleOpenFloorPopup}
                   showChannels={showChannels}
+                  showRoomPopup={showRoomPopup}
+                  onCloseRoomPopup={() => setShowRoomPopup(false)}
+                  onOpenRoomPopup={() => setShowRoomPopup(true)}
                 />
               ) : activeView === "dm" ? (
                 <DirectMessages
