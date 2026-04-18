@@ -120,7 +120,7 @@ export default function ChatArea({
                     fetchedMembers.forEach(m => {
                         memberMap[m.user_id] = {
                             username: m.nickname || m.user?.username || m.user_id,
-                            avatarUrl: m.user?.avatar_thumbnail_url
+                            avatarUrl: m.user?.avatar_thumbnail_url ?? undefined
                         };
                     });
                     setMembers(memberMap);
@@ -136,7 +136,7 @@ export default function ChatArea({
                     const convertedMessages: Message[] = res.messages.map((m, index, array) => ({
                         id: m.id,
                         sender: m.author?.display_name || m.author?.username || m.author_id,
-                        senderAvatar: m.author?.avatar_thumbnail_url,
+                        senderAvatar: m.author?.avatar_thumbnail_url ?? undefined,
                         text: m.content,
                         timestamp: new Date(m.sent_at),
                         isConsecutive: index > 0 && array[index-1].author_id === m.author_id
@@ -160,7 +160,7 @@ export default function ChatArea({
                         const newMsg: Message = {
                             id: msg.id || Date.now().toString(),
                             sender: authorInfo?.username || msg.author_id,
-                            senderAvatar: authorInfo?.avatarUrl,
+                            senderAvatar: authorInfo?.avatarUrl ?? undefined,
                             text: msg.content,
                             timestamp: new Date(msg.sent_at),
                         };
