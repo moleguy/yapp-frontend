@@ -154,19 +154,28 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Typing indicator emitter (debounced)
     const sendTyping = useCallback(() => {
-        if (wsRef.current?.isConnected()) {
-            wsRef.current.sendTyping();
+        if (wsRef.current?.isConnected() && roomId) {
+            wsRef.current.sendTyping(roomId);
         }
-    }, []);
+    }, [roomId]);
+
+    const sendStopTyping = useCallback(() => {
+        if (wsRef.current?.isConnected() && roomId) {
+            wsRef.current.sendStopTyping(roomId);
+        }
+    }, [roomId]);
 
     // Message sender
-    const sendMessage = useCallback((content: string) => {
-        if (wsRef.current?.isConnected()) {
-            wsRef.current.sendMessage(content);
-        } else {
-            console.warn("WebSocket not connected, cannot send message");
-        }
-    }, []);
+    const sendMessage = useCallback(
+        (content: string) => {
+            if (wsRef.current?.isConnected() && roomId) {
+                wsRef.current.sendMessage(roomId, content);
+            } else {
+                console.warn("WebSocket not connected, cannot send message");
+            }
+        },
+        [roomId],
+    );
 
     // Read receipt sender
     const sendRead = useCallback((messageId: string) => {
@@ -191,7 +200,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         isConnected,
         sendMessage,
         sendTyping,
-        sendRead,
+        sendStopTyping,
         reconnect,
         getTypingUsers,
     };

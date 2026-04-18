@@ -1351,6 +1351,7 @@ export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
 
 // ========== WEBSOCKET HELPER ==========
 export function getWebSocketUrl(roomId: string): string {
-  const wsBase = apiBase.replace(/^http/, "ws");
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+  const wsBase = backendUrl.replace(/^http/, "ws");
   return `${wsBase}/ws/rooms/${roomId}`;
 }

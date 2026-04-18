@@ -9,6 +9,8 @@ import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 // import { useAuth } from "@/app/contexts/AuthContext";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
+import { useWebSocket } from "@/app/hooks/useWebSocket";
+import { useMessagesForRoom, useFetchMessages } from "@/app/store/useMessageStore";
 import Image from "next/image";
 import {
     getMessages,
@@ -66,17 +68,41 @@ export default function ChatArea({
     const [showPopup, setShowPopup] = useState(false);
     const [showPollPopup, setShowPollPopup] = useState(false);
 
-    // Separate state for actual messages (user messages)
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-    const [members, setMembers] = useState<Record<string, { username: string; displayName: string; avatarUrl?: string }>>({});
-    const membersRef = useRef<Record<string, { username: string; displayName: string; avatarUrl?: string }>>({});
-    const socketRef = useRef<WebSocket | null>(null);
+    // Get messages from store
+    const storeMessages = useMessagesForRoom(roomId || "");
+    const fetchMessages = useFetchMessages();
 
-    // Update ref whenever members state changes
-    useEffect(() => {
-        membersRef.current = members;
-    }, [members]);
+    const {
+        isConnected,
+        sendMessage: sendWsMessage,
+        sendTyping,
+        sendStopTyping,
+        getTypingUsers
+    } = useWebSocket({
+        roomId: roomId || null,
+        hallId: hallId || null,
+        enabled: !isDm && !!roomId && !!hallId
+    });
+
+    const typingUsersList = getTypingUsers();
+
+    const [members, setMembers] = useState<Record<string, { username: string; displayName: string; avatarUrl?: string }>>({});
+
+    // Map store messages to local Message format for rendering
+    const messages = useMemo<Message[]>(() => {
+        return storeMessages.map((m, index, array) => {
+            const authorInfo = members[m.author_id];
+            return {
+                id: m.id,
+                sender: authorInfo?.displayName || m.author?.display_name || m.author?.username || m.author_id,
+                senderAvatar: authorInfo?.avatarUrl || m.author?.avatar_thumbnail_url || undefined,
+                text: m.content,
+                timestamp: new Date(m.sent_at),
+                isConsecutive: index > 0 && array[index - 1].author_id === m.author_id,
+                isSystem: false
+            };
+        });
+    }, [storeMessages, members]);
 
     // Separate welcome message that can be easily modified
     const [welcomeMessage, setWelcomeMessage] = useState<Message | null>(null);
@@ -109,7 +135,6 @@ export default function ChatArea({
     useEffect(() => {
         const newWelcomeMessage = generateWelcomeMessage();
         setWelcomeMessage(newWelcomeMessage);
-        setMessages([]); // Clear user messages when context changes
         setMessageInput("");
 
         // Fetch hall members for name/avatar mapping
@@ -131,81 +156,17 @@ export default function ChatArea({
 
         // Fetch messages from backend if it's a room
         if (!isDm && hallId && roomId) {
-            const fetchMessages = async () => {
-                const res = await getMessages(hallId, roomId);
-                if (res && res.messages) {
-                    const convertedMessages: Message[] = res.messages.map((m, index, array) => ({
-                        id: m.id,
-                        sender: m.author?.display_name || m.author?.username || m.author_id,
-                        senderAvatar: m.author?.avatar_thumbnail_url ?? undefined,
-                        text: m.content,
-                        timestamp: new Date(m.sent_at),
-                        isConsecutive: index > 0 && array[index-1].author_id === m.author_id
-                    }));
-                    setMessages(convertedMessages);
-                }
-            };
-            fetchMessages();
-
-            // Setup WebSocket
-            const wsUrl = getWebSocketUrl(roomId);
-            const ws = new WebSocket(wsUrl);
-            socketRef.current = ws;
-
-            ws.onmessage = (event) => {
-                const msg: WSMessage = JSON.parse(event.data);
-
-                switch (msg.type) {
-                    case "text":
-                        const authorInfo = membersRef.current[msg.author_id];
-                        const newMsg: Message = {
-                            id: msg.id || Date.now().toString(),
-                            sender: authorInfo?.displayName || msg.author_id,
-                            senderAvatar: authorInfo?.avatarUrl ?? undefined,
-                            text: msg.content,
-                            timestamp: new Date(msg.sent_at),
-                        };
-                        setMessages(prev => {
-                            // Check if it matches an optimistic message
-                            const existingIndex = prev.findIndex(m => m.isOptimistic && m.text === newMsg.text && m.sender === (user?.display_name || user?.username || "You"));
-                            if (existingIndex !== -1) {
-                                const newMessages = [...prev];
-                                newMessages[existingIndex] = { ...newMsg, isOptimistic: false };
-                                return newMessages;
-                            }
-
-                            newMsg.isConsecutive = prev.length > 0 && prev[prev.length - 1].sender === newMsg.sender;
-                            return [...prev, newMsg];
-                        });
-                        break;
-                    case "typing":
-                        const typingUser = membersRef.current[msg.typing_user]?.displayName || msg.typing_user;
-                        setTypingUsers(prev => new Set(prev).add(typingUser));
-                        break;
-                    case "stop_typing":
-                        setTypingUsers(prev => {
-                            const typingUser = membersRef.current[msg.author_id]?.displayName || msg.author_id;
-                            const next = new Set(prev);
-                            next.delete(typingUser);
-                            return next;
-                        });
-                        break;
-                    case "error":
-                        console.error("WS Error:", msg.error);
-                        // Handle marking last optimistic message as failed
-                        break;
-                }
-            };
-
-            ws.onerror = (error) => console.error("WebSocket error:", error);
-            ws.onclose = () => console.log("WebSocket connection closed");
-
-            return () => {
-                ws.close();
-                socketRef.current = null;
-            };
+            fetchMessages(hallId, roomId);
         }
-    }, [isDm, roomId, hallId, friendId, serverName, channelName, friendDisplayName, generateWelcomeMessage]);
+    }, [isDm, roomId, hallId, friendId, serverName, channelName, friendDisplayName, generateWelcomeMessage, fetchMessages]);
+
+    // Handle incoming messages from store or hook
+    // Actually the useWebSocket hook updates the message store.
+    // ChatArea currently uses local state for messages. Let's keep it simple for now and sync with hook's callbacks if possible,
+    // or just use the hook's returned state if we refactor more.
+    // For now, I'll modify useWebSocket to accept an onMessage callback or similar.
+    // Wait, useWebSocket already calls addMessage(roomId, message).
+    // Let's make ChatArea listen to the store.
 
     // combining welcome message with user messages for rendering
     const allMessages = useMemo(() => {
@@ -224,26 +185,16 @@ export default function ChatArea({
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setMessageInput(e.target.value);
 
-        if (!isDm && roomId && socketRef.current?.readyState === WebSocket.OPEN) {
-            // Send typing indicator
-            socketRef.current.send(JSON.stringify({
-                type: "typing",
-                room_id: roomId,
-                sent_at: new Date().toISOString()
-            }));
+        if (!isDm && roomId && isConnected) {
+            // Send typing indicator via hook
+            sendTyping();
 
             // Clear previous timeout
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-            // Set timeout to stop typing (server also has a 5s auto-stop but good to be explicit)
+            // Set timeout to stop typing
             typingTimeoutRef.current = setTimeout(() => {
-                if (socketRef.current?.readyState === WebSocket.OPEN) {
-                    socketRef.current.send(JSON.stringify({
-                        type: "stop_typing",
-                        room_id: roomId,
-                        sent_at: new Date().toISOString()
-                    }));
-                }
+                sendStopTyping();
             }, 3000);
         }
     };
@@ -254,42 +205,16 @@ export default function ChatArea({
         const content = messageInput.trim();
         setMessageInput("");
 
-        if (!isDm && roomId && socketRef.current?.readyState === WebSocket.OPEN) {
-            const sentAt = new Date().toISOString();
-
-            // Optimistic update
-            const optimisticMsg: Message = {
-                id: `opt-${Date.now()}`,
-                sender: user?.display_name || user?.username || "You",
-                text: content,
-                timestamp: new Date(sentAt),
-                isOptimistic: true,
-                isConsecutive: messages.length > 0 &&
-                    messages[messages.length - 1].sender === (user?.display_name || user?.username || "You")
-            };
-            setMessages(prev => [...prev, optimisticMsg]);
-
-            socketRef.current.send(JSON.stringify({
-                type: "text",
-                room_id: roomId,
-                content: content,
-                sent_at: sentAt
-            }));
+        if (!isDm && roomId && isConnected) {
+            sendWsMessage(content);
+            // The store will be updated when the message is broadcast back from the server
+            // For true optimistic UI, we would call addMessage(roomId, optimisticMsg) here
         } else if (!isDm) {
             console.error("WebSocket is not connected");
         } else {
             // Local fallback for now (e.g. DMs not yet implemented in backend)
-            const newMessage: Message = {
-                id: Date.now().toString(),
-                sender: user?.display_name || "Unknown",
-                text: content,
-                timestamp: new Date(),
-                isConsecutive: messages.length > 0 &&
-                    messages[messages.length - 1].sender === (user?.display_name || "Unknown") &&
-                    !messages[messages.length - 1].isSystem &&
-                    !messages[messages.length - 1].isWelcome
-            };
-            setMessages(prev => [...prev, newMessage]);
+            // Note: This won't persist as it's not in the store,
+            // we should eventually add DM support to the store.
         }
     };
 
@@ -432,10 +357,10 @@ export default function ChatArea({
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
-                        {typingUsers.size > 0 && (
+                        {typingUsersList.length > 0 && (
                             <div className="text-xs text-gray-500 italic ml-14">
-                                {Array.from(typingUsers).length === 1
-                                    ? `${Array.from(typingUsers)[0]} is typing...`
+                                {typingUsersList.length === 1
+                                    ? `${members[typingUsersList[0]]?.displayName || typingUsersList[0]} is typing...`
                                     : "Several people are typing..."}
                             </div>
                         )}

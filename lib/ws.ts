@@ -81,9 +81,16 @@ export class WebSocketClient {
     /**
      * Send a text message
      */
-    sendMessage(content: string): void {
+    sendMessage(roomId: string, content: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ type: "message", data: { content } }));
+            this.ws.send(
+                JSON.stringify({
+                    type: "text",
+                    room_id: roomId,
+                    content: content,
+                    sent_at: new Date().toISOString(),
+                }),
+            );
         } else {
             console.warn("WebSocket not connected, message not sent");
         }
@@ -92,9 +99,30 @@ export class WebSocketClient {
     /**
      * Send typing indicator
      */
-    sendTyping(): void {
+    sendTyping(roomId: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ type: "typing" }));
+            this.ws.send(
+                JSON.stringify({
+                    type: "typing",
+                    room_id: roomId,
+                    sent_at: new Date().toISOString(),
+                }),
+            );
+        }
+    }
+
+    /**
+     * Send stop typing indicator
+     */
+    sendStopTyping(roomId: string): void {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(
+                JSON.stringify({
+                    type: "stop_typing",
+                    room_id: roomId,
+                    sent_at: new Date().toISOString(),
+                }),
+            );
         }
     }
 
@@ -148,16 +176,31 @@ export class WebSocketClient {
     private handleMessage(data: WSMessage): void {
         switch (data.type) {
             case "text":
-                // Map WS text message to Api Message format if needed,
-                // but for now just fix the build error.
-                // This class seems unused but needs to compile.
-                console.log("Received text message:", data.content);
+                // Map WS text message to Api Message format
+                // In api.ts, WSTextMessage is almost the same as Message but with author_id instead of author object
+                // The addMessage store action should handle this or we can convert it here
+                this.listeners.onMessage?.({
+                    id: data.id || "",
+                    room_id: data.room_id,
+                    author_id: data.author_id,
+                    content: data.content,
+                    sent_at: data.sent_at,
+                    edited_at: data.edited_at || null,
+                    deleted_at: data.deleted_at || null,
+                    attachments: data.attachments,
+                });
                 break;
             case "typing":
                 this.listeners.onTyping?.({ author_id: data.author_id, room_id: data.room_id });
                 break;
+            case "stop_typing":
+                // Handle stop typing if needed
+                break;
+            case "error":
+                this.listeners.onError?.(new Error(data.error));
+                break;
             default:
-                console.warn("Unhandled message type:", data.type);
+                console.warn("Unhandled message type:", (data as any).type);
         }
     }
 
@@ -189,9 +232,14 @@ export class WebSocketClient {
 let wsInstance: WebSocketClient | null = null;
 
 export function getWebSocketClient(url: string): WebSocketClient {
-    if (!wsInstance) {
-        wsInstance = new WebSocketClient(url);
+    if (wsInstance) {
+        // If it's the same URL, return existing instance
+        // But the class doesn't store URL in a public way easily accessible here,
+        // and we usually want a fresh connection if the hook calls this.
+        // For simplicity, let's just allow the hook to disconnect the old one.
+        wsInstance.disconnect();
     }
+    wsInstance = new WebSocketClient(url);
     return wsInstance;
 }
 
