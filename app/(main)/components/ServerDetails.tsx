@@ -70,6 +70,7 @@ export default function ServerDetails({
   const categoryPopupRef = useRef<HTMLDivElement | null>(null);
   const deleteFloorMenuRef = useRef<HTMLDivElement | null>(null);
   const roomMenuRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch floors and rooms when activeServer changes
   useEffect(() => {
@@ -501,17 +502,40 @@ export default function ServerDetails({
       {/* Main Area Context Menu */}
       {showContextMenu && (
         <div
-          className="fixed bg-white border shadow rounded-lg border-[#dcd9d3] z-50 py-2 px-2"
+          ref={menuRef}
+          className="flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-lg w-48 bg-[#ffffff] cursor-pointer text-[#1e1e1e] text-sm tracking-wide font-base"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           <button
-            className="block w-full text-left text-[#1e1e1e] hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 text-sm tracking-wide"
+            className="text-left w-full py-2 px-2 rounded-md font-base cursor-pointer hover:bg-[#f2f2f3]"
             onClick={() => {
               setShowContextMenu(false);
               onOpenCategoryPopup();
             }}
           >
             Create Floor
+          </button>
+          <div className="h-px bg-gray-200 w-full my-1" />
+          <button
+            className="text-left w-full py-2 px-2 rounded-md font-base cursor-pointer hover:bg-[#f2f2f3]"
+            onClick={() => {
+              setShowContextMenu(false);
+              onOpenRoomPopup?.();
+            }}
+          >
+            Create Room
+          </button>
+          <div className="h-px bg-gray-200 w-full my-1" />
+          <button
+            className="text-left w-full py-2 px-2 rounded-md font-base cursor-pointer hover:bg-[#f2f2f3]"
+            onClick={() => {
+              setShowContextMenu(false);
+              if (activeServer) {
+                window.location.href = `/halls/${activeServer.id}/settings/profile`;
+              }
+            }}
+          >
+            Hall Settings
           </button>
         </div>
       )}

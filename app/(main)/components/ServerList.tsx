@@ -212,6 +212,30 @@ export default function ServerList({
 			},
 		},
 		{
+			label: "Create Room",
+			danger: false,
+			onClick: () => {
+				if (contextMenu) {
+					const server = servers.find((s) => s.id === contextMenu?.serverId);
+					if (server) {
+						onCreateRoomClick(server);
+					}
+				}
+				setContextMenu(null);
+			},
+		},
+		{
+			label: "Hall Settings",
+			danger: false,
+			onClick: () => {
+				if (contextMenu) {
+					// Navigate to hall settings
+					window.location.href = `/halls/${contextMenu.serverId}/settings/profile`;
+				}
+				setContextMenu(null);
+			},
+		},
+		{
 			label: "Delete Hall",
 			danger: true,
 			onClick: () => {
@@ -257,7 +281,9 @@ export default function ServerList({
 			label: "Hall Settings",
 			danger: false,
 			onClick: () => {
-				console.log("Hall Settings");
+				if (activeServer) {
+					window.location.href = `/halls/${activeServer.id}/settings/profile`;
+				}
 				setExtraServerContextMenu(null);
 			},
 		},
