@@ -93,8 +93,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userData = await getUserMe();
         if (userData) {
-          const currentToken = useUserStore.getState().user?.access_token;
-          const mergedData = { ...userData, access_token: currentToken || userData.access_token };
+          // Priority: yapp_access_token key -> Zustand store -> current userData
+          const forcedToken = typeof window !== 'undefined' ? localStorage.getItem("yapp_access_token") : null;
+          const storeToken = useUserStore.getState().user?.access_token;
+          const token = forcedToken || storeToken || (userData as any).access_token;
+
+          const mergedData = { ...userData, access_token: token };
           setUser(mergedData);
           setUserEdge(mergedData);
           setActive(true);
@@ -127,8 +131,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(true);
         const userData = await getUserMe();
         if (userData) {
-          const currentToken = useUserStore.getState().user?.access_token;
-          const mergedData = { ...userData, access_token: currentToken || userData.access_token };
+          // Priority: yapp_access_token key -> Zustand store -> current userData
+          const forcedToken = typeof window !== 'undefined' ? localStorage.getItem("yapp_access_token") : null;
+          const storeToken = useUserStore.getState().user?.access_token;
+          const token = forcedToken || storeToken || (userData as any).access_token;
+
+          const mergedData = { ...userData, access_token: token };
           setUser(mergedData);
           setUserEdge(mergedData);
           setActive(true);
@@ -190,6 +198,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Sync token to store if returned in signin response
         if (result.access_token) {
           console.log("[AuthContext.signin] Updating user store with access token");
+          // FORCE into localStorage immediately to bypass Zustand sync lag
+          localStorage.setItem("yapp_access_token", result.access_token);
+
           setUserEdge({
             id: result.id,
             username: result.username,

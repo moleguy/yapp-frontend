@@ -1365,21 +1365,24 @@ export function getWebSocketUrl(roomId: string): string {
   // Try to get token from user store if possible
   let token = "";
   try {
-    if (typeof window !== 'undefined') {
-      const userStorage = localStorage.getItem('user-storage');
-      if (userStorage) {
-        const parsed = JSON.parse(userStorage);
-        // Robust check for the token path in Zustand persist state
-        token = parsed?.state?.user?.access_token || "";
-        console.log("[getWebSocketUrl] Token found in localStorage:", !!token);
+    if (typeof window !== "undefined") {
+      // 1. Check dedicated key first (for speed/reliability)
+      token = localStorage.getItem("yapp_access_token") || "";
+
+      // 2. Check Zustand store if dedicated key is missing
+      if (!token) {
+        const userStorage = localStorage.getItem("user-storage");
+        if (userStorage) {
+          const parsed = JSON.parse(userStorage);
+          token = parsed?.state?.user?.access_token || "";
+        }
       }
 
-      // Fallback: Check cookies if localStorage fails
+      // 3. Check cookies as last resort
       if (!token) {
         const match = document.cookie.match(/(^| )access_token=([^;]+)/);
         if (match) {
           token = match[2];
-          console.log("[getWebSocketUrl] Token found in cookies");
         }
       }
     }
