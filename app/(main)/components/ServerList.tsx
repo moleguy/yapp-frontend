@@ -236,7 +236,7 @@ export default function ServerList({
 			},
 		},
 		{
-			label: "Delete Hall",
+			label: "Leave / Delete Hall",
 			danger: true,
 			onClick: () => {
 				if (!contextMenu) return;

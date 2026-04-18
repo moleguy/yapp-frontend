@@ -11,7 +11,7 @@ import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
-import { Hall, getUserHalls, Room } from "@/lib/api";
+import { Hall, getUserHalls, Room, deleteHall, leaveHall } from "@/lib/api";
 import { useResizable } from "@/app/hooks/useResizable";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 
@@ -198,19 +198,42 @@ export default function HomePage() {
     setActiveView("server");
   };
 
-  const handleLeaveHall = (hallId: string) => {
-    const hallIndex = halls.findIndex((h) => h.id === hallId);
-    if (hallIndex !== -1) {
-      const newHalls = halls.filter((h) => h.id !== hallId);
-      setHalls(newHalls);
+  const handleLeaveHall = async (hallId: string) => {
+    try {
+      // Find the hall to check if current user is owner
+      const hallToDelete = halls.find((h) => h.id === hallId);
+      const isOwner = hallToDelete?.owner_id === user?.id;
 
-      if (activeHall?.id === hallId) {
-        const nextHall =
-          newHalls.length > 0
-            ? newHalls[Math.min(hallIndex, newHalls.length - 1)]
-            : null;
-        setActiveHall(nextHall);
+      let success = false;
+      if (isOwner) {
+        const confirmDelete = window.confirm(
+          "You are the owner of this Hall. Deleting it will remove it for everyone. Are you sure?",
+        );
+        if (!confirmDelete) return;
+        success = await deleteHall(hallId);
+      } else {
+        const confirmLeave = window.confirm("Are you sure you want to leave this Hall?");
+        if (!confirmLeave) return;
+        success = await leaveHall(hallId);
       }
+
+      if (success) {
+        const hallIndex = halls.findIndex((h) => h.id === hallId);
+        if (hallIndex !== -1) {
+          const newHalls = halls.filter((h) => h.id !== hallId);
+          setHalls(newHalls);
+
+          if (activeHall?.id === hallId) {
+            const nextHall =
+              newHalls.length > 0
+                ? newHalls[Math.min(hallIndex, newHalls.length - 1)]
+                : null;
+            setActiveHall(nextHall);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error leaving/deleting hall:", error);
     }
   };
 
