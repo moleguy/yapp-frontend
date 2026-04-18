@@ -577,12 +577,31 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
     console.log("[AuthSignIn] Starting signin with email:", payload.email);
     console.log("[AuthSignIn] API Base:", apiBase);
 
-    const result = await request<SignInRes>(`${apiBase}/auth/signin`, {
+    // Signin is special because the token is in the envelope, not the data field
+    // We use a manual fetch/request here to avoid the automatic "data" unwrapping
+    const backendUrl = `${apiBase}/auth/signin`;
+    const res = await fetch(isProxyEnabled ? `/api/proxy?path=${encodeURIComponent("/auth/signin")}` : backendUrl, {
       method: "POST",
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
       body: JSON.stringify(payload),
     });
 
-    console.log("[AuthSignIn] Response received:", result);
+    const body = await res.json();
+    console.log("[AuthSignIn] Raw Response body:", body);
+
+    if (!res.ok) {
+      throw new Error(body.message || body.error || "Signin failed");
+    }
+
+    // Combine the envelope fields (success, access_token) with the user data
+    const result: SignInRes = {
+      ...(body.data || {}),
+      success: body.success,
+      message: body.message,
+      access_token: body.access_token,
+    };
+
+    console.log("[AuthSignIn] Processed result with token:", !!result.access_token);
 
     // Ensure result object has required fields
     if (!result || typeof result !== "object" || !result.id) {
