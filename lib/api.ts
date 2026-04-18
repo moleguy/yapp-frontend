@@ -334,6 +334,14 @@ export type Attachment = {
   file_type: string;
   file_size: number;
   created_at: string;
+  updated_at: string;
+};
+
+export type AttachmentReq = {
+  file_name: string;
+  url: string;
+  file_type?: string;
+  file_size?: number;
 };
 
 export type Reaction = {
@@ -486,27 +494,64 @@ export type InviteInfo = {
 };
 
 // ========== WEBSOCKET MESSAGE TYPES ==========
-export type WSMessage = WSTextMessage | WSTypingMessage | WSReadMessage;
-
-export type WSTextMessage = {
-  type: "message";
-  data: Message;
+export type WSBaseMessage = {
+  room_id: string;
+  author_id: string;
+  sent_at: string;
 };
 
-export type WSTypingMessage = {
+export type WSTextMessage = WSBaseMessage & {
+  type: "text";
+  id?: string;
+  content: string;
+  mention_everyone?: boolean;
+  mentions?: string[];
+  attachments?: Attachment[];
+  created_at?: string;
+  updated_at?: string;
+  edited_at?: string | null;
+  deleted_at?: string | null;
+};
+
+export type WSTypingMessage = WSBaseMessage & {
   type: "typing";
-  data: {
-    user_id: string;
-    room_id: string;
-  };
+  typing_user: string;
 };
 
-export type WSReadMessage = {
-  type: "read";
-  data: {
-    user_id: string;
-    message_id: string;
-  };
+export type WSStopTypingMessage = WSBaseMessage & {
+  type: "stop_typing";
+};
+
+export type WSJoinMessage = WSBaseMessage & {
+  type: "join";
+};
+
+export type WSLeaveMessage = WSBaseMessage & {
+  type: "leave";
+};
+
+export type WSErrorMessage = WSBaseMessage & {
+  type: "error";
+  error: string;
+};
+
+export type WSMessage =
+  | WSTextMessage
+  | WSTypingMessage
+  | WSStopTypingMessage
+  | WSJoinMessage
+  | WSLeaveMessage
+  | WSErrorMessage;
+
+// Client-side outgoing message shape
+export type WSSendTextMessage = {
+  type: "text";
+  room_id: string;
+  content: string;
+  sent_at: string;
+  mention_everyone?: boolean;
+  mentions?: string[];
+  attachments?: Omit<AttachmentReq, "id">[];
 };
 
 // ========== ERROR TYPES ==========
