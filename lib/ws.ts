@@ -42,7 +42,6 @@ export class WebSocketClient {
                 this.ws.onopen = () => {
                     console.log("WebSocket connected");
                     this.reconnectAttempts = 0;
-                    this.startHeartbeat();
                     this.listeners.onOpen?.();
                     resolve();
                 };
@@ -65,7 +64,6 @@ export class WebSocketClient {
 
                 this.ws.onclose = () => {
                     console.log("WebSocket closed");
-                    this.stopHeartbeat();
                     this.listeners.onClose?.();
 
                     if (!this.isManualClose && this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -143,7 +141,6 @@ export class WebSocketClient {
      */
     disconnect(): void {
         this.isManualClose = true;
-        this.stopHeartbeat();
         if (this.ws) {
             this.ws.close();
             this.ws = null;
@@ -215,23 +212,17 @@ export class WebSocketClient {
 
     /**
      * Start heartbeat to keep connection alive
+     * (Currently disabled - using native WS ping/pong)
      */
     private startHeartbeat(): void {
-        this.heartbeatInterval = setInterval(() => {
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({ type: "ping" }));
-            }
-        }, 30000); // 30 seconds
+        // Handled by browser + backend
     }
 
     /**
      * Stop heartbeat
      */
     private stopHeartbeat(): void {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-        }
+        // Handled by browser + backend
     }
 }
 

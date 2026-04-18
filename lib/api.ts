@@ -1395,46 +1395,32 @@ export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
 
 // ========== WEBSOCKET HELPER ==========
 export function getWebSocketUrl(roomId: string): string {
-  let backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+  // Use the public variable directly to avoid any proxy interference
+  const rawUrl = process.env.NEXT_PUBLIC_API_BASE || "https://yappserver.onrender.com";
 
-  // Clean up backendUrl: remove trailing slashes
-  backendUrl = backendUrl.replace(/\/+$/, "");
+  // Clean the URL strictly: remove trailing slashes
+  const cleanUrl = rawUrl.replace(/\/+$/, "");
 
-  // Force wss if on https, or ws if on http
-  let wsBase = "";
-  if (backendUrl.startsWith("https://")) {
-    wsBase = backendUrl.replace("https://", "wss://");
-  } else if (backendUrl.startsWith("http://")) {
-    wsBase = backendUrl.replace("http://", "ws://");
-  } else {
-    // Fallback if protocol is missing
-    wsBase = `ws://${backendUrl}`;
-  }
+  // Determine protocol: wss for https, ws for http
+  const protocol = cleanUrl.startsWith("https") ? "wss" : "ws";
 
-  // Try to get token from user store if possible
+  // Extract host (e.g., yappserver.onrender.com)
+  const host = cleanUrl.replace(/^https?:\/\//, "");
+
+  // Get token from localStorage
   let token = "";
-  try {
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("yapp_access_token") || "";
-      if (!token) {
-        const userStorage = localStorage.getItem("user-storage");
-        if (userStorage) {
-          const parsed = JSON.parse(userStorage);
-          token = parsed?.state?.user?.access_token || "";
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("[getWebSocketUrl] Failed to get token", e);
+  if (typeof window !== "undefined") {
+    token = localStorage.getItem("yapp_access_token") || "";
   }
 
-  // Correct path is /ws/rooms/:roomId
-  const finalUrl = `${wsBase}/ws/rooms/${roomId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  // Construct URL
+  // Backend path: /ws/rooms/:room_id
+  const finalUrl = `${protocol}://${host}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
 
   if (typeof window !== 'undefined') {
     (window as any).__LAST_WS_URL = finalUrl;
   }
 
-  console.log("[getWebSocketUrl] Generated URL:", finalUrl);
+  console.log("[WebSocket] Target URL:", finalUrl);
   return finalUrl;
 }
