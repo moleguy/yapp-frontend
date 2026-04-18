@@ -51,21 +51,21 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     // Typing indicator handler
     const handleTyping = useCallback(
-        (data: { user_id: string; room_id: string }) => {
+        (data: { author_id: string; room_id: string }) => {
             const typing = stateRef.current.isTyping;
 
             // Clear existing timeout
-            if (typing.has(data.user_id)) {
-                clearTimeout(typing.get(data.user_id)?.timeout);
+            if (typing.has(data.author_id)) {
+                clearTimeout(typing.get(data.author_id)?.timeout);
             }
 
             // Set new timeout for 3 seconds
             const timeout = setTimeout(() => {
-                clearTypingIndicator(data.user_id);
+                clearTypingIndicator(data.author_id);
             }, 3000);
 
-            typing.set(data.user_id, {
-                userId: data.user_id,
+            typing.set(data.author_id, {
+                userId: data.author_id,
                 timeout,
             });
         },
@@ -130,7 +130,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 await wsRef.current!.connect({
                     onMessage: handleMessage,
                     onTyping: handleTyping,
-                    onRead: handleRead,
                     onError: handleError,
                     onOpen: handleOpen,
                     onClose: handleClose,
