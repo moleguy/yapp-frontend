@@ -24,6 +24,7 @@ interface ServerListProps {
 	isLoading: boolean;
 	showChannels: boolean;
 	setShowChannels: React.Dispatch<React.SetStateAction<boolean>>;
+	currentUserId?: string;
 }
 
 const MAX_VISIBLE = 7;
@@ -41,6 +42,7 @@ export default function ServerList({
 	onCreateRoomClick,
 	showChannels,
 	setShowChannels,
+	currentUserId,
 }: ServerListProps) {
 	const [showPopup, setShowPopup] = useState(false);
 	const [contextMenu, setContextMenu] = useState<{
@@ -236,7 +238,10 @@ export default function ServerList({
 			},
 		},
 		{
-			label: "Leave / Delete Hall",
+			label:
+				contextMenu && servers.find((s) => s.id === contextMenu.serverId)?.owner_id === currentUserId
+					? "Delete Hall"
+					: "Leave Hall",
 			danger: true,
 			onClick: () => {
 				if (!contextMenu) return;
@@ -302,6 +307,16 @@ export default function ServerList({
 			danger: false,
 			onClick: () => {
 				console.log("Manage Halls");
+				setExtraServerContextMenu(null);
+			},
+		},
+		{
+			label: activeServer?.owner_id === currentUserId ? "Delete Hall" : "Leave Hall",
+			danger: true,
+			onClick: () => {
+				if (activeServer) {
+					onLeaveServer(activeServer.id);
+				}
 				setExtraServerContextMenu(null);
 			},
 		},

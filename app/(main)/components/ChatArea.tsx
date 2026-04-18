@@ -69,8 +69,8 @@ export default function ChatArea({
     // Separate state for actual messages (user messages)
     const [messages, setMessages] = useState<Message[]>([]);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-    const [members, setMembers] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
-    const membersRef = useRef<Record<string, { username: string; avatarUrl?: string }>>({});
+    const [members, setMembers] = useState<Record<string, { username: string; displayName: string; avatarUrl?: string }>>({});
+    const membersRef = useRef<Record<string, { username: string; displayName: string; avatarUrl?: string }>>({});
     const socketRef = useRef<WebSocket | null>(null);
 
     // Update ref whenever members state changes
@@ -114,12 +114,13 @@ export default function ChatArea({
 
         // Fetch hall members for name/avatar mapping
         if (hallId) {
-            getHallMembers(hallId).then(fetchedMembers => {
-                if (fetchedMembers) {
-                    const memberMap: Record<string, { username: string; avatarUrl?: string }> = {};
-                    fetchedMembers.forEach(m => {
+            getHallMembers(hallId).then(res => {
+                if (res && res.members) {
+                    const memberMap: Record<string, { username: string; displayName: string; avatarUrl?: string }> = {};
+                    res.members.forEach(m => {
                         memberMap[m.user_id] = {
-                            username: m.nickname || m.user?.username || m.user_id,
+                            username: m.user?.username || m.user_id,
+                            displayName: m.nickname || m.user?.display_name || m.user?.username || m.user_id,
                             avatarUrl: m.user?.avatar_thumbnail_url ?? undefined
                         };
                     });
@@ -159,7 +160,7 @@ export default function ChatArea({
                         const authorInfo = membersRef.current[msg.author_id];
                         const newMsg: Message = {
                             id: msg.id || Date.now().toString(),
-                            sender: authorInfo?.username || msg.author_id,
+                            sender: authorInfo?.displayName || msg.author_id,
                             senderAvatar: authorInfo?.avatarUrl ?? undefined,
                             text: msg.content,
                             timestamp: new Date(msg.sent_at),
@@ -178,12 +179,12 @@ export default function ChatArea({
                         });
                         break;
                     case "typing":
-                        const typingUser = membersRef.current[msg.typing_user]?.username || msg.typing_user;
+                        const typingUser = membersRef.current[msg.typing_user]?.displayName || msg.typing_user;
                         setTypingUsers(prev => new Set(prev).add(typingUser));
                         break;
                     case "stop_typing":
                         setTypingUsers(prev => {
-                            const typingUser = membersRef.current[msg.author_id]?.username || msg.author_id;
+                            const typingUser = membersRef.current[msg.author_id]?.displayName || msg.author_id;
                             const next = new Set(prev);
                             next.delete(typingUser);
                             return next;

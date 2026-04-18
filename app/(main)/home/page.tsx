@@ -315,6 +315,7 @@ export default function HomePage() {
               isLoading={hallsLoading}
               showChannels={showChannels}
               setShowChannels={setShowChannels}
+              currentUserId={user?.id}
             />
 
             {/* Channels / DM section */}

@@ -1080,9 +1080,11 @@ export async function removeReaction(
 }
 
 // ========== HALL MEMBER FUNCTIONS ==========
-export async function getHallMembers(hallId: string): Promise<HallMember[] | null> {
+export async function getHallMembers(
+  hallId: string,
+): Promise<{ members: HallMember[]; total: number } | null> {
   try {
-    return await request<HallMember[]>(
+    return await request<{ members: HallMember[]; total: number }>(
       `${protectedApiBase}/halls/${hallId}/settings/members`,
       {
         method: "GET",

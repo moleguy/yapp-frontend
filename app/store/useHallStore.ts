@@ -163,9 +163,9 @@ export const useHallStore = create<HallState>()(
                 if (!hallId) return;
 
                 try {
-                    const members = await getHallMembers(hallId);
-                    if (members) {
-                        set({ members, error: null });
+                    const res = await getHallMembers(hallId);
+                    if (res && res.members) {
+                        set({ members: res.members, error: null });
                     }
                 } catch (error) {
                     console.error("Failed to fetch members:", error);
