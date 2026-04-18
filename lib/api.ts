@@ -1395,17 +1395,27 @@ export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
 
 // ========== WEBSOCKET HELPER ==========
 export function getWebSocketUrl(roomId: string): string {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-  const wsBase = backendUrl.replace(/^http/, "ws");
+  let backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
+  // Clean up backendUrl: remove trailing slashes
+  backendUrl = backendUrl.replace(/\/+$/, "");
+
+  // Force wss if on https, or ws if on http
+  let wsBase = "";
+  if (backendUrl.startsWith("https://")) {
+    wsBase = backendUrl.replace("https://", "wss://");
+  } else if (backendUrl.startsWith("http://")) {
+    wsBase = backendUrl.replace("http://", "ws://");
+  } else {
+    // Fallback if protocol is missing
+    wsBase = `ws://${backendUrl}`;
+  }
 
   // Try to get token from user store if possible
   let token = "";
   try {
     if (typeof window !== "undefined") {
-      // 1. Check dedicated key first (for speed/reliability)
       token = localStorage.getItem("yapp_access_token") || "";
-
-      // 2. Check Zustand store if dedicated key is missing
       if (!token) {
         const userStorage = localStorage.getItem("user-storage");
         if (userStorage) {
@@ -1413,26 +1423,18 @@ export function getWebSocketUrl(roomId: string): string {
           token = parsed?.state?.user?.access_token || "";
         }
       }
-
-      // 3. Check cookies as last resort
-      if (!token) {
-        const match = document.cookie.match(/(^| )access_token=([^;]+)/);
-        if (match) {
-          token = match[2];
-        }
-      }
     }
   } catch (e) {
     console.warn("[getWebSocketUrl] Failed to get token", e);
   }
 
-  const finalUrl = `${wsBase}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
+  // Correct path is /ws/rooms/:roomId
+  const finalUrl = `${wsBase}/ws/rooms/${roomId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 
   if (typeof window !== 'undefined') {
     (window as any).__LAST_WS_URL = finalUrl;
-    (window as any).__WS_TOKEN_FOUND = !!token;
   }
 
-  console.log("[getWebSocketUrl] Room:", roomId, "Token Found:", !!token);
+  console.log("[getWebSocketUrl] Generated URL:", finalUrl);
   return finalUrl;
 }
