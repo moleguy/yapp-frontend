@@ -361,6 +361,7 @@ export type Message = {
   deleted_at: string | null;
   attachments?: Attachment[];
   reactions?: Reaction[];
+  author?: UserMeRes;
 };
 
 export type CreateMessageReq = {
@@ -446,6 +447,7 @@ export type HallMember = {
   nickname: string | null;
   joined_at: string;
   updated_at: string;
+  user?: UserMeRes;
 };
 
 export type UpdateHallMemberReq = {

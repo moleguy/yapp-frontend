@@ -15,7 +15,9 @@ import {
     Message as ApiMessage,
     getWebSocketUrl,
     WSMessage,
-    WSTextMessage
+    WSTextMessage,
+    getHallMembers,
+    HallMember
 } from "@/lib/api";
 
 type Message = {
@@ -67,7 +69,14 @@ export default function ChatArea({
     // Separate state for actual messages (user messages)
     const [messages, setMessages] = useState<Message[]>([]);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+    const [members, setMembers] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
+    const membersRef = useRef<Record<string, { username: string; avatarUrl?: string }>>({});
     const socketRef = useRef<WebSocket | null>(null);
+
+    // Update ref whenever members state changes
+    useEffect(() => {
+        membersRef.current = members;
+    }, [members]);
 
     // Separate welcome message that can be easily modified
     const [welcomeMessage, setWelcomeMessage] = useState<Message | null>(null);
@@ -103,6 +112,22 @@ export default function ChatArea({
         setMessages([]); // Clear user messages when context changes
         setMessageInput("");
 
+        // Fetch hall members for name/avatar mapping
+        if (hallId) {
+            getHallMembers(hallId).then(fetchedMembers => {
+                if (fetchedMembers) {
+                    const memberMap: Record<string, { username: string; avatarUrl?: string }> = {};
+                    fetchedMembers.forEach(m => {
+                        memberMap[m.user_id] = {
+                            username: m.nickname || m.user?.username || m.user_id,
+                            avatarUrl: m.user?.avatar_thumbnail_url
+                        };
+                    });
+                    setMembers(memberMap);
+                }
+            });
+        }
+
         // Fetch messages from backend if it's a room
         if (!isDm && hallId && roomId) {
             const fetchMessages = async () => {
@@ -110,7 +135,8 @@ export default function ChatArea({
                 if (res && res.messages) {
                     const convertedMessages: Message[] = res.messages.map((m, index, array) => ({
                         id: m.id,
-                        sender: m.author?.username || m.author_id,
+                        sender: m.author?.display_name || m.author?.username || m.author_id,
+                        senderAvatar: m.author?.avatar_thumbnail_url,
                         text: m.content,
                         timestamp: new Date(m.sent_at),
                         isConsecutive: index > 0 && array[index-1].author_id === m.author_id
@@ -130,15 +156,17 @@ export default function ChatArea({
 
                 switch (msg.type) {
                     case "text":
+                        const authorInfo = membersRef.current[msg.author_id];
                         const newMsg: Message = {
                             id: msg.id || Date.now().toString(),
-                            sender: msg.author_id, // TODO: Map to username if possible
+                            sender: authorInfo?.username || msg.author_id,
+                            senderAvatar: authorInfo?.avatarUrl,
                             text: msg.content,
                             timestamp: new Date(msg.sent_at),
                         };
                         setMessages(prev => {
                             // Check if it matches an optimistic message
-                            const existingIndex = prev.findIndex(m => m.isOptimistic && m.text === newMsg.text && m.sender === newMsg.sender);
+                            const existingIndex = prev.findIndex(m => m.isOptimistic && m.text === newMsg.text && m.sender === (user?.display_name || user?.username || "You"));
                             if (existingIndex !== -1) {
                                 const newMessages = [...prev];
                                 newMessages[existingIndex] = { ...newMsg, isOptimistic: false };
@@ -150,12 +178,14 @@ export default function ChatArea({
                         });
                         break;
                     case "typing":
-                        setTypingUsers(prev => new Set(prev).add(msg.typing_user));
+                        const typingUser = membersRef.current[msg.typing_user]?.username || msg.typing_user;
+                        setTypingUsers(prev => new Set(prev).add(typingUser));
                         break;
                     case "stop_typing":
                         setTypingUsers(prev => {
+                            const typingUser = membersRef.current[msg.author_id]?.username || msg.author_id;
                             const next = new Set(prev);
-                            next.delete(msg.author_id);
+                            next.delete(typingUser);
                             return next;
                         });
                         break;
@@ -335,9 +365,9 @@ export default function ChatArea({
                                 <div className={`flex gap-4 items-start group-hover:bg-[#eeeeef] rounded-lg px-2 transition-colors ${msg.isSystem ? 'flex items-start' : ''} ${msg.isOptimistic ? 'opacity-70' : ''} ${msg.hasError ? 'text-red-500' : ''}`}>
                                     {!msg.isSystem && !msg.isConsecutive && (
                                         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 flex items-start overflow-hidden">
-                                            {avatarThumbnailUrl ? (
+                                            {msg.senderAvatar || avatarThumbnailUrl ? (
                                                 <Image
-                                                    src={avatarThumbnailUrl}
+                                                    src={msg.senderAvatar || avatarThumbnailUrl || ""}
                                                     alt={msg.sender}
                                                     width={124}
                                                     height={124}
