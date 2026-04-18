@@ -186,6 +186,7 @@ export type SignInRes = {
   updated_at: string;
   success: boolean;
   message?: string;
+  access_token?: string;
 };
 
 export type SignUpReq = {
@@ -214,6 +215,7 @@ export type UserMeRes = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type UpdateUserMeReq = {
@@ -269,6 +271,7 @@ export type Floor = {
   is_private: boolean;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type CreateFloorReq = {
@@ -295,6 +298,7 @@ export type Room = {
   is_private: boolean;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type CreateRoomReq = {
@@ -335,6 +339,7 @@ export type Attachment = {
   file_size: number;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type AttachmentReq = {
@@ -362,6 +367,7 @@ export type Message = {
   attachments?: Attachment[];
   reactions?: Reaction[];
   author?: UserMeRes;
+  isOptimistic?: boolean;
 };
 
 export type CreateMessageReq = {
@@ -413,6 +419,7 @@ export type RolePermission = {
   attach_files: boolean;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type Role = {
@@ -424,6 +431,7 @@ export type Role = {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 };
 
 export type CreateRoleReq = {
@@ -1353,5 +1361,19 @@ export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
 export function getWebSocketUrl(roomId: string): string {
   const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
   const wsBase = backendUrl.replace(/^http/, "ws");
-  return `${wsBase}/ws/rooms/${roomId}`;
+
+  // Try to get token from user store if possible, or cookies
+  // Since this is a library function, we'll try to get it from localStorage where Zustand persists it
+  let token = "";
+  try {
+    const userStorage = localStorage.getItem('user-storage');
+    if (userStorage) {
+      const parsed = JSON.parse(userStorage);
+      token = parsed.state?.user?.access_token || "";
+    }
+  } catch (e) {
+    console.warn("Failed to get token from localStorage", e);
+  }
+
+  return `${wsBase}/ws/rooms/${roomId}${token ? `?token=${token}` : ""}`;
 }

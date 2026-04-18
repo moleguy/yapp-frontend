@@ -10,7 +10,7 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react";
 // import { useAuth } from "@/app/contexts/AuthContext";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
-import { useMessagesForRoom, useFetchMessages } from "@/app/store/useMessageStore";
+import { useMessagesForRoom, useFetchMessages, useAddOptimisticMessage } from "@/app/store/useMessageStore";
 import Image from "next/image";
 import {
     getMessages,
@@ -19,7 +19,8 @@ import {
     WSMessage,
     WSTextMessage,
     getHallMembers,
-    HallMember
+    HallMember,
+    createMessage
 } from "@/lib/api";
 
 type Message = {
@@ -71,6 +72,7 @@ export default function ChatArea({
     // Get messages from store
     const storeMessages = useMessagesForRoom(roomId || "");
     const fetchMessages = useFetchMessages();
+    const addOptimisticMessage = useAddOptimisticMessage();
 
     const {
         isConnected,
@@ -99,7 +101,8 @@ export default function ChatArea({
                 text: m.content,
                 timestamp: new Date(m.sent_at),
                 isConsecutive: index > 0 && array[index - 1].author_id === m.author_id,
-                isSystem: false
+                isSystem: false,
+                isOptimistic: m.isOptimistic
             };
         });
     }, [storeMessages, members]);
@@ -205,16 +208,38 @@ export default function ChatArea({
         const content = messageInput.trim();
         setMessageInput("");
 
-        if (!isDm && roomId && isConnected) {
+        if (!isDm && roomId && isConnected && user) {
+            // Optimistic Update
+            const tempId = `temp-${Date.now()}`;
+            const optimisticMsg: ApiMessage = {
+                id: tempId,
+                room_id: roomId,
+                author_id: user.id,
+                content: content,
+                sent_at: new Date().toISOString(),
+                edited_at: null,
+                deleted_at: null,
+                author: user as any, // Cast to avoid full user object mismatch
+            };
+
+            addOptimisticMessage(roomId, optimisticMsg);
             sendWsMessage(content);
-            // The store will be updated when the message is broadcast back from the server
-            // For true optimistic UI, we would call addMessage(roomId, optimisticMsg) here
+        } else if (isDm && friendId && roomId && hallId) {
+            // REST fallback for DMs (or if WS is preferred, but docs say REST POST /messages doesn't exist)
+            // Wait, api(updated).md says "Text messages are NOT created via REST... All message creation flows exclusively through the WebSocket connection."
+            // But it also says "/api/v1/halls/:hallID/rooms/:roomID/messages" GET exists.
+            // If DMs are also in rooms, they should use WS.
+            // Let's stick to WS if possible.
+            if (isConnected) {
+                sendWsMessage(content);
+            } else {
+                // Fallback to REST if WS not connected and if it existed.
+                // Since docs say it doesn't, we might need to handle this.
+                // For now, let's assume DMs also use WS rooms.
+                console.error("WebSocket is not connected for DM");
+            }
         } else if (!isDm) {
             console.error("WebSocket is not connected");
-        } else {
-            // Local fallback for now (e.g. DMs not yet implemented in backend)
-            // Note: This won't persist as it's not in the store,
-            // we should eventually add DM support to the store.
         }
     };
 

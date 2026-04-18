@@ -167,6 +167,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         console.log("[AuthContext.signin] Signin successful, fetching user profile");
+
+        // Sync token to store if returned in signin response
+        if (result.access_token) {
+          console.log("[AuthContext.signin] Updating user store with access token");
+          setUserEdge({
+            id: result.id,
+            username: result.username,
+            display_name: result.display_name,
+            email: result.email,
+            phone_number: result.phone_number,
+            avatar_url: result.avatar_url,
+            avatar_thumbnail_url: result.avatar_thumbnail_url,
+            description: result.description,
+            friend_policy: result.friend_policy,
+            active: result.active,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+            access_token: result.access_token
+          });
+        }
+
         // Fetch full user profile
         const userData = await fetchUser(false);
         if (!userData) {

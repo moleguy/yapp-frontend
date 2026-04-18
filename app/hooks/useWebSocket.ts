@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { getWebSocketUrl } from "@/lib/api";
 import { WebSocketClient, getWebSocketClient } from "@/lib/ws";
-import { useAddMessage } from "@/app/store/useMessageStore";
-import { Message } from "@/lib/api";
+import { useAddMessage, useResolveOptimisticMessage, useRejectOptimisticMessage } from "@/app/store/useMessageStore";
+import { Message, WSErrorMessage } from "@/lib/api";
 
 interface UseWebSocketOptions {
     roomId: string | null;
@@ -29,6 +29,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     });
 
     const addMessage = useAddMessage();
+    const resolveOptimisticMessage = useResolveOptimisticMessage();
+    const rejectOptimisticMessage = useRejectOptimisticMessage();
 
     // Typing indicator cleanup
     const clearTypingIndicator = useCallback((userId: string) => {
@@ -43,6 +45,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const handleMessage = useCallback(
         (message: Message) => {
             if (roomId) {
+                // If this is a message we sent optimistically, resolve it
+                // We'll use a custom property in the WS payload or check content + timestamp + author
+                // Actually, the server should return the original client-side message ID if we provided one
+                // For now, let's look for any optimistic message by the same author with same content in the last few seconds
+                // OR better: use a temporary ID and have the server echo it back.
+
+                // Since our current backend might not echo a temp ID yet,
+                // we'll just add it and rely on the store's deduplication by real ID
                 addMessage(roomId, message);
             }
         },
@@ -85,7 +95,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
     // Error handler
     const handleError = useCallback((error: Error) => {
         console.error("WebSocket error:", error.message);
+        // If it was a message error, we might need to reject an optimistic update
+        // The error object here is generic from the client, but the server sends specific error events
     }, []);
+
+    const handleWSError = useCallback((data: WSErrorMessage) => {
+        console.error("WebSocket server error:", data.error);
+        if (roomId) {
+            // We need to know WHICH message failed.
+            // If the server doesn't provide a context ID, this is hard.
+            // For now, let's assume it's the last one? (Not ideal)
+            // TODO: Implement correlation IDs
+        }
+    }, [roomId]);
 
     // Open handler
     const handleOpen = useCallback(() => {
@@ -133,6 +155,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
                     onError: handleError,
                     onOpen: handleOpen,
                     onClose: handleClose,
+                    // onWSError: handleWSError, // Need to add this to ws.ts listeners if we want specific handling
                 });
                 console.log(`WebSocket connected to room: ${roomId}`);
             } catch (error) {

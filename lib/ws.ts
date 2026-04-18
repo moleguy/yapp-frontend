@@ -5,6 +5,9 @@ import { Message, WSMessage, WSTextMessage, WSTypingMessage } from "./api";
 export type WebSocketEventListener = {
     onMessage?: (msg: Message) => void;
     onTyping?: (data: { author_id: string; room_id: string }) => void;
+    onStopTyping?: (data: { author_id: string; room_id: string }) => void;
+    onJoin?: (data: { author_id: string; room_id: string }) => void;
+    onLeave?: (data: { author_id: string; room_id: string }) => void;
     onError?: (error: Error) => void;
     onOpen?: () => void;
     onClose?: () => void;
@@ -194,7 +197,13 @@ export class WebSocketClient {
                 this.listeners.onTyping?.({ author_id: data.author_id, room_id: data.room_id });
                 break;
             case "stop_typing":
-                // Handle stop typing if needed
+                this.listeners.onStopTyping?.({ author_id: data.author_id, room_id: data.room_id });
+                break;
+            case "join":
+                this.listeners.onJoin?.({ author_id: data.author_id, room_id: data.room_id });
+                break;
+            case "leave":
+                this.listeners.onLeave?.({ author_id: data.author_id, room_id: data.room_id });
                 break;
             case "error":
                 this.listeners.onError?.(new Error(data.error));

@@ -30,6 +30,9 @@ type MessageState = {
 
     // Actions - manage messages
     addMessage: (roomId: string, message: Message) => void;
+    addOptimisticMessage: (roomId: string, message: Message) => void;
+    resolveOptimisticMessage: (roomId: string, tempId: string, realMessage: Message) => void;
+    rejectOptimisticMessage: (roomId: string, tempId: string) => void;
     updateMessage: (roomId: string, messageId: string, updates: Partial<Message>) => void;
     deleteMessage: (roomId: string, messageId: string) => void;
     setMessages: (roomId: string, messages: Message[]) => void;
@@ -207,6 +210,40 @@ export const useMessageStore = create<MessageState>()(
                 });
             },
 
+            addOptimisticMessage: (roomId: string, message: Message) => {
+                set((state) => {
+                    const existing = state.messagesByRoom[roomId] || [];
+                    return {
+                        messagesByRoom: {
+                            ...state.messagesByRoom,
+                            [roomId]: [...existing, { ...message, isOptimistic: true }],
+                        },
+                    };
+                });
+            },
+
+            resolveOptimisticMessage: (roomId: string, tempId: string, realMessage: Message) => {
+                set((state) => ({
+                    messagesByRoom: {
+                        ...state.messagesByRoom,
+                        [roomId]: (state.messagesByRoom[roomId] || []).map((m) =>
+                            m.id === tempId ? { ...realMessage, isOptimistic: false } : m,
+                        ),
+                    },
+                }));
+            },
+
+            rejectOptimisticMessage: (roomId: string, tempId: string) => {
+                set((state) => ({
+                    messagesByRoom: {
+                        ...state.messagesByRoom,
+                        [roomId]: (state.messagesByRoom[roomId] || []).filter(
+                            (m) => m.id !== tempId,
+                        ),
+                    },
+                }));
+            },
+
             updateMessage: (roomId: string, messageId: string, updates: Partial<Message>) => {
                 set((state) => ({
                     messagesByRoom: {
@@ -318,6 +355,15 @@ export const useFetchNewerMessages = () =>
 
 export const useAddMessage = () =>
     useMessageStore((state) => state.addMessage);
+
+export const useAddOptimisticMessage = () =>
+    useMessageStore((state) => state.addOptimisticMessage);
+
+export const useResolveOptimisticMessage = () =>
+    useMessageStore((state) => state.resolveOptimisticMessage);
+
+export const useRejectOptimisticMessage = () =>
+    useMessageStore((state) => state.rejectOptimisticMessage);
 
 export const useUpdateMessage = () =>
     useMessageStore((state) => state.updateMessage);

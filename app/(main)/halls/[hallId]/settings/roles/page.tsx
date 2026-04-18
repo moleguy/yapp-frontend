@@ -16,6 +16,7 @@ import {
   getRolePermissions,
   updateRolePermissions,
   createRole,
+  deleteRole,
   UpdateRolePermissionsReq
 } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
@@ -90,6 +91,26 @@ export default function HallRolesSettings() {
     }
   };
 
+  const handleDeleteRole = async (roleId: string) => {
+    if (!hallId) return;
+    if (window.confirm("Are you sure you want to delete this role?")) {
+      try {
+        const success = await deleteRole(hallId, roleId);
+        if (success) {
+          if (selectedRole?.id === roleId) setSelectedRole(null);
+          selectHall(hallId);
+        }
+      } catch (error) {
+        console.error("Failed to delete role:", error);
+      }
+    }
+  };
+
+  const handleUpdateRole = async (role: Role) => {
+    // This could open a name/color editor, for now just simple implementation
+    console.log("Update role:", role);
+  };
+
   if (!hall) return null;
 
   const isOwner = hall.owner_id === user?.id;
@@ -147,8 +168,8 @@ export default function HallRolesSettings() {
             roles={roles}
             selectedRoleId={selectedRole?.id || null}
             onSelectRole={setSelectedRole}
-            onDeleteRole={() => {}} // TODO
-            onUpdateRole={() => {}} // TODO
+            onDeleteRole={handleDeleteRole}
+            onUpdateRole={handleUpdateRole}
             isOwner={isOwner}
           />
         </div>
