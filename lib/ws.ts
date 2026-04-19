@@ -1,6 +1,6 @@
 // WebSocket client for real-time messaging
 
-import { Message, WSMessage, WSTextMessage, WSTypingMessage } from "./api";
+import { Message, WSMessage } from "./api";
 
 export type WebSocketEventListener = {
     onMessage?: (msg: Message) => void;
@@ -19,17 +19,13 @@ export class WebSocketClient {
     private listeners: WebSocketEventListener = {};
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
-    private reconnectDelay = 1000; // ms
-    private heartbeatInterval: NodeJS.Timeout | null = null;
+    private reconnectDelay = 1000;
     private isManualClose = false;
 
     constructor(url: string) {
         this.url = url;
     }
 
-    /**
-     * Connect to WebSocket with auto-reconnect on failure
-     */
     connect(listeners?: WebSocketEventListener): Promise<void> {
         return new Promise((resolve, reject) => {
             if (listeners) {
@@ -80,7 +76,7 @@ export class WebSocketClient {
     }
 
     /**
-     * Send a text message
+     * Send a text message to a specific room
      */
     sendMessage(roomId: string, content: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -89,6 +85,7 @@ export class WebSocketClient {
                     type: "text",
                     room_id: roomId,
                     content: content,
+                    mention_everyone: false,
                     sent_at: new Date().toISOString(),
                 }),
             );
@@ -98,7 +95,7 @@ export class WebSocketClient {
     }
 
     /**
-     * Send typing indicator
+     * Send typing indicator for a specific room
      */
     sendTyping(roomId: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -113,7 +110,7 @@ export class WebSocketClient {
     }
 
     /**
-     * Send stop typing indicator
+     * Send stop typing indicator for a specific room
      */
     sendStopTyping(roomId: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -136,9 +133,6 @@ export class WebSocketClient {
         }
     }
 
-    /**
-     * Disconnect from WebSocket
-     */
     disconnect(): void {
         this.isManualClose = true;
         if (this.ws) {
@@ -147,38 +141,23 @@ export class WebSocketClient {
         }
     }
 
-    /**
-     * Reconnect to WebSocket
-     */
     reconnect(): Promise<void> {
         this.isManualClose = false;
         this.reconnectAttempts = 0;
         return this.connect(this.listeners);
     }
 
-    /**
-     * Check if connected
-     */
     isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
     }
 
-    /**
-     * Register event listeners
-     */
     on(listeners: WebSocketEventListener): void {
         this.listeners = { ...this.listeners, ...listeners };
     }
 
-    /**
-     * Handle incoming WebSocket messages
-     */
     private handleMessage(data: WSMessage): void {
         switch (data.type) {
             case "text":
-                // Map WS text message to Api Message format
-                // In api.ts, WSTextMessage is almost the same as Message but with author_id instead of author object
-                // The addMessage store action should handle this or we can convert it here
                 this.listeners.onMessage?.({
                     id: data.id || "",
                     room_id: data.room_id,
@@ -209,34 +188,12 @@ export class WebSocketClient {
                 console.warn("Unhandled message type:", (data as any).type);
         }
     }
-
-    /**
-     * Start heartbeat to keep connection alive
-     * (Currently disabled - using native WS ping/pong)
-     */
-    private startHeartbeat(): void {
-        // Handled by browser + backend
-    }
-
-    /**
-     * Stop heartbeat
-     */
-    private stopHeartbeat(): void {
-        // Handled by browser + backend
-    }
 }
 
-/**
- * Singleton WebSocket instance
- */
 let wsInstance: WebSocketClient | null = null;
 
 export function getWebSocketClient(url: string): WebSocketClient {
     if (wsInstance) {
-        // If it's the same URL, return existing instance
-        // But the class doesn't store URL in a public way easily accessible here,
-        // and we usually want a fresh connection if the hook calls this.
-        // For simplicity, let's just allow the hook to disconnect the old one.
         wsInstance.disconnect();
     }
     wsInstance = new WebSocketClient(url);
