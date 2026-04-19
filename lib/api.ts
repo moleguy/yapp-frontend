@@ -3,7 +3,7 @@
 // Use proxy during development to bypass CORS issues
 const isProxyEnabled = true; // Set to false to call backend directly
 const base = isProxyEnabled ? "" : (process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "http://localhost:8080");
-export const apiBase = `${base}/api/v1`;
+// export const apiBase = base;
 export const protectedApiBase = `${base}/api/v1`;
 
 // API-host csrf cookie is not visible in document.cookie on another origin (e.g. two ngrok URLs).
@@ -32,7 +32,7 @@ function resolveCSRFToken(): string | null {
 async function primeCsrfFromApi(): Promise<void> {
   if (resolveCSRFToken()) return;
 
-  const healthUrl = isProxyEnabled ? `/api/proxy?path=%2Fhealth` : `${apiBase}/health`;
+  const healthUrl = isProxyEnabled ? `/api/proxy?path=%2Fhealth` : `${protectedApiBase}/health`;
 
   const res = await fetch(healthUrl, {
     method: "GET",
@@ -575,11 +575,11 @@ export type AppError = {
 export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
   try {
     console.log("[AuthSignIn] Starting signin with email:", payload.email);
-    console.log("[AuthSignIn] API Base:", apiBase);
+    console.log("[AuthSignIn] API Base:", protectedApiBase);
 
     // Signin is special because the token is in the envelope, not the data field
     // We use a manual fetch/request here to avoid the automatic "data" unwrapping
-    const backendUrl = `${apiBase}/auth/signin`;
+    const backendUrl = `${protectedApiBase}/auth/signin`;
     const res = await fetch(isProxyEnabled ? `/api/proxy?path=${encodeURIComponent("/auth/signin")}` : backendUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
@@ -661,7 +661,7 @@ export async function authSignIn(payload: SignInReq): Promise<SignInRes> {
 
 export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
   try {
-    const result = await request<SignUpRes>(`${apiBase}/auth/signup`, {
+    const result = await request<SignUpRes>(`${protectedApiBase}/auth/signup`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -684,7 +684,7 @@ export async function authSignUp(payload: SignUpReq): Promise<SignUpRes> {
 
 export async function authSignOut(): Promise<{ message?: string } | undefined> {
   try {
-    return request<{ message?: string }>(`${apiBase}/auth/signout`, {
+    return request<{ message?: string }>(`${protectedApiBase}/auth/signout`, {
       method: "GET",
     });
   } catch (err: unknown) {

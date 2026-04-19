@@ -5,10 +5,9 @@
 
 import { gunzip, brotliDecompress, inflate } from "node:zlib";
 
-// Headers that should NOT be copied from backend response
 const HEADERS_TO_EXCLUDE = new Set([
-    "content-encoding", // We'll decompress, so don't pass this header
-    "content-length", // Will be recalculated by Response
+    "content-encoding",
+    "content-length",
     "transfer-encoding",
     "connection",
     "keep-alive",
@@ -21,70 +20,65 @@ const HEADERS_TO_EXCLUDE = new Set([
 
 function createSafeHeaders(backendHeaders: Headers): Headers {
     const headers = new Headers();
-
-    // Only copy safe headers
     backendHeaders.forEach((value, key) => {
         if (!HEADERS_TO_EXCLUDE.has(key.toLowerCase())) {
             headers.set(key, value);
         }
     });
-
-    // Always set content-type as application/json for API responses
     headers.set("Content-Type", "application/json");
-
     return headers;
 }
 
-/**
- * Decompress response body based on Content-Encoding header.
- * If decompression fails (e.g., content is already plain), returns original buffer.
- */
-async function decompressResponseBody(
-    encodingType: string | null,
-    buffer: Buffer
-): Promise<Buffer> {
-    if (!encodingType) {
-        return buffer;
-    }
-
+async function decompressResponseBody(encodingType: string | null, buffer: Buffer): Promise<Buffer> {
+    if (!encodingType) return buffer;
     const encoding = encodingType.toLowerCase().trim();
-
     return new Promise((resolve) => {
         if (encoding === "gzip") {
-            gunzip(buffer, (err: Error | null, decompressed: Buffer) => {
-                if (err) {
-                    // Content isn't actually gzipped, return original
-                    resolve(buffer);
-                } else {
-                    resolve(decompressed);
-                }
-            });
+            gunzip(buffer, (err, d) => resolve(err ? buffer : d));
         } else if (encoding === "br") {
-            brotliDecompress(buffer, (err: Error | null, decompressed: Buffer) => {
-                if (err) {
-                    // Content isn't actually brotli compressed, return original
-                    resolve(buffer);
-                } else {
-                    resolve(decompressed);
-                }
-            });
+            brotliDecompress(buffer, (err, d) => resolve(err ? buffer : d));
         } else if (encoding === "deflate") {
-            inflate(buffer, (err: Error | null, decompressed: Buffer) => {
-                if (err) {
-                    // Content isn't actually deflated, return original
-                    resolve(buffer);
-                } else {
-                    resolve(decompressed);
-                }
-            });
+            inflate(buffer, (err, d) => resolve(err ? buffer : d));
         } else {
-            // Unknown encoding, return as-is
             resolve(buffer);
         }
     });
 }
 
-export async function GET(request: Request) {
+/** Extract JWT from cookie string, build Authorization header */
+function extractAuthHeader(request: Request): string {
+    // Prefer Authorization header passed directly
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) return authHeader;
+
+    // Fall back to JWT cookie
+    const cookie = request.headers.get("cookie") || "";
+    const match = cookie.match(/jwt=([^;]+)/);
+    return match ? `Bearer ${match[1]}` : "";
+}
+
+/** Forward cookie + set-cookie handling, JWT extraction */
+function applySetCookie(res: Response, headers: Headers): void {
+    const setCookie = res.headers.get("set-cookie");
+    if (!setCookie) return;
+
+    const jwtMatch = setCookie.match(/jwt=([^;]+)/);
+    if (jwtMatch?.[1]) {
+        headers.set("X-Yapp-Token", jwtMatch[1]);
+    }
+
+    let modifiedCookie = setCookie
+        .split(";")
+        .filter((p) => !p.trim().toLowerCase().startsWith("domain="))
+        .join(";");
+    if (!modifiedCookie.toLowerCase().includes("path=")) {
+        modifiedCookie += "; Path=/";
+    }
+    headers.set("set-cookie", modifiedCookie);
+}
+
+/** Shared proxy logic for all methods */
+async function proxyRequest(request: Request, method: string, body?: string): Promise<Response> {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get("path");
 
@@ -92,315 +86,79 @@ export async function GET(request: Request) {
         return new Response(JSON.stringify({ error: "Missing path" }), { status: 400 });
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+    const backendUrl = (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080").replace(/\/+$/, "");
     const targetUrl = `${backendUrl}${path}`;
 
-    console.log("[Proxy] GET", targetUrl);
+    console.log(`[Proxy] ${method}`, targetUrl);
 
     try {
+        const authHeader = extractAuthHeader(request);
+
         const res = await fetch(targetUrl, {
-            method: "GET",
+            method,
             headers: {
                 "Content-Type": "application/json",
-                Accept: "application/json",
+                "Accept": "application/json",
                 "Accept-Encoding": "gzip, deflate, br",
                 "ngrok-skip-browser-warning": "true",
                 Cookie: request.headers.get("cookie") || "",
+                ...(authHeader ? { Authorization: authHeader } : {}),
+                // Forward CSRF token if present
+                ...(request.headers.get("x-csrf-token")
+                    ? { "X-CSRF-Token": request.headers.get("x-csrf-token")! }
+                    : {}),
             },
+            ...(body !== undefined ? { body } : {}),
         });
 
-        // Get response body and check encoding
         const encoding = res.headers.get("content-encoding");
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Decompress if needed (gracefully handles both compressed and uncompressed)
+        const buffer = Buffer.from(await res.arrayBuffer());
         const decompressed = await decompressResponseBody(encoding, buffer);
-        const bodyString = decompressed.toString('utf8');
+        const bodyString = decompressed.toString("utf8");
 
-        console.log("[Proxy] Decompressed buffer size:", decompressed.length, "bytes");
-        console.log("[Proxy] Body string length:", bodyString.length, "chars");
-        console.log("[Proxy] Body preview:", bodyString.substring(0, 300));
-        console.log("[Proxy] Response status:", res.status, "Content-Type:", res.headers.get("content-type"), "Content-Encoding:", encoding);
+        console.log(`[Proxy] ${res.status} ← ${method} ${path}`);
 
         const headers = createSafeHeaders(res.headers);
 
-        // Also check if the request ALREADY had a JWT in its cookies and pass it back
-        const requestCookies = request.headers.get("cookie") || "";
-        const reqJwtMatch = requestCookies.match(/jwt=([^;]+)/);
-        if (reqJwtMatch && reqJwtMatch[1]) {
+        // Forward CSRF token from backend
+        const csrfToken = res.headers.get("x-csrf-token");
+        if (csrfToken) headers.set("x-csrf-token", csrfToken);
+
+        // Handle set-cookie + JWT extraction
+        applySetCookie(res, headers);
+
+        // Also echo back any JWT already in the incoming request cookies
+        const reqJwtMatch = (request.headers.get("cookie") || "").match(/jwt=([^;]+)/);
+        if (reqJwtMatch?.[1] && !headers.get("X-Yapp-Token")) {
             headers.set("X-Yapp-Token", reqJwtMatch[1]);
         }
 
-        // Copy set-cookie if present and modify for proxy domain
-        const setCookie = res.headers.get("set-cookie");
-        if (setCookie) {
-            console.log("[Proxy] GET Set-Cookie:", setCookie.substring(0, 100));
-
-            // Extract the JWT token from the cookie
-            const resJwtMatch = setCookie.match(/jwt=([^;]+)/);
-            if (resJwtMatch && resJwtMatch[1]) {
-                headers.set("X-Yapp-Token", resJwtMatch[1]);
-                console.log("[Proxy] Extracted JWT from Set-Cookie and set X-Yapp-Token header");
-            }
-
-            // Remove Domain attribute to make it work with localhost:3000
-            let modifiedCookie = setCookie
-                .split(';')
-                .filter(part => !part.trim().toLowerCase().startsWith('domain='))
-                .join(';');
-            // Ensure Path is set to /
-            if (!modifiedCookie.toLowerCase().includes('path=')) {
-                modifiedCookie += '; Path=/';
-            }
-            headers.set("set-cookie", modifiedCookie);
-        }
-
         return new Response(bodyString, {
             status: res.status,
             statusText: res.statusText,
             headers,
         });
     } catch (error: unknown) {
-        console.error("[Proxy] GET error:", error);
-        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error(`[Proxy] ${method} error:`, error);
         return new Response(
-            JSON.stringify({ error: message }),
-            { status: 502, headers: { "Content-Type": "application/json" } }
+            JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
         );
     }
+}
+
+export async function GET(request: Request) {
+    return proxyRequest(request, "GET");
 }
 
 export async function POST(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const path = searchParams.get("path");
-
-    if (!path) {
-        return new Response(JSON.stringify({ error: "Missing path" }), { status: 400 });
-    }
-
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-    const targetUrl = `${backendUrl}${path}`;
-
-    console.log("[Proxy] POST", targetUrl);
-
-    try {
-        const body = await request.text();
-
-        const res = await fetch(targetUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept-Encoding": "gzip, deflate, br",
-                "ngrok-skip-browser-warning": "true",
-                Cookie: request.headers.get("cookie") || "",
-            },
-            body,
-        });
-
-        // Get response body and check encoding
-        const encoding = res.headers.get("content-encoding");
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Decompress if needed (gracefully handles both compressed and uncompressed)
-        const decompressed = await decompressResponseBody(encoding, buffer);
-        const bodyString = decompressed.toString('utf8');
-
-        console.log("[Proxy] Decompressed buffer size:", decompressed.length, "bytes");
-        console.log("[Proxy] Body string length:", bodyString.length, "chars");
-        console.log("[Proxy] Body preview:", bodyString.substring(0, 300));
-        console.log("[Proxy] Response status:", res.status, "Content-Type:", res.headers.get("content-type"), "Content-Encoding:", encoding);
-
-        const headers = createSafeHeaders(res.headers);
-
-        // Copy CSRF token if present
-        const csrfToken = res.headers.get("x-csrf-token");
-        if (csrfToken) {
-            headers.set("x-csrf-token", csrfToken);
-        }
-
-        // Copy set-cookie if present and modify for proxy domain
-        const setCookie = res.headers.get("set-cookie");
-        if (setCookie) {
-            console.log("[Proxy] Raw Set-Cookie header:", setCookie);
-
-            // Extract the JWT token from the cookie for the frontend to use in WebSockets
-            const jwtMatch = setCookie.match(/jwt=([^;]+)/);
-            if (jwtMatch && jwtMatch[1]) {
-                headers.set("X-Yapp-Token", jwtMatch[1]);
-                console.log("[Proxy] Extracted JWT and set X-Yapp-Token header");
-            }
-
-            // Modify the cookie to work with our proxy domain
-            let modifiedCookie = setCookie
-                .split(';')
-                .filter(part => !part.trim().toLowerCase().startsWith('domain='))
-                .join(';');
-            if (!modifiedCookie.toLowerCase().includes('path=')) {
-                modifiedCookie += '; Path=/';
-            }
-            headers.set("set-cookie", modifiedCookie);
-        }
-
-        return new Response(bodyString, {
-            status: res.status,
-            statusText: res.statusText,
-            headers,
-        });
-    } catch (error: unknown) {
-        console.error("[Proxy] POST error:", error);
-        const message = error instanceof Error ? error.message : "Unknown error";
-        return new Response(
-            JSON.stringify({ error: message }),
-            { status: 502, headers: { "Content-Type": "application/json" } }
-        );
-    }
+    return proxyRequest(request, "POST", await request.text());
 }
 
 export async function PATCH(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const path = searchParams.get("path");
-
-    if (!path) {
-        return new Response(JSON.stringify({ error: "Missing path" }), { status: 400 });
-    }
-
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-    const targetUrl = `${backendUrl}${path}`;
-
-    console.log("[Proxy] PATCH", targetUrl);
-
-    try {
-        const body = await request.text();
-
-        const res = await fetch(targetUrl, {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept-Encoding": "gzip, deflate, br",
-                "ngrok-skip-browser-warning": "true",
-                Cookie: request.headers.get("cookie") || "",
-            },
-            body,
-        });
-
-        // Get response body and check encoding
-        const encoding = res.headers.get("content-encoding");
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Decompress if needed (gracefully handles both compressed and uncompressed)
-        const decompressed = await decompressResponseBody(encoding, buffer);
-        const bodyString = decompressed.toString('utf8');
-
-        console.log("[Proxy] Response status:", res.status, "Content-Type:", res.headers.get("content-type"), "Content-Encoding:", encoding);
-
-        const headers = createSafeHeaders(res.headers);
-
-        // Copy CSRF token if present
-        const csrfToken = res.headers.get("x-csrf-token");
-        if (csrfToken) {
-            headers.set("x-csrf-token", csrfToken);
-        }
-
-        // Copy set-cookie if present and modify for proxy domain
-        const setCookie = res.headers.get("set-cookie");
-        if (setCookie) {
-            console.log("[Proxy] PATCH Set-Cookie:", setCookie.substring(0, 100));
-            let modifiedCookie = setCookie
-                .split(';')
-                .filter(part => !part.trim().toLowerCase().startsWith('domain='))
-                .join(';');
-            if (!modifiedCookie.toLowerCase().includes('path=')) {
-                modifiedCookie += '; Path=/';
-            }
-            headers.set("set-cookie", modifiedCookie);
-        }
-
-        return new Response(bodyString, {
-            status: res.status,
-            statusText: res.statusText,
-            headers,
-        });
-    } catch (error: unknown) {
-        console.error("[Proxy] PATCH error:", error);
-        const message = error instanceof Error ? error.message : "Unknown error";
-        return new Response(
-            JSON.stringify({ error: message }),
-            { status: 502, headers: { "Content-Type": "application/json" } }
-        );
-    }
+    return proxyRequest(request, "PATCH", await request.text());
 }
 
 export async function DELETE(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const path = searchParams.get("path");
-
-    if (!path) {
-        return new Response(JSON.stringify({ error: "Missing path" }), { status: 400 });
-    }
-
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-    const targetUrl = `${backendUrl}${path}`;
-
-    console.log("[Proxy] DELETE", targetUrl);
-
-    try {
-        const res = await fetch(targetUrl, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept-Encoding": "gzip, deflate, br",
-                "ngrok-skip-browser-warning": "true",
-                Cookie: request.headers.get("cookie") || "",
-            },
-        });
-
-        // Get response body and check encoding
-        const encoding = res.headers.get("content-encoding");
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Decompress if needed (gracefully handles both compressed and uncompressed)
-        const decompressed = await decompressResponseBody(encoding, buffer);
-        const bodyString = decompressed.toString('utf8');
-
-        console.log("[Proxy] Response status:", res.status, "Content-Type:", res.headers.get("content-type"), "Content-Encoding:", encoding);
-
-        const headers = createSafeHeaders(res.headers);
-
-        // Copy CSRF token if present
-        const csrfToken = res.headers.get("x-csrf-token");
-        if (csrfToken) {
-            headers.set("x-csrf-token", csrfToken);
-        }
-
-        // Copy set-cookie if present and modify for proxy domain
-        const setCookie = res.headers.get("set-cookie");
-        if (setCookie) {
-            console.log("[Proxy] DELETE Set-Cookie:", setCookie.substring(0, 100));
-            let modifiedCookie = setCookie
-                .split(';')
-                .filter(part => !part.trim().toLowerCase().startsWith('domain='))
-                .join(';');
-            if (!modifiedCookie.toLowerCase().includes('path=')) {
-                modifiedCookie += '; Path=/';
-            }
-            headers.set("set-cookie", modifiedCookie);
-        }
-
-        return new Response(bodyString, {
-            status: res.status,
-            statusText: res.statusText,
-            headers,
-        });
-    } catch (error: unknown) {
-        console.error("[Proxy] DELETE error:", error);
-        const message = error instanceof Error ? error.message : "Unknown error";
-        return new Response(
-            JSON.stringify({ error: message }),
-            { status: 502, headers: { "Content-Type": "application/json" } }
-        );
-    }
+    return proxyRequest(request, "DELETE");
 }
