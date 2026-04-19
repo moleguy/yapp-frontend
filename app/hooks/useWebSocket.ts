@@ -1,7 +1,10 @@
+"use client";
+
 import { useEffect, useRef, useCallback, useState } from "react";
 import { getWebSocketUrl } from "@/lib/api";
 import { WebSocketClient, getWebSocketClient } from "@/lib/ws";
-import { useAddMessage } from "@/app/store/useMessageStore";
+// FIX: Import useMessageStore directly
+import { useMessageStore } from "@/app/store/useMessageStore";
 import { Message } from "@/lib/api";
 
 interface UseWebSocketOptions {
@@ -19,10 +22,10 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const { roomId, hallId, enabled = true } = options;
     const wsRef = useRef<WebSocketClient | null>(null);
     const [isConnected, setIsConnected] = useState(false);
-    // Map of userId -> TypingEntry for users currently typing
     const typingRef = useRef<Map<string, TypingEntry>>(new Map());
 
-    const addMessage = useAddMessage();
+    // FIX: Pull addMessage directly from the store
+    const addMessage = useMessageStore((state) => state.addMessage);
 
     const clearTypingIndicator = useCallback((userId: string) => {
         const entry = typingRef.current.get(userId);
@@ -43,14 +46,10 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     const handleTyping = useCallback(
         (data: { author_id: string; room_id: string }) => {
-            // Clear any existing auto-clear timeout for this user
             clearTypingIndicator(data.author_id);
-
-            // Auto-clear after 3s of no further typing events
             const timeout = setTimeout(() => {
                 clearTypingIndicator(data.author_id);
             }, 3000);
-
             typingRef.current.set(data.author_id, { userId: data.author_id, timeout });
         },
         [clearTypingIndicator],
@@ -68,19 +67,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
     }, []);
 
     const handleOpen = useCallback(() => {
-        console.log("WebSocket connected");
         setIsConnected(true);
     }, []);
 
     const handleClose = useCallback(() => {
-        console.log("WebSocket closed");
         setIsConnected(false);
-        // Clear all typing indicators on disconnect
         typingRef.current.forEach(({ timeout }) => clearTimeout(timeout));
         typingRef.current.clear();
     }, []);
 
-    // Connect / reconnect when roomId changes
     useEffect(() => {
         if (!enabled || !roomId || !hallId) {
             if (wsRef.current) {
@@ -91,7 +86,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
             return;
         }
 
-        // Disconnect previous room's connection
         if (wsRef.current) {
             wsRef.current.disconnect();
             wsRef.current = null;
@@ -109,7 +103,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 onOpen: handleOpen,
                 onClose: handleClose,
             })
-            .then(() => console.log(`WebSocket connected to room: ${roomId}`))
             .catch((error) => console.error("Failed to connect WebSocket:", error));
 
         return () => {
@@ -121,14 +114,10 @@ export function useWebSocket(options: UseWebSocketOptions) {
         };
     }, [roomId, hallId, enabled, handleMessage, handleTyping, handleStopTyping, handleError, handleOpen, handleClose]);
 
-    // ---- Outbound actions ----
-
     const sendMessage = useCallback(
         (content: string) => {
             if (wsRef.current?.isConnected() && roomId) {
-                wsRef.current.sendMessage(roomId, content); // ✅ passes roomId
-            } else {
-                console.warn("WebSocket not connected, cannot send message");
+                wsRef.current.sendMessage(roomId, content);
             }
         },
         [roomId],
@@ -136,13 +125,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     const sendTyping = useCallback(() => {
         if (wsRef.current?.isConnected() && roomId) {
-            wsRef.current.sendTyping(roomId); // ✅ passes roomId
+            wsRef.current.sendTyping(roomId);
         }
     }, [roomId]);
 
     const sendStopTyping = useCallback(() => {
         if (wsRef.current?.isConnected() && roomId) {
-            wsRef.current.sendStopTyping(roomId); // ✅ passes roomId
+            wsRef.current.sendStopTyping(roomId);
         }
     }, [roomId]);
 
@@ -173,9 +162,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
     };
 }
 
-/**
- * Debounced typing indicator — sends typing event, auto-stops after 3s of inactivity
- */
 export function useTypingIndicator(roomId: string | null) {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const { sendTyping, sendStopTyping } = useWebSocket({ roomId, hallId: null, enabled: !!roomId });
@@ -188,9 +174,7 @@ export function useTypingIndicator(roomId: string | null) {
 
     const sendTypingIndicator = useCallback(() => {
         sendTyping();
-
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
         typingTimeoutRef.current = setTimeout(() => {
             sendStopTyping();
         }, 3000);
