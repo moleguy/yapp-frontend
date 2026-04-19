@@ -3,7 +3,7 @@
 // Use proxy during development to bypass CORS issues
 const isProxyEnabled = true; // Set to false to call backend directly
 const base = isProxyEnabled ? "" : (process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "http://localhost:8080");
-export const apiBase = base;
+export const apiBase = `${base}/api/v1`;
 export const protectedApiBase = `${base}/api/v1`;
 
 // API-host csrf cookie is not visible in document.cookie on another origin (e.g. two ngrok URLs).
