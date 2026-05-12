@@ -14,10 +14,16 @@ interface GlobalWebSocketManager {
 }
 
 class GlobalWebSocketManagerImpl implements GlobalWebSocketManager {
-  client: WebSocketClient | null = null;
-  isConnected = false;
-  listeners = new Map<string, Set<(message: WSMessage) => void>>();
-  connectionPromise: Promise<void> | null = null;
+  public client: WebSocketClient | null = null;
+  public isConnected = false;
+  public listeners = new Map<string, Set<(message: WSMessage) => void>>();
+  public connectionPromise: Promise<void> | null = null;
+  private wsInstance: WebSocket | null = null;
+  private url: string = '';
+
+  constructor(url: string) {
+    this.url = url;
+  }
 
   async connect(): Promise<void> {
     if (this.connectionPromise) {
@@ -45,6 +51,22 @@ class GlobalWebSocketManagerImpl implements GlobalWebSocketManager {
           onLeave: (message: any) => this.handleMessage(message as WSMessage),
           onError: (error: Error) => {
             console.error("Global WebSocket error:", error);
+            console.error("Error details:", {
+              message: error.message,
+              stack: error.stack,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Log WebSocket specific information
+            if (this.wsInstance) {
+              console.error("WebSocket state:", {
+                readyState: this.wsInstance.readyState,
+                url: this.url,
+                protocol: this.wsInstance.protocol,
+                extensions: this.wsInstance.extensions
+              });
+            }
+            
             reject(error);
           },
           onOpen: () => {
@@ -135,7 +157,7 @@ class GlobalWebSocketManagerImpl implements GlobalWebSocketManager {
 }
 
 // Singleton instance
-export const globalWebSocketManager = new GlobalWebSocketManagerImpl();
+export const globalWebSocketManager = new GlobalWebSocketManagerImpl(getWebSocketUrl());
 
 // Initialize connection on module load
 if (typeof window !== 'undefined') {
