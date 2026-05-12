@@ -1,6 +1,58 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+
+// Error boundary component
+class ErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    { hasError: boolean; error?: Error }
+> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.error("ChatArea Error Boundary caught an error:", error, errorInfo);
+        
+        // Log detailed error info for debugging
+        console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+            componentStack: errorInfo.componentStack,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex flex-col items-center justify-center h-screen p-4">
+                    <div className="text-center">
+                        <h2 className="text-xl font-semibold text-red-600 mb-2">
+                            Chat Error
+                        </h2>
+                        <p className="text-gray-600 mb-4">
+                            {this.state.error?.message || "An error occurred while loading the chat room"}
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                            Reload Page
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
 import { Send, Loader2, AlertCircle } from "lucide-react";
 import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 import {
@@ -41,6 +93,14 @@ import {
  * - Optimistic updates
  */
 export default function ChatArea() {
+    return (
+        <ErrorBoundary>
+            <ChatAreaContent />
+        </ErrorBoundary>
+    );
+}
+
+function ChatAreaContent() {
     // Ensure persisted stores are hydrated from localStorage
     useStoreHydration();
 

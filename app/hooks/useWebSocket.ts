@@ -48,46 +48,50 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
         // Set up message handlers for current room
         const handleMessage = (message: WSMessage) => {
-            if (message.room_id === roomId) {
-                switch (message.type) {
-                    case 'text':
-                        addMessage(roomId, message as Message);
-                        break;
-                    case 'edit':
-                        useMessageStore.getState().updateMessage(roomId, message.id, message);
-                        break;
-                    case 'delete':
-                        useMessageStore.getState().deleteMessage(roomId, message.id);
-                        break;
-                    case 'react':
-                        if (message.action === 'add') {
-                            useReactionStore.getState().addReaction(roomId, message.message_id, {
-                                message_id: message.message_id,
-                                user_id: message.user_id,
-                                emoji: message.emoji,
-                                created_at: new Date().toISOString()
-                            });
-                        } else {
-                            useReactionStore.getState().removeReaction(roomId, message.message_id, message.user_id, message.emoji);
-                        }
-                        break;
-                    case 'typing':
-                        clearTypingIndicator(message.author_id);
-                        const timeout = setTimeout(() => {
+            try {
+                if (message.room_id === roomId) {
+                    switch (message.type) {
+                        case 'text':
+                            addMessage(roomId, message as Message);
+                            break;
+                        case 'edit':
+                            useMessageStore.getState().updateMessage(roomId, message.id, message);
+                            break;
+                        case 'delete':
+                            useMessageStore.getState().deleteMessage(roomId, message.id);
+                            break;
+                        case 'react':
+                            if (message.action === 'add') {
+                                useReactionStore.getState().addReaction(roomId, message.message_id, {
+                                    message_id: message.message_id,
+                                    user_id: message.user_id,
+                                    emoji: message.emoji,
+                                    created_at: new Date().toISOString()
+                                });
+                            } else {
+                                useReactionStore.getState().removeReaction(roomId, message.message_id, message.user_id, message.emoji);
+                            }
+                            break;
+                        case 'typing':
                             clearTypingIndicator(message.author_id);
-                        }, 3000);
-                        typingRef.current.set(message.author_id, { userId: message.author_id, timeout });
-                        break;
-                    case 'stop_typing':
-                        clearTypingIndicator(message.author_id);
-                        break;
-                    case 'join':
-                        console.log(`User ${message.author_id} joined room ${message.room_id}`);
-                        break;
-                    case 'leave':
-                        console.log(`User ${message.author_id} left room ${message.room_id}`);
-                        break;
+                            const timeout = setTimeout(() => {
+                                clearTypingIndicator(message.author_id);
+                            }, 3000);
+                            typingRef.current.set(message.author_id, { userId: message.author_id, timeout });
+                            break;
+                        case 'stop_typing':
+                            clearTypingIndicator(message.author_id);
+                            break;
+                        case 'join':
+                            console.log(`User ${message.author_id} joined room ${message.room_id}`);
+                            break;
+                        case 'leave':
+                            console.log(`User ${message.author_id} left room ${message.room_id}`);
+                            break;
+                    }
                 }
+            } catch (error) {
+                console.error("Error handling WebSocket message:", error, "Message:", message);
             }
         };
 
