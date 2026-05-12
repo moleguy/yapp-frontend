@@ -217,11 +217,14 @@ export class WebSocketClient {
                     room_id: data.room_id,
                     author_id: data.author_id,
                     content: data.content ?? "",
-                    mention_everyone: data.mention_everyone ?? data.mentions_everyone,
+                    mentions_everyone: data.mentions_everyone ?? false,
                     sent_at: data.sent_at,
                     edited_at: data.edited_at || null,
                     deleted_at: data.deleted_at || null,
                     attachments: data.attachments,
+                    mentions: data.mentions || [],
+                    created_at: data.created_at || data.sent_at,
+                    updated_at: data.updated_at || data.sent_at,
                 });
                 break;
             case "edit":
@@ -234,15 +237,29 @@ export class WebSocketClient {
                 this.emit('react', data);
                 break;
             case "typing": {
+                // According to API docs, typing events use typing_user field
                 const uid = (data as any).typing_user || data.author_id;
-                this.emit('typing', { type: 'typing', author_id: uid, room_id: data.room_id });
+                this.emit('typing', { 
+                    type: 'typing', 
+                    author_id: uid, 
+                    room_id: data.room_id,
+                    sent_at: data.sent_at 
+                });
                 break;
             }
             case "stop_typing": {
                 const uid = (data as any).typing_user || data.author_id;
-                this.emit('stop_typing', { type: 'stop_typing', author_id: uid, room_id: data.room_id });
+                this.emit('stop_typing', { 
+                    type: 'stop_typing', 
+                    author_id: uid, 
+                    room_id: data.room_id,
+                    sent_at: data.sent_at 
+                });
                 break;
             }
+            case "read":
+                this.emit('read', data);
+                break;
             case "presence":
                 this.emit('presence', data);
                 break;
@@ -253,10 +270,13 @@ export class WebSocketClient {
                 this.emit('leave', data);
                 break;
             case "error":
-                this.emit('error', new Error(data.error));
+                // Handle server error messages properly
+                const errorMessage = (data as any).error || "Unknown WebSocket error";
+                console.error("WebSocket server error:", errorMessage, "Room:", data.room_id);
+                this.emit('error', new Error(errorMessage));
                 break;
             default:
-                console.warn("Unhandled message type:", (data as any).type);
+                console.warn("Unhandled message type:", (data as any).type, "Data:", data);
         }
     }
 }

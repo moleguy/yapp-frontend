@@ -369,6 +369,12 @@ export type WSLeaveMessage = WSBaseMessage & { type: "leave" };
 export type WSEditMessage = WSBaseMessage & { type: "edit"; id: string; content: string; edited_at: string };
 export type WSDeleteMessage = WSBaseMessage & { type: "delete"; id: string };
 export type WSReactMessage = WSBaseMessage & { type: "react"; message_id: string; user_id: string; emoji: string; action: "add" | "remove" };
+export type WSReadMessage = WSBaseMessage & { 
+  type: "read"; 
+  message_id: string; 
+  read_by?: string; 
+  read_at?: string; 
+};
 export type WSErrorMessage = WSBaseMessage & { type: "error"; error: string };
 export type WSMessage =
   | WSTextMessage
@@ -380,6 +386,7 @@ export type WSMessage =
   | WSEditMessage
   | WSDeleteMessage
   | WSReactMessage
+  | WSReadMessage
   | WSErrorMessage;
 export type WSSendTextMessage = {
   type: "text"; room_id: string; content: string; sent_at: string;
