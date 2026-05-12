@@ -235,13 +235,43 @@ export class WebSocketClient {
 }
 
 let wsInstance: WebSocketClient | null = null;
+let connectionPromise: Promise<void> | null = null;
+
+export function getGlobalWebSocketClient(): WebSocketClient {
+    if (!wsInstance) {
+        const { getWebSocketUrl } = require("./api");
+        const url = getWebSocketUrl();
+        wsInstance = new WebSocketClient(url);
+    }
+    return wsInstance;
+}
 
 export function getWebSocketClient(url: string): WebSocketClient {
-    if (wsInstance) {
-        wsInstance.disconnect();
+    // For backward compatibility, but we should use global connection
+    console.warn("getWebSocketClient with URL is deprecated, use getGlobalWebSocketClient instead");
+    return getGlobalWebSocketClient();
+}
+
+export async function ensureWebSocketConnection(): Promise<void> {
+    if (connectionPromise) {
+        return connectionPromise;
     }
-    wsInstance = new WebSocketClient(url);
-    return wsInstance;
+
+    const client = getGlobalWebSocketClient();
+    if (client.isConnected()) {
+        return Promise.resolve();
+    }
+
+    connectionPromise = client.connect()
+        .then(() => {
+            connectionPromise = null;
+        })
+        .catch((error) => {
+            connectionPromise = null;
+            throw error;
+        });
+
+    return connectionPromise;
 }
 
 export function closeWebSocketClient(): void {
@@ -249,4 +279,5 @@ export function closeWebSocketClient(): void {
         wsInstance.disconnect();
         wsInstance = null;
     }
+    connectionPromise = null;
 }
