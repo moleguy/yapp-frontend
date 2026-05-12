@@ -169,7 +169,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 setIsConnected(false);
             }
         };
-    }, [roomId, hallId, enabled, handleMessage, handleTyping, handleStopTyping, handleError, handleOpen, handleClose]);
+    }, [roomId, hallId, enabled]);
 
     const sendMessage = useCallback(
         (content: string) => {

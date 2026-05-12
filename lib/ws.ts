@@ -38,7 +38,16 @@ export class WebSocketClient {
             try {
                 this.ws = new WebSocket(this.url);
 
+                // Set connection timeout
+                const timeout = setTimeout(() => {
+                    if (this.ws?.readyState === WebSocket.CONNECTING) {
+                        this.ws.close();
+                        reject(new Error("WebSocket connection timeout"));
+                    }
+                }, 10000);
+
                 this.ws.onopen = () => {
+                    clearTimeout(timeout);
                     console.log("WebSocket connected");
                     this.reconnectAttempts = 0;
                     this.listeners.onOpen?.();
@@ -58,10 +67,11 @@ export class WebSocketClient {
                     const err = new Error(`WebSocket error: ${error}`);
                     console.error(err);
                     this.listeners.onError?.(err);
-                    reject(err);
+                    // Don't reject on error to allow reconnection logic to handle it
                 };
 
                 this.ws.onclose = () => {
+                    clearTimeout(timeout);
                     console.log("WebSocket closed");
                     this.listeners.onClose?.();
 
