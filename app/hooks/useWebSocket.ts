@@ -128,7 +128,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
             // Just clear the reference
             wsRef.current = null;
         };
-    }, [roomId, hallId, enabled, updateListeners]);
+    }, [roomId, hallId, enabled]);
 
     const sendMessage = useCallback(
         (content: string) => {
