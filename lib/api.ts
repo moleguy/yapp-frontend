@@ -341,13 +341,13 @@ export async function getUser(userId: string): Promise<UserMeRes | null> {
 
 export async function createHall(payload: CreateHallReq): Promise<Hall | null> {
   try {
-    return await request<Hall>("/api/v1/halls/", { method: "POST", body: JSON.stringify(payload) });
+    return await request<Hall>("/api/v1/halls", { method: "POST", body: JSON.stringify(payload) });
   } catch (err) { console.error(err); return null; }
 }
 
 export async function getUserHalls(): Promise<Hall[] | null> {
   try {
-    return await request<Hall[]>("/api/v1/halls/", { method: "GET" });
+    return await request<Hall[]>("/api/v1/halls", { method: "GET" });
   } catch (err) { console.error(err); return null; }
 }
 
