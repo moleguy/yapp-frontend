@@ -26,6 +26,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const [isConnected, setIsConnected] = useState(false);
     const typingRef = useRef<Map<string, TypingEntry>>(new Map());
     const listenersRef = useRef<any>(null);
+    const roomIdRef = useRef<string | null>(null);
 
     // FIX: Pull addMessage directly from the store
     const addMessage = useMessageStore((state) => state.addMessage);
@@ -38,37 +39,39 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
     }, []);
 
-    // Store event handlers in ref to maintain stable references
-    const updateListeners = useCallback(() => {
-        if (!roomId) return;
-
+    // Initialize listeners once with stable references
+    if (!listenersRef.current) {
         listenersRef.current = {
             onMessage: (message: Message) => {
-                if (roomId) {
-                    addMessage(roomId, message);
+                const currentRoomId = roomIdRef.current;
+                if (currentRoomId) {
+                    useMessageStore.getState().addMessage(currentRoomId, message);
                 }
             },
             onEdit: (message: Partial<Message> & { id: string }) => {
-                if (roomId) {
-                    useMessageStore.getState().updateMessage(roomId, message.id, message);
+                const currentRoomId = roomIdRef.current;
+                if (currentRoomId) {
+                    useMessageStore.getState().updateMessage(currentRoomId, message.id, message);
                 }
             },
             onDelete: (data: { id: string }) => {
-                if (roomId) {
-                    useMessageStore.getState().deleteMessage(roomId, data.id);
+                const currentRoomId = roomIdRef.current;
+                if (currentRoomId) {
+                    useMessageStore.getState().deleteMessage(currentRoomId, data.id);
                 }
             },
             onReact: (data: { message_id: string; user_id: string; emoji: string; action: "add" | "remove" }) => {
-                if (roomId) {
+                const currentRoomId = roomIdRef.current;
+                if (currentRoomId) {
                     if (data.action === "add") {
-                        useReactionStore.getState().addReaction(roomId, data.message_id, {
+                        useReactionStore.getState().addReaction(currentRoomId, data.message_id, {
                             message_id: data.message_id,
                             user_id: data.user_id,
                             emoji: data.emoji,
                             created_at: new Date().toISOString()
                         });
                     } else {
-                        useReactionStore.getState().removeReaction(roomId, data.message_id, data.user_id, data.emoji);
+                        useReactionStore.getState().removeReaction(currentRoomId, data.message_id, data.user_id, data.emoji);
                     }
                 }
             },
@@ -100,15 +103,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 typingRef.current.clear();
             },
         };
-    }, [roomId, addMessage, clearTypingIndicator]);
+    }
 
     useEffect(() => {
         if (!enabled || !roomId || !hallId) {
             return;
         }
 
-        // Update listeners with current roomId
-        updateListeners();
+        // Update current roomId ref
+        roomIdRef.current = roomId;
 
         // Get global WebSocket client
         const client = getGlobalWebSocketClient();

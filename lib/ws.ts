@@ -36,14 +36,8 @@ export class WebSocketClient {
             }
 
             try {
-                // Get auth token from localStorage
-                let wsUrl = this.url;
-                const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
-                if (token) {
-                    wsUrl += `?token=${encodeURIComponent(token)}`;
-                }
-                
-                this.ws = new WebSocket(wsUrl);
+                // WebSocket connection uses cookies for authentication, not query parameters
+                this.ws = new WebSocket(this.url);
 
                 // Set connection timeout
                 const timeout = setTimeout(() => {
