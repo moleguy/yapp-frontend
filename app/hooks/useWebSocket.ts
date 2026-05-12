@@ -110,10 +110,16 @@ export function useWebSocket(options: UseWebSocketOptions) {
     }, [roomId, hallId, enabled]); // Remove unstable dependencies
 
     // Connection state tracking
+    const isConnectedRef = useRef(false);
+    
     useEffect(() => {
         const updateConnectionState = () => {
             const connected = WebSocketClient.getGlobalInstance()?.isConnected() || false;
-            setIsConnected(connected);
+            // Only update state if connection state actually changed
+            if (isConnectedRef.current !== connected) {
+                isConnectedRef.current = connected;
+                setIsConnected(connected);
+            }
         };
 
         const unsubscribeOpen = WebSocketClient.getGlobalInstance().on('open', updateConnectionState);
