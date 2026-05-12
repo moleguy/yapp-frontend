@@ -35,6 +35,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     }, []);
 
     // Message handler + room subscription
+    const handleMessageRef = useRef<(message: WSMessage) => void>(() => {});
+
     useEffect(() => {
         if (!enabled || !roomId || !hallId) {
             if (unsubscribeRef.current) {
@@ -44,7 +46,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
             return;
         }
 
-        const handleMessage = (message: WSMessage): void => {
+        // Create stable message handler
+        handleMessageRef.current = (message: WSMessage): void => {
             try {
                 if (message.room_id !== roomId) return;
 
@@ -95,7 +98,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         WebSocketClient.ensureGlobalConnection()
             .catch((error) => console.error("Failed to connect WebSocket:", error));
 
-        const unsubscribe = WebSocketClient.getGlobalInstance().on('*', handleMessage);
+        const unsubscribe = WebSocketClient.getGlobalInstance().on('*', handleMessageRef.current);
         unsubscribeRef.current = unsubscribe;
 
         return () => {
@@ -104,7 +107,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 unsubscribeRef.current = null;
             }
         };
-    }, [roomId, hallId, enabled, addMessage, clearTypingIndicator]);
+    }, [roomId, hallId, enabled]); // Remove unstable dependencies
 
     // Connection state tracking
     useEffect(() => {
