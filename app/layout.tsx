@@ -2,6 +2,7 @@ import {type Metadata} from 'next'
 import {Geist, Geist_Mono} from 'next/font/google'
 import './globals.css'
 import {AuthProvider} from './contexts/AuthContext'
+import {WebSocketProvider} from './contexts/WebSocketProvider'
 import {EdgeStoreProvider} from '@/lib/edgestore';
 import React from "react";
 
@@ -48,9 +49,11 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-            <EdgeStoreProvider>
-                {children}
-            </EdgeStoreProvider>
+            <WebSocketProvider>
+                <EdgeStoreProvider>
+                    {children}
+                </EdgeStoreProvider>
+            </WebSocketProvider>
         </AuthProvider>
         </body>
         </html>
