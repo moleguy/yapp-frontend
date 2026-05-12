@@ -209,10 +209,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
         [roomId],
     );
 
+    // Use ref for connection state to prevent infinite re-renders
+    const isConnectedRef = useRef(globalWebSocketManager.isConnected);
+    
     useEffect(() => {
         // Update connection state based on global manager
         const updateConnectionState = () => {
-            setIsConnected(globalWebSocketManager.isConnected);
+            const newConnectionState = globalWebSocketManager.isConnected;
+            isConnectedRef.current = newConnectionState;
+            setIsConnected(newConnectionState);
         };
 
         // Listen to connection events
@@ -223,7 +228,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
             unsubscribeOpen();
             unsubscribeClose();
         };
-    }, []);
+    }, []); // Empty dependency array since we use ref
 
     return {
         isConnected,
