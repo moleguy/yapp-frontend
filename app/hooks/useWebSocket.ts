@@ -6,6 +6,7 @@ import { WSMessage } from "@/lib/api";
 import { useMessageStore } from "@/app/store/useMessageStore";
 import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useReactionStore } from "@/app/store/useReactionStore";
+import { useUserStore } from "@/app/store/useUserStore";
 
 interface UseWebSocketOptions {
     roomId: string | null;
@@ -53,7 +54,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
                 switch (message.type) {
                     case 'text':
-                        addMessage(roomId, message as any);
+                        // Resolve optimistic message if it exists
+                        if (message.id) {
+                            useMessageStore.getState().resolveOptimisticMessage(roomId, message.id, message as any);
+                        } else {
+                            addMessage(roomId, message as any);
+                        }
                         break;
                     case 'edit':
                         useMessageStore.getState().updateMessage(roomId, message.id, message as any);
@@ -137,10 +143,28 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const sendMessage = useCallback((content: string) => {
         const client = WebSocketClient.getGlobalInstance();
         if (client?.isConnected() && roomId) {
+            // Add optimistic message locally
+            const tempId = `temp-${Date.now()}`;
+            const optimisticMessage: any = {
+                id: tempId,
+                room_id: roomId,
+                author_id: useUserStore.getState().user?.id,
+                content,
+                sent_at: new Date().toISOString(),
+                edited_at: null,
+                deleted_at: null,
+                author: useUserStore.getState().user,
+                isOptimistic: true,
+            };
+            
+            addMessage(roomId, optimisticMessage);
+            
+            // Send via WebSocket
             client.send({
                 type: "text",
                 room_id: roomId,
                 content,
+                client_id: tempId, // Important for resolving optimistic message
                 sent_at: new Date().toISOString(),
                 mention_everyone: false,
                 mentions: [],

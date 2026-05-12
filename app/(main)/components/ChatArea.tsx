@@ -100,23 +100,7 @@ export default function ChatArea({
     if (!input.trim() || !user || !roomId) return;
 
     const content = input.trim();
-    const tempId = `temp-${Date.now()}`;
-
-    const optimistic: ApiMessage = {
-      id: tempId,
-      room_id: roomId,
-      author_id: user.id,
-      content,
-      sent_at: new Date().toISOString(),
-      edited_at: null,
-      deleted_at: null,
-      author: user as any,
-    };
-
-    addOptimistic(roomId, optimistic);
-
     sendMessage(content);
-
     setInput("");
   };
 
@@ -179,7 +163,7 @@ export default function ChatArea({
         />
         <button 
           onClick={handleSend}
-          className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="px-3 py-2 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <FiSend />
         </button>

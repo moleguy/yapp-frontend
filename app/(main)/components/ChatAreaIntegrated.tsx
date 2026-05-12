@@ -97,20 +97,6 @@ function ChatAreaContent() {
     if (!input.trim() || !user || !selectedRoom?.id) return;
 
     const content = input.trim();
-    const tempId = `temp-${Date.now()}`;
-
-    const optimistic: ApiMessage = {
-      id: tempId,
-      room_id: selectedRoom.id,
-      author_id: user.id,
-      content,
-      sent_at: new Date().toISOString(),
-      edited_at: null,
-      deleted_at: null,
-      author: user as any,
-    };
-
-    addOptimistic(selectedRoom.id, optimistic);
     sendMessage(content);
     setInput("");
   };
