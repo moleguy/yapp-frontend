@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { getWebSocketUrl } from "@/lib/api";
-import { WebSocketClient, getGlobalWebSocketClient, ensureWebSocketConnection } from "@/lib/ws";
+import { globalWebSocketManager } from "@/lib/globalWebSocket";
+import { WSMessage } from "@/lib/api";
 // FIX: Import useMessageStore directly
 import { useMessageStore } from "@/app/store/useMessageStore";
 import { useSelectedHallId } from "@/app/store/useHallStore";
@@ -22,11 +22,9 @@ interface TypingEntry {
 
 export function useWebSocket(options: UseWebSocketOptions) {
     const { roomId, hallId, enabled = true } = options;
-    const wsRef = useRef<WebSocketClient | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const typingRef = useRef<Map<string, TypingEntry>>(new Map());
-    const listenersRef = useRef<any>(null);
-    const roomIdRef = useRef<string | null>(null);
+    const unsubscribeRef = useRef<(() => void) | null>(null);
 
     // FIX: Pull addMessage directly from the store
     const addMessage = useMessageStore((state) => state.addMessage);
@@ -39,145 +37,201 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
     }, []);
 
-    // Initialize listeners once with stable references
-    if (!listenersRef.current) {
-        listenersRef.current = {
-            onMessage: (message: Message) => {
-                const currentRoomId = roomIdRef.current;
-                if (currentRoomId) {
-                    useMessageStore.getState().addMessage(currentRoomId, message);
-                }
-            },
-            onEdit: (message: Partial<Message> & { id: string }) => {
-                const currentRoomId = roomIdRef.current;
-                if (currentRoomId) {
-                    useMessageStore.getState().updateMessage(currentRoomId, message.id, message);
-                }
-            },
-            onDelete: (data: { id: string }) => {
-                const currentRoomId = roomIdRef.current;
-                if (currentRoomId) {
-                    useMessageStore.getState().deleteMessage(currentRoomId, data.id);
-                }
-            },
-            onReact: (data: { message_id: string; user_id: string; emoji: string; action: "add" | "remove" }) => {
-                const currentRoomId = roomIdRef.current;
-                if (currentRoomId) {
-                    if (data.action === "add") {
-                        useReactionStore.getState().addReaction(currentRoomId, data.message_id, {
-                            message_id: data.message_id,
-                            user_id: data.user_id,
-                            emoji: data.emoji,
-                            created_at: new Date().toISOString()
-                        });
-                    } else {
-                        useReactionStore.getState().removeReaction(currentRoomId, data.message_id, data.user_id, data.emoji);
-                    }
-                }
-            },
-            onTyping: (data: { author_id: string; room_id: string }) => {
-                clearTypingIndicator(data.author_id);
-                const timeout = setTimeout(() => {
-                    clearTypingIndicator(data.author_id);
-                }, 3000);
-                typingRef.current.set(data.author_id, { userId: data.author_id, timeout });
-            },
-            onStopTyping: (data: { author_id: string; room_id: string }) => {
-                clearTypingIndicator(data.author_id);
-            },
-            onJoin: (data: { author_id: string; room_id: string }) => {
-                console.log(`User ${data.author_id} joined room ${data.room_id}`);
-            },
-            onLeave: (data: { author_id: string; room_id: string }) => {
-                console.log(`User ${data.author_id} left room ${data.room_id}`);
-            },
-            onError: (error: Error) => {
-                console.error("WebSocket error:", error.message);
-            },
-            onOpen: () => {
-                setIsConnected(true);
-            },
-            onClose: () => {
-                setIsConnected(false);
-                typingRef.current.forEach(({ timeout }) => clearTimeout(timeout));
-                typingRef.current.clear();
-            },
-        };
-    }
-
     useEffect(() => {
         if (!enabled || !roomId || !hallId) {
+            if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+            }
             return;
         }
 
-        // Update current roomId ref
-        roomIdRef.current = roomId;
-
-        // Get global WebSocket client
-        const client = getGlobalWebSocketClient();
-        wsRef.current = client;
-
-        // Connect if not already connected
-        ensureWebSocketConnection()
-            .then(() => {
-                if (client && listenersRef.current) {
-                    client.on(listenersRef.current);
+        // Set up message handlers for current room
+        const handleMessage = (message: WSMessage) => {
+            if (message.room_id === roomId) {
+                switch (message.type) {
+                    case 'text':
+                        addMessage(roomId, message as Message);
+                        break;
+                    case 'edit':
+                        useMessageStore.getState().updateMessage(roomId, message.id, message);
+                        break;
+                    case 'delete':
+                        useMessageStore.getState().deleteMessage(roomId, message.id);
+                        break;
+                    case 'react':
+                        if (message.action === 'add') {
+                            useReactionStore.getState().addReaction(roomId, message.message_id, {
+                                message_id: message.message_id,
+                                user_id: message.user_id,
+                                emoji: message.emoji,
+                                created_at: new Date().toISOString()
+                            });
+                        } else {
+                            useReactionStore.getState().removeReaction(roomId, message.message_id, message.user_id, message.emoji);
+                        }
+                        break;
+                    case 'typing':
+                        clearTypingIndicator(message.author_id);
+                        const timeout = setTimeout(() => {
+                            clearTypingIndicator(message.author_id);
+                        }, 3000);
+                        typingRef.current.set(message.author_id, { userId: message.author_id, timeout });
+                        break;
+                    case 'stop_typing':
+                        clearTypingIndicator(message.author_id);
+                        break;
+                    case 'join':
+                        console.log(`User ${message.author_id} joined room ${message.room_id}`);
+                        break;
+                    case 'leave':
+                        console.log(`User ${message.author_id} left room ${message.room_id}`);
+                        break;
                 }
-            })
-            .catch((error) => console.error("Failed to connect WebSocket:", error));
+            }
+        };
+
+        // Subscribe to global WebSocket events
+        const unsubscribe = globalWebSocketManager.on('*', handleMessage);
+        unsubscribeRef.current = unsubscribe;
 
         return () => {
-            // Don't disconnect global connection on unmount
-            // Just clear the reference
-            wsRef.current = null;
+            if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+            }
         };
-    }, [roomId, hallId, enabled]);
+    }, [roomId, hallId, enabled, addMessage, clearTypingIndicator]);
 
     const sendMessage = useCallback(
         (content: string) => {
-            if (wsRef.current?.isConnected() && roomId) {
-                wsRef.current.sendMessage(roomId, content);
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "text",
+                    room_id: roomId,
+                    content,
+                    sent_at: new Date().toISOString(),
+                    mention_everyone: false,
+                    mentions: [],
+                    attachments: []
+                });
             }
         },
         [roomId],
     );
 
-    const sendTyping = useCallback(() => {
-        if (wsRef.current?.isConnected() && roomId) {
-            wsRef.current.sendTyping(roomId);
-        }
-    }, [roomId]);
+    const sendEdit = useCallback(
+        (messageId: string, content: string) => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "edit",
+                    room_id: roomId,
+                    id: messageId,
+                    content,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
 
-    const sendStopTyping = useCallback(() => {
-        if (wsRef.current?.isConnected() && roomId) {
-            wsRef.current.sendStopTyping(roomId);
-        }
-    }, [roomId]);
+    const sendDelete = useCallback(
+        (messageId: string) => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "delete",
+                    room_id: roomId,
+                    id: messageId,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
 
-    const sendRead = useCallback((messageId: string) => {
-        if (wsRef.current?.isConnected()) {
-            wsRef.current.sendRead(messageId);
-        }
-    }, []);
+    const sendReact = useCallback(
+        (messageId: string, emoji: string, action: "add" | "remove") => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "react",
+                    room_id: roomId,
+                    message_id: messageId,
+                    emoji,
+                    action,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
 
-    const reconnect = useCallback(async () => {
-        if (wsRef.current) {
-            await wsRef.current.reconnect();
-        }
-    }, []);
+    const sendTyping = useCallback(
+        () => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "typing",
+                    room_id: roomId,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
 
-    const getTypingUsers = useCallback(() => {
-        return Array.from(typingRef.current.keys());
+    const sendStopTyping = useCallback(
+        () => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "stop_typing",
+                    room_id: roomId,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
+
+    const sendRead = useCallback(
+        (messageId: string) => {
+            if (globalWebSocketManager.isConnected && roomId) {
+                globalWebSocketManager.send({
+                    type: "read",
+                    room_id: roomId,
+                    message_id: messageId,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        },
+        [roomId],
+    );
+
+    useEffect(() => {
+        // Update connection state based on global manager
+        const updateConnectionState = () => {
+            setIsConnected(globalWebSocketManager.isConnected);
+        };
+
+        // Listen to connection events
+        const unsubscribeOpen = globalWebSocketManager.on('open', updateConnectionState);
+        const unsubscribeClose = globalWebSocketManager.on('close', updateConnectionState);
+
+        return () => {
+            unsubscribeOpen();
+            unsubscribeClose();
+        };
     }, []);
 
     return {
         isConnected,
         sendMessage,
+        sendEdit,
+        sendDelete,
+        sendReact,
         sendTyping,
         sendStopTyping,
         sendRead,
-        reconnect,
-        getTypingUsers,
+        typingUsers: Array.from(typingRef.current.values()).map(entry => entry.userId),
+        getTypingUsers: () => Array.from(typingRef.current.values()).map(entry => entry.userId),
     };
 }
 
