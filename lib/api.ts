@@ -169,11 +169,16 @@ export type Attachment = {
   file_type: string; file_size: number; created_at: string; updated_at: string; access_token?: string;
 };
 export type AttachmentReq = { file_name: string; url: string; file_type?: string; file_size?: number };
-export type Reaction = { message_id: string; user_id: string; emoji: string; created_at: string };
+export type Reaction = { message_id: string; user_id: string; emoji: string; created_at?: string };
+export type ReactionGroup = {
+  emoji: string;
+  count: number;
+  user_ids: { id: string; username: string; email: string; avatar_url: string | null }[];
+};
 export type Message = {
   id: string; room_id: string; author_id: string; content: string;
   sent_at: string; edited_at: string | null; deleted_at: string | null;
-  attachments?: Attachment[]; reactions?: Reaction[]; author?: UserMeRes; isOptimistic?: boolean;
+  attachments?: Attachment[]; reactions?: ReactionGroup[]; author?: UserMeRes; isOptimistic?: boolean;
 };
 export type CreateMessageReq = {
   content: string;
@@ -229,8 +234,11 @@ export type WSTypingMessage = WSBaseMessage & { type: "typing"; typing_user: str
 export type WSStopTypingMessage = WSBaseMessage & { type: "stop_typing" };
 export type WSJoinMessage = WSBaseMessage & { type: "join" };
 export type WSLeaveMessage = WSBaseMessage & { type: "leave" };
+export type WSEditMessage = WSBaseMessage & { type: "edit"; id: string; content: string; edited_at: string };
+export type WSDeleteMessage = WSBaseMessage & { type: "delete"; id: string };
+export type WSReactMessage = WSBaseMessage & { type: "react"; message_id: string; user_id: string; emoji: string; action: "add" | "remove" };
 export type WSErrorMessage = WSBaseMessage & { type: "error"; error: string };
-export type WSMessage = WSTextMessage | WSTypingMessage | WSStopTypingMessage | WSJoinMessage | WSLeaveMessage | WSErrorMessage;
+export type WSMessage = WSTextMessage | WSTypingMessage | WSStopTypingMessage | WSJoinMessage | WSLeaveMessage | WSEditMessage | WSDeleteMessage | WSReactMessage | WSErrorMessage;
 export type WSSendTextMessage = {
   type: "text"; room_id: string; content: string; sent_at: string;
   mention_everyone?: boolean; mentions?: string[]; attachments?: Omit<AttachmentReq, "id">[];

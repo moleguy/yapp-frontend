@@ -5,6 +5,7 @@ import { getWebSocketUrl } from "@/lib/api";
 import { WebSocketClient, getWebSocketClient } from "@/lib/ws";
 // FIX: Import useMessageStore directly
 import { useMessageStore } from "@/app/store/useMessageStore";
+import { useReactionStore } from "@/app/store/useReactionStore";
 import { Message } from "@/lib/api";
 
 interface UseWebSocketOptions {
@@ -44,6 +45,42 @@ export function useWebSocket(options: UseWebSocketOptions) {
         [roomId, addMessage],
     );
 
+    const handleEdit = useCallback(
+        (message: Partial<Message> & { id: string }) => {
+            if (roomId) {
+                useMessageStore.getState().updateMessage(roomId, message.id, message);
+            }
+        },
+        [roomId],
+    );
+
+    const handleDelete = useCallback(
+        (data: { id: string }) => {
+            if (roomId) {
+                useMessageStore.getState().deleteMessage(roomId, data.id);
+            }
+        },
+        [roomId],
+    );
+
+    const handleReact = useCallback(
+        (data: { message_id: string; user_id: string; emoji: string; action: "add" | "remove" }) => {
+            if (roomId) {
+                if (data.action === "add") {
+                    useReactionStore.getState().addReaction(roomId, data.message_id, {
+                        message_id: data.message_id,
+                        user_id: data.user_id,
+                        emoji: data.emoji,
+                        created_at: new Date().toISOString()
+                    });
+                } else {
+                    useReactionStore.getState().removeReaction(roomId, data.message_id, data.user_id, data.emoji);
+                }
+            }
+        },
+        [roomId],
+    );
+
     const handleTyping = useCallback(
         (data: { author_id: string; room_id: string }) => {
             clearTypingIndicator(data.author_id);
@@ -60,6 +97,20 @@ export function useWebSocket(options: UseWebSocketOptions) {
             clearTypingIndicator(data.author_id);
         },
         [clearTypingIndicator],
+    );
+
+    const handleJoin = useCallback(
+        (data: { author_id: string; room_id: string }) => {
+            console.log(`User ${data.author_id} joined room ${data.room_id}`);
+        },
+        [],
+    );
+
+    const handleLeave = useCallback(
+        (data: { author_id: string; room_id: string }) => {
+            console.log(`User ${data.author_id} left room ${data.room_id}`);
+        },
+        [],
     );
 
     const handleError = useCallback((error: Error) => {
@@ -97,8 +148,13 @@ export function useWebSocket(options: UseWebSocketOptions) {
         wsRef.current
             .connect({
                 onMessage: handleMessage,
+                onEdit: handleEdit,
+                onDelete: handleDelete,
+                onReact: handleReact,
                 onTyping: handleTyping,
                 onStopTyping: handleStopTyping,
+                onJoin: handleJoin,
+                onLeave: handleLeave,
                 onError: handleError,
                 onOpen: handleOpen,
                 onClose: handleClose,

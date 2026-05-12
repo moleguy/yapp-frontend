@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
-import { Message, getMessages, FetchMessagesOpts } from "@/lib/api";
+import { Message, getMessages, FetchMessagesOpts, Reaction, ReactionGroup } from "@/lib/api";
+import { useReactionStore } from "./useReactionStore";
 
 const EMPTY_MESSAGES: Message[] = [];
 
@@ -54,6 +55,20 @@ export const useMessageStore = create<MessageState>()(
           const response = await getMessages(hallId, roomId, opts);
           if (response) {
             const messages = response.messages || [];
+
+            // Sync reactions to ReactionStore
+            messages.forEach(msg => {
+              if (msg.reactions) {
+                const flat: Reaction[] = [];
+                msg.reactions.forEach((g: ReactionGroup) => {
+                  (g.user_ids || []).forEach((u) => {
+                    flat.push({ message_id: msg.id, user_id: u.id, emoji: g.emoji });
+                  });
+                });
+                useReactionStore.getState().setReactions(roomId, msg.id, flat);
+              }
+            });
+
             const hasMore = response.has_more || false;
             const oldest = messages.length > 0 ? messages[0].id : undefined;
             const newest =
@@ -85,8 +100,22 @@ export const useMessageStore = create<MessageState>()(
             before: cursor,
           });
           if (response) {
+            const newMsgs = response.messages || [];
+
+            // Sync reactions to ReactionStore
+            newMsgs.forEach(msg => {
+              if (msg.reactions) {
+                const flat: Reaction[] = [];
+                msg.reactions.forEach((g: ReactionGroup) => {
+                  (g.user_ids || []).forEach((u) => {
+                    flat.push({ message_id: msg.id, user_id: u.id, emoji: g.emoji });
+                  });
+                });
+                useReactionStore.getState().setReactions(roomId, msg.id, flat);
+              }
+            });
+
             set((state) => {
-              const newMsgs = response.messages || [];
               const existing = state.messagesByRoom[roomId] || [];
               return {
                 messagesByRoom: {
@@ -118,8 +147,22 @@ export const useMessageStore = create<MessageState>()(
         try {
           const response = await getMessages(hallId, roomId, { after: cursor });
           if (response) {
+            const newMsgs = response.messages || [];
+
+            // Sync reactions to ReactionStore
+            newMsgs.forEach(msg => {
+              if (msg.reactions) {
+                const flat: Reaction[] = [];
+                msg.reactions.forEach((g: ReactionGroup) => {
+                  (g.user_ids || []).forEach((u) => {
+                    flat.push({ message_id: msg.id, user_id: u.id, emoji: g.emoji });
+                  });
+                });
+                useReactionStore.getState().setReactions(roomId, msg.id, flat);
+              }
+            });
+
             set((state) => {
-              const newMsgs = response.messages || [];
               const existing = state.messagesByRoom[roomId] || [];
               return {
                 messagesByRoom: {

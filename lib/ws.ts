@@ -4,6 +4,9 @@ import { Message, WSMessage } from "./api";
 
 export type WebSocketEventListener = {
     onMessage?: (msg: Message) => void;
+    onEdit?: (msg: Partial<Message> & { id: string }) => void;
+    onDelete?: (data: { id: string }) => void;
+    onReact?: (data: { message_id: string; user_id: string; emoji: string; action: "add" | "remove" }) => void;
     onTyping?: (data: { author_id: string; room_id: string }) => void;
     onStopTyping?: (data: { author_id: string; room_id: string }) => void;
     onJoin?: (data: { author_id: string; room_id: string }) => void;
@@ -167,6 +170,24 @@ export class WebSocketClient {
                     edited_at: data.edited_at || null,
                     deleted_at: data.deleted_at || null,
                     attachments: data.attachments,
+                });
+                break;
+            case "edit":
+                this.listeners.onEdit?.({
+                    id: (data as any).id,
+                    content: (data as any).content,
+                    edited_at: (data as any).edited_at,
+                });
+                break;
+            case "delete":
+                this.listeners.onDelete?.({ id: (data as any).id });
+                break;
+            case "react":
+                this.listeners.onReact?.({
+                    message_id: (data as any).message_id,
+                    user_id: (data as any).user_id,
+                    emoji: (data as any).emoji,
+                    action: (data as any).action,
                 });
                 break;
             case "typing":
