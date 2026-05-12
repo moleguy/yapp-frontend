@@ -15,6 +15,7 @@ function buildUrl(path: string): string {
   return `${rawBase}${path}`;
 }
 
+
 // ========== CSRF ==========
 
 let csrfTokenFromApi: string | null = null;
@@ -871,9 +872,11 @@ export function getWebSocketUrl(): string {
   const cleanUrl = rawBase.replace(/\/+$/, "");
   const protocol = cleanUrl.startsWith("https") ? "wss" : "ws";
   const host = cleanUrl.replace(/^https?:\/\//, "");
-  // NOTE: Do NOT pass token as query parameter. Browser will automatically include JWT cookie from sign-in.
-  // Backend's AuthMiddleware looks for JWT in cookie "jwt" or Authorization header, not in query params.
-  const url = `${protocol}://${host}/ws/`;
+  
+  // Get JWT token and include in URL as query parameter
+  const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
+  const url = token ? `${protocol}://${host}/ws?token=${encodeURIComponent(token)}` : `${protocol}://${host}/ws`;
+  
   console.log("[WebSocket] URL:", url);
   return url;
 }

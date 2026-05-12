@@ -1,6 +1,6 @@
 // WebSocket client for real-time messaging
 
-import { Message, WSMessage } from "./api";
+import { Message, WSMessage, getWebSocketUrl } from "./api";
 
 export type WebSocketEventListener = {
     onMessage?: (msg: Message) => void;
@@ -16,42 +16,96 @@ export type WebSocketEventListener = {
     onClose?: () => void;
 };
 
+// Event emitter types
+type EventCallback = (data: any) => void;
+
+// Global singleton
+let globalWsInstance: WebSocketClient | null = null;
+let globalConnectionPromise: Promise<void> | null = null;
+
 export class WebSocketClient {
     private ws: WebSocket | null = null;
     private url: string;
-    private listeners: WebSocketEventListener = {};
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
     private reconnectDelay = 1000;
     private isManualClose = false;
 
+    // Event emitter: event name -> set of callbacks
+    private eventListeners = new Map<string, Set<EventCallback>>();
+
     constructor(url: string) {
         this.url = url;
     }
 
-    connect(listeners?: WebSocketEventListener): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (listeners) {
-                this.listeners = listeners;
+    // ========== STATIC GLOBAL MANAGER ==========
+
+    static getGlobalInstance(): WebSocketClient {
+        if (!globalWsInstance) {
+            globalWsInstance = new WebSocketClient(getWebSocketUrl());
+        }
+        return globalWsInstance;
+    }
+
+    static async ensureGlobalConnection(): Promise<void> {
+        if (globalConnectionPromise) return globalConnectionPromise;
+
+        const client = WebSocketClient.getGlobalInstance();
+        if (client.isConnected()) return Promise.resolve();
+
+        globalConnectionPromise = client.connect()
+            .then(() => { globalConnectionPromise = null; })
+            .catch((error) => { globalConnectionPromise = null; throw error; });
+
+        return globalConnectionPromise;
+    }
+
+    static closeGlobal(): void {
+        if (globalWsInstance) {
+            globalWsInstance.disconnect();
+            globalWsInstance = null;
+        }
+        globalConnectionPromise = null;
+    }
+
+    // ========== EVENT EMITTER ==========
+
+    /**
+     * Subscribe to a named event. Returns an unsubscribe function.
+     * Use '*' to subscribe to all message types.
+     */
+    on(event: string, callback: EventCallback): () => void {
+        if (!this.eventListeners.has(event)) {
+            this.eventListeners.set(event, new Set());
+        }
+        this.eventListeners.get(event)!.add(callback);
+
+        return () => {
+            const callbacks = this.eventListeners.get(event);
+            if (callbacks) {
+                callbacks.delete(callback);
+                if (callbacks.size === 0) this.eventListeners.delete(event);
             }
+        };
+    }
 
+    private emit(event: string, data: any): void {
+        // Emit to specific event listeners
+        this.eventListeners.get(event)?.forEach((cb) => cb(data));
+        // Emit to wildcard listeners
+        if (event !== '*') {
+            this.eventListeners.get('*')?.forEach((cb) => cb(data));
+        }
+    }
+
+    // ========== CONNECTION ==========
+
+    connect(): Promise<void> {
+        return new Promise((resolve, reject) => {
             try {
-                // WebSocket connection uses cookies for authentication, but also try Authorization header
-                let wsUrl = this.url;
-                const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
-                
-                if (token) {
-                    // WebSocket doesn't support custom headers in browser
-                    // Fallback to cookie-based auth (browser sends cookies automatically)
-                    console.log("WebSocket auth: Using cookie-based authentication (JWT token present)");
-                    this.ws = new WebSocket(wsUrl);
-                } else {
-                    // Fallback to cookie-based auth
-                    console.log("WebSocket auth: No JWT token found, using cookie-based auth");
-                    this.ws = new WebSocket(wsUrl);
-                }
+                console.log("WebSocket connecting to:", this.url);
+                this.ws = new WebSocket(this.url);
 
-                // Set connection timeout
                 const timeout = setTimeout(() => {
                     if (this.ws?.readyState === WebSocket.CONNECTING) {
                         this.ws.close();
@@ -63,7 +117,7 @@ export class WebSocketClient {
                     clearTimeout(timeout);
                     console.log("WebSocket connected");
                     this.reconnectAttempts = 0;
-                    this.listeners.onOpen?.();
+                    this.emit('open', null);
                     resolve();
                 };
 
@@ -79,90 +133,25 @@ export class WebSocketClient {
                 this.ws.onerror = (error) => {
                     const err = new Error(`WebSocket error: ${error}`);
                     console.error(err);
-                    this.listeners.onError?.(err);
-                    // Don't reject on error to allow reconnection logic to handle it
+                    this.emit('error', err);
                 };
 
                 this.ws.onclose = () => {
                     clearTimeout(timeout);
                     console.log("WebSocket closed");
-                    this.listeners.onClose?.();
+                    this.emit('close', null);
 
                     if (!this.isManualClose && this.reconnectAttempts < this.maxReconnectAttempts) {
                         this.reconnectAttempts++;
                         const delay = this.reconnectDelay * this.reconnectAttempts;
                         console.log(`Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts})`);
-                        setTimeout(() => this.connect(this.listeners), delay);
+                        setTimeout(() => this.connect(), delay);
                     }
                 };
             } catch (error) {
                 reject(error);
             }
         });
-    }
-
-    /**
-     * Send a text message to a specific room
-     */
-    sendMessage(roomId: string, content: string): void {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(
-                JSON.stringify({
-                    type: "text",
-                    room_id: roomId,
-                    content: content,
-                    mention_everyone: false,
-                    sent_at: new Date().toISOString(),
-                }),
-            );
-        } else {
-            console.warn("WebSocket not connected, message not sent");
-        }
-    }
-
-    /**
-     * Send typing indicator for a specific room
-     */
-    sendTyping(roomId: string): void {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(
-                JSON.stringify({
-                    type: "typing",
-                    room_id: roomId,
-                    sent_at: new Date().toISOString(),
-                }),
-            );
-        }
-    }
-
-    /**
-     * Send stop typing indicator for a specific room
-     */
-    sendStopTyping(roomId: string): void {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(
-                JSON.stringify({
-                    type: "stop_typing",
-                    room_id: roomId,
-                    sent_at: new Date().toISOString(),
-                }),
-            );
-        }
-    }
-
-    /**
-     * Send read receipt
-     */
-    sendRead(messageId: string): void {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(
-                JSON.stringify({
-                    type: "read",
-                    message_id: messageId,
-                    sent_at: new Date().toISOString(),
-                }),
-            );
-        }
     }
 
     disconnect(): void {
@@ -176,21 +165,54 @@ export class WebSocketClient {
     reconnect(): Promise<void> {
         this.isManualClose = false;
         this.reconnectAttempts = 0;
-        return this.connect(this.listeners);
+        return this.connect();
     }
 
     isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
     }
 
-    on(listeners: WebSocketEventListener): void {
-        this.listeners = { ...this.listeners, ...listeners };
+    // ========== SEND HELPERS ==========
+
+    send(data: any): void {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify(data));
+        } else {
+            console.warn("WebSocket not connected, message not sent");
+        }
     }
+
+    sendMessage(roomId: string, content: string): void {
+        this.send({
+            type: "text",
+            room_id: roomId,
+            content,
+            sent_at: new Date().toISOString(),
+            mention_everyone: false,
+            mentions: [],
+            attachments: [],
+        });
+    }
+
+    sendTyping(roomId: string): void {
+        this.send({ type: "typing", room_id: roomId, sent_at: new Date().toISOString() });
+    }
+
+    sendStopTyping(roomId: string): void {
+        this.send({ type: "stop_typing", room_id: roomId, sent_at: new Date().toISOString() });
+    }
+
+    sendRead(messageId: string): void {
+        this.send({ type: "read", message_id: messageId, sent_at: new Date().toISOString() });
+    }
+
+    // ========== MESSAGE HANDLER ==========
 
     private handleMessage(data: WSMessage): void {
         switch (data.type) {
             case "text":
-                this.listeners.onMessage?.({
+                this.emit('text', {
+                    type: 'text',
                     id: data.id || "",
                     room_id: data.room_id,
                     author_id: data.author_id,
@@ -203,94 +225,38 @@ export class WebSocketClient {
                 });
                 break;
             case "edit":
-                this.listeners.onEdit?.({
-                    id: (data as any).id,
-                    content: (data as any).content,
-                    edited_at: (data as any).edited_at,
-                });
+                this.emit('edit', data);
                 break;
             case "delete":
-                this.listeners.onDelete?.({ id: (data as any).id });
+                this.emit('delete', data);
                 break;
             case "react":
-                this.listeners.onReact?.({
-                    message_id: (data as any).message_id,
-                    user_id: (data as any).user_id,
-                    emoji: (data as any).emoji,
-                    action: (data as any).action,
-                });
+                this.emit('react', data);
                 break;
             case "typing": {
-                const uid = (data as { typing_user?: string }).typing_user || data.author_id;
-                this.listeners.onTyping?.({ author_id: uid, room_id: data.room_id });
+                const uid = (data as any).typing_user || data.author_id;
+                this.emit('typing', { type: 'typing', author_id: uid, room_id: data.room_id });
                 break;
             }
             case "stop_typing": {
-                const uid = (data as { typing_user?: string }).typing_user || data.author_id;
-                this.listeners.onStopTyping?.({ author_id: uid, room_id: data.room_id });
+                const uid = (data as any).typing_user || data.author_id;
+                this.emit('stop_typing', { type: 'stop_typing', author_id: uid, room_id: data.room_id });
                 break;
             }
             case "presence":
+                this.emit('presence', data);
                 break;
             case "join":
-                this.listeners.onJoin?.({ author_id: data.author_id, room_id: data.room_id });
+                this.emit('join', data);
                 break;
             case "leave":
-                this.listeners.onLeave?.({ author_id: data.author_id, room_id: data.room_id });
+                this.emit('leave', data);
                 break;
             case "error":
-                this.listeners.onError?.(new Error(data.error));
+                this.emit('error', new Error(data.error));
                 break;
             default:
                 console.warn("Unhandled message type:", (data as any).type);
         }
     }
-}
-
-let wsInstance: WebSocketClient | null = null;
-let connectionPromise: Promise<void> | null = null;
-
-export function getGlobalWebSocketClient(): WebSocketClient {
-    if (!wsInstance) {
-        const { getWebSocketUrl } = require("./api");
-        const url = getWebSocketUrl();
-        wsInstance = new WebSocketClient(url);
-    }
-    return wsInstance;
-}
-
-export function getWebSocketClient(url: string): WebSocketClient {
-    // For backward compatibility, but we should use global connection
-    console.warn("getWebSocketClient with URL is deprecated, use getGlobalWebSocketClient instead");
-    return getGlobalWebSocketClient();
-}
-
-export async function ensureWebSocketConnection(): Promise<void> {
-    if (connectionPromise) {
-        return connectionPromise;
-    }
-
-    const client = getGlobalWebSocketClient();
-    if (client.isConnected()) {
-        return Promise.resolve();
-    }
-
-    connectionPromise = client.connect()
-        .then(() => {
-            connectionPromise = null;
-        })
-        .catch((error) => {
-            connectionPromise = null;
-            throw error;
-        });
-
-    return connectionPromise;
-}
-
-export function closeWebSocketClient(): void {
-    if (wsInstance) {
-        wsInstance.disconnect();
-        wsInstance = null;
-    }
-    connectionPromise = null;
 }
