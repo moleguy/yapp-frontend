@@ -25,10 +25,10 @@ export default function HallBansSettings() {
     }
   }, [hallId, selectHall]);
 
-  const handleUnban = async (userId: string) => {
+  const handleUnban = async (banId: string) => {
     if (!hallId) return;
     try {
-      const success = await unbanUser(hallId, userId);
+      const success = await unbanUser(hallId, banId);
       if (success) {
         // Refresh bans list
         selectHall(hallId);

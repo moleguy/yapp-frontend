@@ -177,7 +177,11 @@ export default function ProfileSettings() {
       };
 
       await updateUserMe(updatedUser);
-      updateUser(updatedUser);
+      updateUser({
+        display_name: fields["display name"],
+        avatar_url: user.avatar_url ?? undefined,
+        avatar_thumbnail_url: user.avatar_thumbnail_url ?? undefined,
+      });
       setHasChanges(false);
       setEditingField(null);
     } catch (err: unknown) {

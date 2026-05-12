@@ -6,23 +6,23 @@ import { HiOutlineTrash, HiOutlineClipboardDocument, HiOutlineClock } from "reac
 
 interface InviteListProps {
   invites: HallInvite[];
-  onRevoke: (code: string) => Promise<void>;
+  onRevoke: (inviteId: string) => Promise<void>;
   isOwner: boolean;
 }
 
 export default function InviteList({ invites, onRevoke, isOwner }: InviteListProps) {
   const [loadingCode, setLoadingCode] = useState<string | null>(null);
 
-  const handleCopy = (code: string) => {
-    const url = `${window.location.origin}/invites/${code}`;
+  const handleCopy = (invite: HallInvite) => {
+    const url = invite.url || `${window.location.origin}/invites/${invite.code}`;
     navigator.clipboard.writeText(url);
     alert("Invite link copied to clipboard!");
   };
 
-  const handleRevoke = async (code: string) => {
+  const handleRevoke = async (inviteId: string) => {
     if (window.confirm("Are you sure you want to revoke this invite?")) {
-      setLoadingCode(code);
-      await onRevoke(code);
+      setLoadingCode(inviteId);
+      await onRevoke(inviteId);
       setLoadingCode(null);
     }
   };
@@ -49,12 +49,13 @@ export default function InviteList({ invites, onRevoke, isOwner }: InviteListPro
         </thead>
         <tbody className="divide-y divide-[#dcd9d3]">
           {invites.map((invite) => (
-            <tr key={invite.code} className="hover:bg-gray-50 transition-colors">
+            <tr key={invite.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-4 font-mono text-sm font-medium text-blue-600">
                 {invite.code}
               </td>
               <td className="px-4 py-4 text-sm text-[#1e1e1e]">
-                {invite.uses} {invite.max_uses ? `/ ${invite.max_uses}` : "uses"}
+                {invite.used_count}
+                {invite.max_uses != null ? ` / ${invite.max_uses}` : " (no limit)"}
               </td>
               <td className="px-4 py-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
@@ -65,7 +66,7 @@ export default function InviteList({ invites, onRevoke, isOwner }: InviteListPro
               <td className="px-4 py-4 text-right">
                 <div className="flex justify-end gap-2">
                   <button
-                    onClick={() => handleCopy(invite.code)}
+                    onClick={() => handleCopy(invite)}
                     className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="Copy Link"
                   >
@@ -73,8 +74,8 @@ export default function InviteList({ invites, onRevoke, isOwner }: InviteListPro
                   </button>
                   {isOwner && (
                     <button
-                      onClick={() => handleRevoke(invite.code)}
-                      disabled={loadingCode === invite.code}
+                      onClick={() => handleRevoke(invite.id)}
+                      disabled={loadingCode === invite.id}
                       className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Revoke Invite"
                     >

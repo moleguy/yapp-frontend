@@ -36,7 +36,7 @@ export default function RoleList({
           <div className="flex items-center gap-3">
             <div
               className="w-4 h-4 rounded-full border border-gray-200"
-              style={{ backgroundColor: role.color }}
+              style={{ backgroundColor: role.color ?? "#99aab5" }}
             />
             <span className="font-medium">{role.name}</span>
             {role.is_admin && (

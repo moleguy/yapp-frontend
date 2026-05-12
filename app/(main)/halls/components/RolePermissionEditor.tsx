@@ -1,29 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { RolePermission, UpdateRolePermissionsReq } from "@/lib/api";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  RolePermissionsData,
+  UpdateRolePermissionsReq,
+  PermissionCategory,
+} from "@/lib/api";
 
 interface RolePermissionEditorProps {
-  permissions: RolePermission | null;
+  permissions: RolePermissionsData | null;
   onSave: (updates: UpdateRolePermissionsReq) => Promise<void>;
   loading: boolean;
   isOwner: boolean;
 }
 
-const PERMISSION_LABELS: Record<string, { label: string; description: string }> = {
-  admin: { label: "Administrator", description: "Provides all permissions and bypasses all restrictions." },
-  manage_members: { label: "Manage Members", description: "Allows kicking members and changing nicknames." },
-  manage_roles: { label: "Manage Roles", description: "Allows creating, editing, and deleting roles." },
-  manage_bans: { label: "Manage Bans", description: "Allows banning and unbanning users." },
-  create_invites: { label: "Create Invites", description: "Allows creating invite links for the hall." },
-  create_floor: { label: "Manage Floors", description: "Allows creating, editing, and deleting floors." },
-  create_room: { label: "Manage Rooms", description: "Allows creating, editing, and deleting rooms." },
-  manage_messages: { label: "Manage Messages", description: "Allows deleting and pinning messages from others." },
-  send_messages: { label: "Send Messages", description: "Allows sending text messages in rooms." },
-  read_messages: { label: "Read Message History", description: "Allows reading past messages in rooms." },
-  react_to_messages: { label: "Add Reactions", description: "Allows adding emoji reactions to messages." },
-  attach_files: { label: "Attach Files", description: "Allows uploading files and media." },
-};
+function cloneCategories(cats: PermissionCategory[]): PermissionCategory[] {
+  return cats.map((c) => ({
+    ...c,
+    permissions: c.permissions.map((p) => ({ ...p })),
+  }));
+}
 
 export default function RolePermissionEditor({
   permissions,
@@ -31,31 +27,55 @@ export default function RolePermissionEditor({
   loading,
   isOwner,
 }: RolePermissionEditorProps) {
-  const [localPermissions, setLocalPermissions] = useState<Partial<RolePermission>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [local, setLocal] = useState<PermissionCategory[]>([]);
+  const [originalFlat, setOriginalFlat] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (permissions) {
-      setLocalPermissions(permissions);
-      setHasChanges(false);
+      setLocal(cloneCategories(permissions.categories));
+      const o: Record<string, boolean> = {};
+      for (const c of permissions.categories) {
+        for (const p of c.permissions) {
+          o[p.key] = p.is_enabled;
+        }
+      }
+      setOriginalFlat(o);
     }
   }, [permissions]);
 
-  const handleToggle = (key: string) => {
-    if (!isOwner) return;
+  const flatLocal = useMemo(() => {
+    const o: Record<string, boolean> = {};
+    for (const c of local) {
+      for (const p of c.permissions) {
+        o[p.key] = p.is_enabled;
+      }
+    }
+    return o;
+  }, [local]);
 
-    setLocalPermissions((prev) => {
-      const newVal = !prev[key as keyof RolePermission];
-      const updated = { ...prev, [key]: newVal };
-      setHasChanges(true);
-      return updated;
+  const hasChanges = useMemo(() => {
+    if (!permissions) return false;
+    return Object.keys(flatLocal).some((k) => flatLocal[k] !== originalFlat[k]);
+  }, [flatLocal, originalFlat, permissions]);
+
+  const toggle = (catIndex: number, permIndex: number) => {
+    if (!isOwner || permissions?.is_admin) return;
+    setLocal((prev) => {
+      const next = cloneCategories(prev);
+      next[catIndex].permissions[permIndex].is_enabled =
+        !next[catIndex].permissions[permIndex].is_enabled;
+      return next;
     });
   };
 
-  const handleSave = () => {
-    const { role_id, created_at, updated_at, ...updates } = localPermissions as RolePermission;
-    onSave(updates as UpdateRolePermissionsReq);
-    setHasChanges(false);
+  const handleSave = async () => {
+    const updates: UpdateRolePermissionsReq = {};
+    for (const key of Object.keys(flatLocal)) {
+      if (flatLocal[key] !== originalFlat[key]) {
+        (updates as Record<string, boolean>)[key] = flatLocal[key];
+      }
+    }
+    await onSave(updates);
   };
 
   if (!permissions) {
@@ -66,22 +86,32 @@ export default function RolePermissionEditor({
     );
   }
 
+  const readOnly = !isOwner || permissions.is_admin;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between sticky top-0 bg-white py-2 z-10 border-b border-gray-100">
-        <h3 className="font-semibold text-[#1e1e1e]">Permissions</h3>
-        {hasChanges && (
+        <div>
+          <h3 className="font-semibold text-[#1e1e1e]">{permissions.role_name}</h3>
+          {permissions.is_admin && (
+            <p className="text-xs text-amber-700 mt-1">
+              Administrator roles have all permissions enabled.
+            </p>
+          )}
+        </div>
+        {hasChanges && !readOnly && (
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => {
-                setLocalPermissions(permissions);
-                setHasChanges(false);
+                setLocal(cloneCategories(permissions.categories));
               }}
               className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
             >
               Reset
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={loading}
               className="px-4 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
@@ -92,23 +122,36 @@ export default function RolePermissionEditor({
         )}
       </div>
 
-      <div className="space-y-4">
-        {Object.entries(PERMISSION_LABELS).map(([key, { label, description }]) => (
-          <div key={key} className="flex items-start justify-between gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-[#1e1e1e]">{label}</div>
-              <div className="text-xs text-gray-500">{description}</div>
+      <div className="space-y-8">
+        {local.map((category, ci) => (
+          <div key={`${category.name}-${ci}`} className="space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800">{category.name}</h4>
+              <p className="text-xs text-gray-500">{category.description}</p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={!!localPermissions[key as keyof RolePermission]}
-                onChange={() => handleToggle(key)}
-                disabled={!isOwner}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
+            <div className="space-y-2">
+              {category.permissions.map((perm, pi) => (
+                <div
+                  key={perm.key}
+                  className="flex items-start justify-between gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-[#1e1e1e]">{perm.name}</div>
+                    <div className="text-xs text-gray-500">{perm.description}</div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={perm.is_enabled}
+                      onChange={() => toggle(ci, pi)}
+                      disabled={readOnly}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

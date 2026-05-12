@@ -9,7 +9,7 @@ import {
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
 import InviteList from "@/app/(main)/halls/components/InviteList";
-import { createInvite, revokeInvite } from "@/lib/api";
+import { createInvite, revokeInvite, InviteExpireAfter } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
 
 export default function HallInvitesSettings() {
@@ -21,7 +21,8 @@ export default function HallInvitesSettings() {
   const user = useUser();
 
   const [isCreating, setIsCreating] = useState(false);
-  const [maxUses, setMaxUses] = useState<number>(0);
+  const [expireAfter, setExpireAfter] = useState<InviteExpireAfter>("7days");
+  const [maxUses, setMaxUses] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,12 +35,15 @@ export default function HallInvitesSettings() {
     if (!hallId) return;
     setLoading(true);
     try {
+      const validUses = [1, 5, 10, 25, 50, 100];
+      const parsed = parseInt(maxUses, 10);
       const newInvite = await createInvite(hallId, {
-        max_uses: maxUses > 0 ? maxUses : undefined
+        expire_after: expireAfter,
+        max_uses: validUses.includes(parsed) ? parsed : null,
       });
       if (newInvite) {
         setIsCreating(false);
-        setMaxUses(0);
+        setMaxUses("");
         selectHall(hallId); // Refresh list
       }
     } catch (error) {
@@ -49,10 +53,10 @@ export default function HallInvitesSettings() {
     }
   };
 
-  const handleRevoke = async (code: string) => {
+  const handleRevoke = async (inviteId: string) => {
     if (!hallId) return;
     try {
-      const success = await revokeInvite(hallId, code);
+      const success = await revokeInvite(hallId, inviteId);
       if (success) {
         selectHall(hallId);
       }
@@ -89,13 +93,36 @@ export default function HallInvitesSettings() {
         <div className="p-6 bg-blue-50 border border-blue-100 rounded-xl space-y-4">
           <h3 className="font-semibold text-blue-800">New Invite Link</h3>
           <div className="space-y-2">
-            <label className="block text-sm text-blue-700">Max Uses (0 for unlimited)</label>
-            <input
-              type="number"
+            <label className="block text-sm text-blue-700">Expires after</label>
+            <select
+              value={expireAfter}
+              onChange={(e) => setExpireAfter(e.target.value as InviteExpireAfter)}
+              className="w-full max-w-xs px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="30min">30 minutes</option>
+              <option value="1hr">1 hour</option>
+              <option value="6hr">6 hours</option>
+              <option value="12hr">12 hours</option>
+              <option value="1day">1 day</option>
+              <option value="7days">7 days</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm text-blue-700">Max uses (leave empty for no limit)</label>
+            <select
               value={maxUses}
-              onChange={(e) => setMaxUses(parseInt(e.target.value) || 0)}
-              className="w-full max-w-xs px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+              onChange={(e) => setMaxUses(e.target.value)}
+              className="w-full max-w-xs px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">No limit</option>
+              <option value="1">1</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
           </div>
           <div className="flex gap-3">
             <button

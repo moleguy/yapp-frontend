@@ -132,7 +132,13 @@ export class WebSocketClient {
      */
     sendRead(messageId: string): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ type: "read", data: { message_id: messageId } }));
+            this.ws.send(
+                JSON.stringify({
+                    type: "read",
+                    message_id: messageId,
+                    sent_at: new Date().toISOString(),
+                }),
+            );
         }
     }
 
@@ -165,7 +171,8 @@ export class WebSocketClient {
                     id: data.id || "",
                     room_id: data.room_id,
                     author_id: data.author_id,
-                    content: data.content,
+                    content: data.content ?? "",
+                    mention_everyone: data.mention_everyone ?? data.mentions_everyone,
                     sent_at: data.sent_at,
                     edited_at: data.edited_at || null,
                     deleted_at: data.deleted_at || null,
@@ -190,11 +197,17 @@ export class WebSocketClient {
                     action: (data as any).action,
                 });
                 break;
-            case "typing":
-                this.listeners.onTyping?.({ author_id: data.author_id, room_id: data.room_id });
+            case "typing": {
+                const uid = (data as { typing_user?: string }).typing_user || data.author_id;
+                this.listeners.onTyping?.({ author_id: uid, room_id: data.room_id });
                 break;
-            case "stop_typing":
-                this.listeners.onStopTyping?.({ author_id: data.author_id, room_id: data.room_id });
+            }
+            case "stop_typing": {
+                const uid = (data as { typing_user?: string }).typing_user || data.author_id;
+                this.listeners.onStopTyping?.({ author_id: uid, room_id: data.room_id });
+                break;
+            }
+            case "presence":
                 break;
             case "join":
                 this.listeners.onJoin?.({ author_id: data.author_id, room_id: data.room_id });

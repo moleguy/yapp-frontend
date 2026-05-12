@@ -5,6 +5,7 @@ import { getWebSocketUrl } from "@/lib/api";
 import { WebSocketClient, getWebSocketClient } from "@/lib/ws";
 // FIX: Import useMessageStore directly
 import { useMessageStore } from "@/app/store/useMessageStore";
+import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useReactionStore } from "@/app/store/useReactionStore";
 import { Message } from "@/lib/api";
 
@@ -220,7 +221,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
 export function useTypingIndicator(roomId: string | null) {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const { sendTyping, sendStopTyping } = useWebSocket({ roomId, hallId: null, enabled: !!roomId });
+    const hallId = useSelectedHallId();
+    const { sendTyping, sendStopTyping } = useWebSocket({
+        roomId,
+        hallId,
+        enabled: !!roomId && !!hallId,
+    });
 
     useEffect(() => {
         return () => {

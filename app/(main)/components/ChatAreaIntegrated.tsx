@@ -6,7 +6,6 @@ import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 import {
     useMessagesForRoom,
     useFetchMessages,
-    useAddMessage,
     useUpdateMessage,
     useDeleteMessage,
     useCanLoadOlderMessages,
@@ -23,7 +22,6 @@ import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
 import { useWebSocket, useTypingIndicator } from "@/app/hooks/useWebSocket";
 import {
-    createMessage,
     deleteMessage,
     updateMessage,
     addReaction,
@@ -54,7 +52,6 @@ export default function ChatArea() {
     // Message store hooks
     const messages = useMessagesForRoom(selectedRoom?.id || "");
     const fetchMessages = useFetchMessages();
-    const addMessageStore = useAddMessage();
     const updateMessageStore = useUpdateMessage();
     const deleteMessageStore = useDeleteMessage();
     const canLoadOlder = useCanLoadOlderMessages(selectedRoom?.id || "");
@@ -126,25 +123,16 @@ export default function ChatArea() {
             return;
         }
 
+        if (!isConnected) {
+            showError("Not connected — wait for chat to connect, then try again.");
+            return;
+        }
+
         setSending(true);
         try {
-            // Create message via API
-            const newMessage = await createMessage(selectedHallId, selectedRoom.id, {
-                content: inputValue.trim(),
-            });
-
-            if (newMessage) {
-                // Add to store (optimistic, but confirmed by API)
-                addMessageStore(selectedRoom.id, newMessage);
-                setInputValue("");
-
-                // Send via WebSocket to others
-                if (isConnected) {
-                    sendWSMessage(inputValue.trim());
-                }
-            } else {
-                showError("Failed to send message");
-            }
+            const text = inputValue.trim();
+            setInputValue("");
+            sendWSMessage(text);
         } catch (err) {
             showError(
                 err instanceof Error ? err.message : "Error sending message",

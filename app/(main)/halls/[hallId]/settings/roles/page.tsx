@@ -12,12 +12,12 @@ import RoleList from "@/app/(main)/halls/components/RoleList";
 import RolePermissionEditor from "@/app/(main)/halls/components/RolePermissionEditor";
 import {
   Role,
-  RolePermission,
+  RolePermissionsData,
   getRolePermissions,
   updateRolePermissions,
   createRole,
   deleteRole,
-  UpdateRolePermissionsReq
+  UpdateRolePermissionsReq,
 } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
 
@@ -30,7 +30,7 @@ export default function HallRolesSettings() {
   const user = useUser();
 
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [permissions, setPermissions] = useState<RolePermission | null>(null);
+  const [permissions, setPermissions] = useState<RolePermissionsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
@@ -67,8 +67,11 @@ export default function HallRolesSettings() {
     setLoading(true);
     try {
       const updated = await updateRolePermissions(hallId, selectedRole.id, updates);
-      if (updated) {
-        setPermissions(updated);
+      if (updated && permissions) {
+        setPermissions({
+          ...permissions,
+          categories: updated.categories,
+        });
       }
     } catch (error) {
       console.error("Failed to update permissions:", error);

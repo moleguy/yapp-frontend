@@ -11,7 +11,8 @@ import {
   HiOutlineNoSymbol,
   HiOutlineInformationCircle,
   HiOutlineHashtag,
-  HiOutlineEnvelope
+  HiOutlineEnvelope,
+  HiOutlineUserPlus,
 } from "react-icons/hi2";
 
 interface NavItemProps {
@@ -61,6 +62,11 @@ export default function HallSettingsNav({ hallId }: { hallId: string }) {
       href: `/halls/${hallId}/settings/members`,
       label: "Members",
       icon: HiOutlineUsers,
+    },
+    {
+      href: `/halls/${hallId}/settings/requests`,
+      label: "Join requests",
+      icon: HiOutlineUserPlus,
     },
     {
       href: `/halls/${hallId}/settings/roles`,

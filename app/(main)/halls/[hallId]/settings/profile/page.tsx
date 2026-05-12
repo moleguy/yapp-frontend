@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSelectedHall, useUpdateHall, useRemoveHall } from "@/app/store/useHallStore";
-import { updateHall as updateHallApi, deleteHall as deleteHallApi } from "@/lib/api";
+import { patchHallProfile, deleteHall as deleteHallApi } from "@/lib/api";
 import { useUser } from "@/app/store/useUserStore";
 
 export default function HallProfileSettings() {
@@ -37,7 +37,7 @@ export default function HallProfileSettings() {
     setMessage(null);
 
     try {
-      const updatedHall = await updateHallApi(hallId, { name, description });
+      const updatedHall = await patchHallProfile(hallId, { name, description });
       if (updatedHall) {
         updateHallStore(hallId, { name, description });
         setMessage({ type: "success", text: "Hall profile updated successfully!" });

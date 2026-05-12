@@ -98,6 +98,7 @@ export const useMessageStore = create<MessageState>()(
         try {
           const response = await getMessages(hallId, roomId, {
             before: cursor,
+            limit: 50,
           });
           if (response) {
             const newMsgs = response.messages || [];
@@ -145,7 +146,7 @@ export const useMessageStore = create<MessageState>()(
         if (!cursor) return;
         set({ loading: true });
         try {
-          const response = await getMessages(hallId, roomId, { after: cursor });
+          const response = await getMessages(hallId, roomId, { after: cursor, limit: 50 });
           if (response) {
             const newMsgs = response.messages || [];
 

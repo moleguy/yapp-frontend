@@ -10,7 +10,7 @@ import {
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
 import MembersList from "@/app/(main)/halls/components/MembersList";
-import { kickHallMember, updateHallMember } from "@/lib/api";
+import { kickHallMember, updateHallMemberRole } from "@/lib/api";
 
 export default function HallMembersSettings() {
   const params = useParams();
@@ -27,10 +27,10 @@ export default function HallMembersSettings() {
     }
   }, [hallId, selectHall]);
 
-  const handleKick = async (userId: string) => {
+  const handleKick = async (memberId: string) => {
     if (!hallId) return;
     try {
-      const success = await kickHallMember(hallId, userId);
+      const success = await kickHallMember(hallId, memberId);
       if (success) {
         // Refresh members list
         selectHall(hallId);
@@ -40,10 +40,10 @@ export default function HallMembersSettings() {
     }
   };
 
-  const handleUpdateRole = async (userId: string, roleId: string) => {
+  const handleUpdateRole = async (memberId: string, roleId: string) => {
     if (!hallId) return;
     try {
-      const updated = await updateHallMember(hallId, userId, { role_id: roleId });
+      const updated = await updateHallMemberRole(hallId, memberId, { role_id: roleId });
       if (updated) {
         // Refresh members list
         selectHall(hallId);

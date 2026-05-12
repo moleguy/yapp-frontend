@@ -1,0 +1,158 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useSelectHall, useSelectedHall } from "@/app/store/useHallStore";
+import { useUser } from "@/app/store/useUserStore";
+import {
+  getJoinRequests,
+  acceptJoinRequest,
+  declineJoinRequest,
+  HallJoinRequest,
+} from "@/lib/api";
+import { HiOutlineCheck, HiOutlineXMark } from "react-icons/hi2";
+
+export default function HallJoinRequestsSettings() {
+  const params = useParams();
+  const hallId = params.hallId as string;
+  const selectHall = useSelectHall();
+  const hall = useSelectedHall();
+  const user = useUser();
+
+  const [requests, setRequests] = useState<HallJoinRequest[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!hallId) return;
+    setLoading(true);
+    try {
+      const res = await getJoinRequests(hallId);
+      if (res) {
+        setRequests(res.requests || []);
+        setTotal(res.total ?? 0);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hallId) {
+      selectHall(hallId);
+    }
+  }, [hallId, selectHall]);
+
+  useEffect(() => {
+    if (hallId && hall?.is_private) {
+      load();
+    }
+  }, [hallId, hall?.is_private]);
+
+  const onAccept = async (requestId: string) => {
+    if (!hallId) return;
+    setBusyId(requestId);
+    try {
+      const ok = await acceptJoinRequest(hallId, requestId);
+      if (ok) await load();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onDecline = async (requestId: string) => {
+    if (!hallId) return;
+    setBusyId(requestId);
+    try {
+      const ok = await declineJoinRequest(hallId, requestId);
+      if (ok) await load();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (!hall) return null;
+
+  const isOwner = hall.owner_id === user?.id;
+
+  if (!hall.is_private) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-[#1e1e1e]">Join requests</h1>
+        <p className="text-[#73726e]">
+          Join requests only apply to private halls. This hall is public.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Join requests</h1>
+        <p className="text-[#73726e]">
+          Pending requests to join this private hall ({total}).
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#dcd9d3] rounded-xl overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading…</div>
+        ) : requests.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No pending requests.</div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#dcd9d3] text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3">User ID</th>
+                <th className="px-4 py-3">Requested</th>
+                {isOwner && <th className="px-4 py-3 text-right">Actions</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#dcd9d3]">
+              {requests.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-sm">{r.user_id}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {new Date(r.created_at).toLocaleString()}
+                  </td>
+                  {isOwner && (
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onAccept(r.id)}
+                          disabled={busyId === r.id}
+                          className="p-2 rounded-lg text-green-700 hover:bg-green-50 disabled:opacity-50"
+                          title="Accept"
+                        >
+                          <HiOutlineCheck size={22} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDecline(r.id)}
+                          disabled={busyId === r.id}
+                          className="p-2 rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          title="Decline"
+                        >
+                          <HiOutlineXMark size={22} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {!isOwner && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          Only moderators with the right permissions can manage join requests.
+        </div>
+      )}
+    </div>
+  );
+}

@@ -128,8 +128,14 @@ export type UserMeRes = {
   created_at: string; updated_at: string; access_token?: string;
 };
 
-export type UpdateUserMeReq = { display_name: string; avatar_url: string | null; avatar_thumbnail_url: string | null };
-export type UpdateUserMeRes = { display_name: string; avatar_url: string | null; avatar_thumbnail_url: string | null };
+export type UpdateUserMeReq = {
+  display_name?: string | null;
+  description?: string | null;
+  avatar_url?: string | null;
+  avatar_thumbnail_url?: string | null;
+  friend_policy?: "everyone" | "friends" | "no_one" | null;
+};
+export type UpdateUserMeRes = UserMeRes;
 
 export type CreateHallReq = {
   name: string; is_private?: boolean; icon_url: string | null;
@@ -140,9 +146,12 @@ export type Hall = {
   icon_thumbnail_url?: string | null; banner_color: string | null; description: string | null;
   created_at: string; updated_at: string; owner_id: string;
 };
-export type UpdateHallReq = {
-  name?: string; is_private?: boolean; icon_url?: string | null;
-  icon_thumbnail_url?: string | null; banner_color?: string | null; description?: string | null;
+/** PATCH /halls/:hallID/settings/profile */
+export type HallProfileUpdateReq = {
+  name?: string;
+  is_private?: boolean;
+  description?: string | null;
+  banner_color?: string;
 };
 
 export type Floor = {
@@ -161,6 +170,7 @@ export type Room = {
 export type CreateRoomReq = { hall_id: string; floor_id: string | null; name: string; room_type: RoomType; is_private?: boolean };
 export type UpdateRoomReq = { name?: string; is_private?: boolean };
 export type MoveRoomReq = { hall_id: string; new_floor_id: string | null; after_id: string | null };
+export type MoveFloorReq = { hall_id: string; after_id: string | null };
 export type FloorWithRooms = Floor & { rooms: Room[] };
 export type GetHallRoomsRes = { top_level: Room[]; floors: FloorWithRooms[] };
 
@@ -177,73 +187,223 @@ export type ReactionGroup = {
 };
 export type Message = {
   id: string; room_id: string; author_id: string; content: string;
+  mention_everyone?: boolean;
   sent_at: string; edited_at: string | null; deleted_at: string | null;
   attachments?: Attachment[]; reactions?: ReactionGroup[]; author?: UserMeRes; isOptimistic?: boolean;
-};
-export type CreateMessageReq = {
-  content: string;
-  attachments?: { file_name: string; url: string; file_type: string; file_size: number }[];
 };
 export type UpdateMessageReq = { content: string };
 export type MessagesResponse = { messages: Message[]; has_more: boolean };
 export type FetchMessagesOpts = { limit?: number; before?: string; after?: string; around?: string };
 
-export type RolePermission = {
-  role_id: string; admin: boolean; create_hall: boolean; manage_members: boolean;
-  manage_roles: boolean; manage_bans: boolean; create_invites: boolean; create_floor: boolean;
-  delete_floor: boolean; create_room: boolean; delete_room: boolean; manage_messages: boolean;
-  send_messages: boolean; mention_everyone: boolean; read_messages: boolean; read_reactions: boolean;
-  react_to_messages: boolean; attach_files: boolean; created_at: string; updated_at: string; access_token?: string;
+export type PermissionDetail = {
+  key: string;
+  name: string;
+  description: string;
+  is_enabled: boolean;
 };
+export type PermissionCategory = {
+  name: string;
+  description: string;
+  permissions: PermissionDetail[];
+};
+/** GET /halls/:hallID/settings/roles/:roleID/permissions */
+export type RolePermissionsData = {
+  role_id: string;
+  role_name: string;
+  is_admin: boolean;
+  is_default: boolean;
+  categories: PermissionCategory[];
+};
+/** PATCH body — boolean flags; omitted = unchanged */
+export type UpdateRolePermissionsReq = Partial<{
+  view_channels: boolean;
+  manage_channels: boolean;
+  manage_roles: boolean;
+  manage_servers: boolean;
+  manage_invites: boolean;
+  manage_requests: boolean;
+  change_nickname: boolean;
+  manage_nicknames: boolean;
+  kick_members: boolean;
+  ban_members: boolean;
+  text_send_messages: boolean;
+  text_attach_files: boolean;
+  text_mention_roles: boolean;
+  text_manage_messages: boolean;
+  text_read_history: boolean;
+  text_send_voice: boolean;
+  voice_connect: boolean;
+  voice_speak: boolean;
+  voice_video: boolean;
+  voice_mute_members: boolean;
+}>;
+export type UpdateRolePermissionsRes = {
+  success: boolean;
+  message: string;
+  role_id: string;
+  categories: PermissionCategory[];
+};
+
 export type Role = {
-  id: string; hall_id: string; name: string; color: string;
-  is_admin: boolean; is_default: boolean; created_at: string; updated_at: string; access_token?: string;
+  id: string; hall_id: string; name: string; color: string | null;
+  icon_url?: string | null;
+  is_admin: boolean; is_default: boolean; created_at: string; updated_at: string;
 };
-export type CreateRoleReq = { name: string; color?: string; is_admin?: boolean };
-export type UpdateRoleReq = { name?: string; color?: string };
-export type UpdateRolePermissionsReq = Partial<Omit<RolePermission, "role_id" | "created_at" | "updated_at">>;
+export type CreateRoleReq = {
+  name: string;
+  color?: string | null;
+  icon_url?: string | null;
+  is_default?: boolean;
+  is_admin?: boolean;
+};
+export type UpdateRoleReq = {
+  name?: string | null;
+  color?: string | null;
+  icon_url?: string | null;
+  is_default?: boolean;
+  is_admin?: boolean;
+};
 
 export type HallMember = {
+  id: string;
   hall_id: string; user_id: string; role_id: string; nickname: string | null;
-  joined_at: string; updated_at: string; user?: UserMeRes;
+  joined_at: string; updated_at: string;
+  presence?: { user_id: string; status: string; last_seen_at?: string; updated_at: string };
+  user?: UserMeRes;
 };
-export type UpdateHallMemberReq = { role_id?: string; nickname?: string | null };
+export type UpdateHallMemberRoleReq = { role_id: string };
+export type UpdateHallMemberNicknameReq = { nickname: string | null };
+
+export type JoinHallRes = {
+  status: "joined" | "requested";
+  member_id: string | null;
+  request_id: string | null;
+  hall_id: string;
+  user_id: string;
+  role_id: string | null;
+  nickname: string | null;
+  joined_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HallJoinRequest = {
+  id: string;
+  hall_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+};
 
 export type HallBan = {
-  hall_id: string; user_id: string; banned_by: string; reason: string | null; banned_at: string;
+  id: string;
+  user_id: string;
+  username: string;
+  avatar_url: string | null;
+  reason: string | null;
+  created_at: string;
+  updated_at: string;
 };
-export type CreateBanReq = { user_id: string; reason?: string };
+export type CreateBanReq = { user_id: string; reason: string };
+
+export type InviteExpireAfter =
+  | "30min" | "1hr" | "6hr" | "12hr" | "1day" | "7days" | "never";
 
 export type HallInvite = {
-  code: string; hall_id: string; created_by: string; expires_at: string | null;
-  max_uses: number | null; uses: number; created_at: string;
+  id: string;
+  code: string;
+  hall_id: string;
+  created_by: string;
+  url: string;
+  role_id: string | null;
+  max_uses: number | null;
+  used_count: number;
+  expires_at: string | null;
+  created_at: string;
+  is_valid: boolean;
 };
-export type CreateInviteReq = { expires_at?: string; max_uses?: number };
+export type CreateInviteReq = {
+  expire_after: InviteExpireAfter;
+  max_uses?: number | null;
+  role_id?: string | null;
+};
 export type InviteInfo = {
-  code: string; hall_id: string; hall_name: string; created_by: string;
-  expires_at: string | null; max_uses: number | null; uses: number;
+  code: string;
+  hall_id: string;
+  hall_name: string;
+  icon_thumbnail_url: string | null;
+  role_id: string | null;
+  role_name: string | null;
+  max_uses: number | null;
+  used_count: number;
+  expires_at: string | null;
+  is_valid: boolean;
+};
+export type AcceptInviteLinkRes = {
+  hall_id: string;
+  member_id: string;
+  role_id: string | null;
+  joined_at: string;
 };
 
 export type WSBaseMessage = { room_id: string; author_id: string; sent_at: string };
 export type WSTextMessage = WSBaseMessage & {
-  type: "text"; id?: string; content: string; mention_everyone?: boolean;
-  mentions?: string[]; attachments?: Attachment[];
+  type: "text"; id?: string; content?: string;
+  mention_everyone?: boolean;
+  mentions_everyone?: boolean;
+  mentions?: string[] | UserMeRes[];
+  attachments?: Attachment[];
   created_at?: string; updated_at?: string; edited_at?: string | null; deleted_at?: string | null;
 };
-export type WSTypingMessage = WSBaseMessage & { type: "typing"; typing_user: string };
-export type WSStopTypingMessage = WSBaseMessage & { type: "stop_typing" };
+export type WSTypingMessage = WSBaseMessage & { type: "typing"; typing_user?: string };
+export type WSStopTypingMessage = WSBaseMessage & { type: "stop_typing"; typing_user?: string };
+export type WSPresenceMessage = WSBaseMessage & {
+  type: "presence";
+  presence_user_id: string;
+  presence_status: string;
+  last_seen_at?: string;
+};
 export type WSJoinMessage = WSBaseMessage & { type: "join" };
 export type WSLeaveMessage = WSBaseMessage & { type: "leave" };
 export type WSEditMessage = WSBaseMessage & { type: "edit"; id: string; content: string; edited_at: string };
 export type WSDeleteMessage = WSBaseMessage & { type: "delete"; id: string };
 export type WSReactMessage = WSBaseMessage & { type: "react"; message_id: string; user_id: string; emoji: string; action: "add" | "remove" };
 export type WSErrorMessage = WSBaseMessage & { type: "error"; error: string };
-export type WSMessage = WSTextMessage | WSTypingMessage | WSStopTypingMessage | WSJoinMessage | WSLeaveMessage | WSEditMessage | WSDeleteMessage | WSReactMessage | WSErrorMessage;
+export type WSMessage =
+  | WSTextMessage
+  | WSTypingMessage
+  | WSStopTypingMessage
+  | WSPresenceMessage
+  | WSJoinMessage
+  | WSLeaveMessage
+  | WSEditMessage
+  | WSDeleteMessage
+  | WSReactMessage
+  | WSErrorMessage;
 export type WSSendTextMessage = {
   type: "text"; room_id: string; content: string; sent_at: string;
   mention_everyone?: boolean; mentions?: string[]; attachments?: Omit<AttachmentReq, "id">[];
 };
 export type AppError = { code: number; message: string };
+
+export type PresenceStatus = "online" | "offline" | "away" | "busy";
+export type UserPresenceRes = {
+  user_id: string;
+  status: PresenceStatus;
+  last_seen_at?: string;
+  updated_at: string;
+};
+
+/** Flatten GET role permissions for simple feature checks */
+export function flattenRolePermissions(data: RolePermissionsData): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const cat of data.categories) {
+    for (const p of cat.permissions) {
+      out[p.key] = p.is_enabled;
+    }
+  }
+  return out;
+}
 
 // ========== AUTH ==========
 
@@ -357,10 +517,16 @@ export async function getHall(hallId: string): Promise<Hall | null> {
   } catch (err) { console.error(err); return null; }
 }
 
-export async function updateHall(hallId: string, payload: UpdateHallReq): Promise<Hall | null> {
+export async function patchHallProfile(hallId: string, payload: HallProfileUpdateReq): Promise<Hall | null> {
   try {
-    return await request<Hall>(`/api/v1/halls/${hallId}`, { method: "PATCH", body: JSON.stringify(payload) });
-  } catch (err) { console.error(err); return null; }
+    return await request<Hall>(`/api/v1/halls/${hallId}/settings/profile`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
 }
 
 export async function deleteHall(hallId: string): Promise<boolean> {
@@ -370,9 +536,9 @@ export async function deleteHall(hallId: string): Promise<boolean> {
   } catch (err) { console.error(err); return false; }
 }
 
-export async function joinHall(hallId: string): Promise<HallMember | null> {
+export async function joinHall(hallId: string): Promise<JoinHallRes | null> {
   try {
-    return await request<HallMember>(`/api/v1/halls/${hallId}/join`, { method: "POST" });
+    return await request<JoinHallRes>(`/api/v1/halls/${hallId}/join`, { method: "POST" });
   } catch (err) { console.error(err); return null; }
 }
 
@@ -387,7 +553,8 @@ export async function leaveHall(hallId: string): Promise<boolean> {
 
 export async function getFloors(hallId: string): Promise<Floor[] | null> {
   try {
-    return await request<Floor[]>(`/api/v1/halls/${hallId}/floors`, { method: "GET" });
+    const res = await request<{ floors: Floor[] }>(`/api/v1/halls/${hallId}/floors`, { method: "GET" });
+    return res?.floors ?? [];
   } catch (err) { console.error(err); return null; }
 }
 
@@ -439,7 +606,19 @@ export async function deleteRoom(hallId: string, roomId: string): Promise<boolea
 
 export async function moveRoom(hallId: string, roomId: string, payload: MoveRoomReq): Promise<Room | null> {
   try {
-    return await request<Room>(`/api/v1/halls/${hallId}/rooms/${roomId}/move`, { method: "POST", body: JSON.stringify(payload) });
+    return await request<Room>(`/api/v1/halls/${hallId}/rooms/${roomId}/move`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function moveFloor(hallId: string, floorId: string, payload: MoveFloorReq): Promise<Floor | null> {
+  try {
+    return await request<Floor>(`/api/v1/halls/${hallId}/floors/${floorId}/move`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
   } catch (err) { console.error(err); return null; }
 }
 
@@ -448,24 +627,18 @@ export async function moveRoom(hallId: string, roomId: string, payload: MoveRoom
 export async function getMessages(hallId: string, roomId: string, opts?: FetchMessagesOpts): Promise<MessagesResponse | null> {
   try {
     const p = new URLSearchParams();
-    if (opts?.limit) p.append("limit", opts.limit.toString());
+    p.append("limit", String(opts?.limit ?? 50));
     if (opts?.before) p.append("before", opts.before);
     if (opts?.after) p.append("after", opts.after);
     if (opts?.around) p.append("around", opts.around);
     const q = p.toString();
-    return await request<MessagesResponse>(`/api/v1/halls/${hallId}/rooms/${roomId}/messages${q ? "?" + q : ""}`, { method: "GET" });
+    return await request<MessagesResponse>(`/api/v1/halls/${hallId}/rooms/${roomId}/messages?${q}`, { method: "GET" });
   } catch (err) { console.error(err); return null; }
 }
 
 export async function getMessage(hallId: string, roomId: string, messageId: string): Promise<Message | null> {
   try {
     return await request<Message>(`/api/v1/halls/${hallId}/rooms/${roomId}/messages/${messageId}`, { method: "GET" });
-  } catch (err) { console.error(err); return null; }
-}
-
-export async function createMessage(hallId: string, roomId: string, payload: CreateMessageReq): Promise<Message | null> {
-  try {
-    return await request<Message>(`/api/v1/halls/${hallId}/rooms/${roomId}/messages`, { method: "POST", body: JSON.stringify(payload) });
   } catch (err) { console.error(err); return null; }
 }
 
@@ -486,7 +659,11 @@ export async function deleteMessage(hallId: string, roomId: string, messageId: s
 
 export async function addReaction(hallId: string, roomId: string, messageId: string, emoji: string): Promise<boolean> {
   try {
-    await request<{ message: string }>(`/api/v1/halls/${hallId}/rooms/${roomId}/messages/${messageId}/reactions`, { method: "POST", body: JSON.stringify({ emoji }) });
+    const enc = encodeURIComponent(emoji);
+    await request<{ message: string }>(
+      `/api/v1/halls/${hallId}/rooms/${roomId}/messages/${messageId}/reactions/${enc}`,
+      { method: "PUT" },
+    );
     return true;
   } catch (err) { console.error(err); return false; }
 }
@@ -506,15 +683,35 @@ export async function getHallMembers(hallId: string): Promise<{ members: HallMem
   } catch (err) { console.error(err); return null; }
 }
 
-export async function updateHallMember(hallId: string, userId: string, payload: UpdateHallMemberReq): Promise<HallMember | null> {
+export async function updateHallMemberRole(
+  hallId: string,
+  memberId: string,
+  payload: UpdateHallMemberRoleReq,
+): Promise<HallMember | null> {
   try {
-    return await request<HallMember>(`/api/v1/halls/${hallId}/settings/members/${userId}`, { method: "PATCH", body: JSON.stringify(payload) });
+    return await request<HallMember>(
+      `/api/v1/halls/${hallId}/settings/members/${memberId}/role`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
   } catch (err) { console.error(err); return null; }
 }
 
-export async function kickHallMember(hallId: string, userId: string): Promise<boolean> {
+export async function updateHallMemberNickname(
+  hallId: string,
+  memberId: string,
+  payload: UpdateHallMemberNicknameReq,
+): Promise<HallMember | null> {
   try {
-    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/members/${userId}`, { method: "DELETE" });
+    return await request<HallMember>(
+      `/api/v1/halls/${hallId}/settings/members/${memberId}/nickname`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function kickHallMember(hallId: string, memberId: string): Promise<boolean> {
+  try {
+    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/members/${memberId}`, { method: "DELETE" });
     return true;
   } catch (err) { console.error(err); return false; }
 }
@@ -544,33 +741,42 @@ export async function deleteRole(hallId: string, roleId: string): Promise<boolea
   } catch (err) { console.error(err); return false; }
 }
 
-export async function getRolePermissions(hallId: string, roleId: string): Promise<RolePermission | null> {
+export async function getRolePermissions(hallId: string, roleId: string): Promise<RolePermissionsData | null> {
   try {
-    return await request<RolePermission>(`/api/v1/halls/${hallId}/settings/roles/${roleId}/permissions`, { method: "GET" });
+    return await request<RolePermissionsData>(`/api/v1/halls/${hallId}/settings/roles/${roleId}/permissions`, { method: "GET" });
   } catch (err) { console.error(err); return null; }
 }
 
-export async function updateRolePermissions(hallId: string, roleId: string, payload: UpdateRolePermissionsReq): Promise<RolePermission | null> {
+export async function updateRolePermissions(
+  hallId: string,
+  roleId: string,
+  payload: UpdateRolePermissionsReq,
+): Promise<UpdateRolePermissionsRes | null> {
   try {
-    return await request<RolePermission>(`/api/v1/halls/${hallId}/settings/roles/${roleId}/permissions`, { method: "PATCH", body: JSON.stringify(payload) });
+    return await request<UpdateRolePermissionsRes>(
+      `/api/v1/halls/${hallId}/settings/roles/${roleId}/permissions`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
   } catch (err) { console.error(err); return null; }
 }
 
 export async function getHallBans(hallId: string): Promise<HallBan[] | null> {
   try {
-    return await request<HallBan[]>(`/api/v1/halls/${hallId}/settings/bans`, { method: "GET" });
+    const res = await request<{ bans: HallBan[] }>(`/api/v1/halls/${hallId}/settings/bans`, { method: "GET" });
+    return res?.bans ?? [];
   } catch (err) { console.error(err); return null; }
 }
 
-export async function banUser(hallId: string, payload: CreateBanReq): Promise<HallBan | null> {
+export async function banUser(hallId: string, payload: CreateBanReq): Promise<boolean> {
   try {
-    return await request<HallBan>(`/api/v1/halls/${hallId}/settings/bans`, { method: "POST", body: JSON.stringify(payload) });
-  } catch (err) { console.error(err); return null; }
+    await request<unknown>(`/api/v1/halls/${hallId}/settings/bans`, { method: "POST", body: JSON.stringify(payload) });
+    return true;
+  } catch (err) { console.error(err); return false; }
 }
 
-export async function unbanUser(hallId: string, userId: string): Promise<boolean> {
+export async function unbanUser(hallId: string, banId: string): Promise<boolean> {
   try {
-    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/bans/${userId}`, { method: "DELETE" });
+    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/bans/${banId}`, { method: "DELETE" });
     return true;
   } catch (err) { console.error(err); return false; }
 }
@@ -587,9 +793,9 @@ export async function createInvite(hallId: string, payload: CreateInviteReq): Pr
   } catch (err) { console.error(err); return null; }
 }
 
-export async function revokeInvite(hallId: string, inviteCode: string): Promise<boolean> {
+export async function revokeInvite(hallId: string, inviteId: string): Promise<boolean> {
   try {
-    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/invites/${inviteCode}`, { method: "DELETE" });
+    await request<{ message: string }>(`/api/v1/halls/${hallId}/settings/invites/${inviteId}`, { method: "DELETE" });
     return true;
   } catch (err) { console.error(err); return false; }
 }
@@ -600,9 +806,62 @@ export async function getPublicInviteInfo(inviteCode: string): Promise<InviteInf
   } catch (err) { console.error(err); return null; }
 }
 
-export async function acceptInvite(inviteCode: string): Promise<Hall | null> {
+export async function acceptInvite(inviteCode: string): Promise<AcceptInviteLinkRes | null> {
   try {
-    return await request<Hall>(`/api/v1/invites/${inviteCode}/accept`, { method: "POST" });
+    return await request<AcceptInviteLinkRes>(`/api/v1/invites/${inviteCode}/accept`, { method: "POST" });
+  } catch (err) { console.error(err); return null; }
+}
+
+// ========== JOIN REQUESTS ==========
+
+export async function getJoinRequests(hallId: string): Promise<{ requests: HallJoinRequest[]; total: number } | null> {
+  try {
+    return await request<{ requests: HallJoinRequest[]; total: number }>(
+      `/api/v1/halls/${hallId}/settings/requests`,
+      { method: "GET" },
+    );
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function acceptJoinRequest(hallId: string, requestId: string): Promise<unknown | null> {
+  try {
+    return await request<unknown>(
+      `/api/v1/halls/${hallId}/settings/requests/${requestId}/accept`,
+      { method: "PATCH", body: JSON.stringify({}) },
+    );
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function declineJoinRequest(hallId: string, requestId: string): Promise<boolean> {
+  try {
+    await request<unknown>(`/api/v1/halls/${hallId}/settings/requests/${requestId}`, { method: "DELETE" });
+    return true;
+  } catch (err) { console.error(err); return false; }
+}
+
+// ========== PRESENCE ==========
+
+export async function getMyPresence(): Promise<UserPresenceRes | null> {
+  try {
+    return await request<UserPresenceRes>("/api/v1/presence/me", { method: "GET" });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function updateMyPresence(status: PresenceStatus): Promise<UserPresenceRes | null> {
+  try {
+    return await request<UserPresenceRes>("/api/v1/presence/me", {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function getPresencesForUsers(userIds: string[]): Promise<UserPresenceRes[] | null> {
+  if (userIds.length === 0) return [];
+  try {
+    const q = userIds.map(encodeURIComponent).join(",");
+    const res = await request<{ presences: UserPresenceRes[] }>(`/api/v1/presence/users?ids=${q}`, { method: "GET" });
+    return res?.presences ?? [];
   } catch (err) { console.error(err); return null; }
 }
 

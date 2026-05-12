@@ -6,17 +6,17 @@ import { HiOutlineUserMinus, HiOutlineShieldExclamation } from "react-icons/hi2"
 
 interface BanListProps {
   bans: HallBan[];
-  onUnban: (userId: string) => Promise<void>;
+  onUnban: (banId: string) => Promise<void>;
   isOwner: boolean;
 }
 
 export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const handleUnban = async (userId: string) => {
+  const handleUnban = async (banId: string) => {
     if (window.confirm("Are you sure you want to unban this user?")) {
-      setLoadingId(userId);
-      await onUnban(userId);
+      setLoadingId(banId);
+      await onUnban(banId);
       setLoadingId(null);
     }
   };
@@ -46,26 +46,27 @@ export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
         </thead>
         <tbody className="divide-y divide-[#dcd9d3]">
           {bans.map((ban) => (
-            <tr key={ban.user_id} className="hover:bg-gray-50 transition-colors">
+            <tr key={ban.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-4">
                 <div className="font-medium text-[#1e1e1e]">
-                  ID: {ban.user_id.substring(0, 8)}...
+                  {ban.username}
                 </div>
+                <div className="text-xs text-gray-500">User ID: {ban.user_id.substring(0, 8)}…</div>
               </td>
               <td className="px-4 py-4 text-sm text-[#73726e]">
                 {ban.reason || "No reason provided."}
               </td>
               <td className="px-4 py-4 text-sm text-gray-500">
-                {new Date(ban.banned_at).toLocaleDateString()}
+                {new Date(ban.created_at).toLocaleDateString()}
               </td>
               <td className="px-4 py-4 text-right">
                 {isOwner && (
                   <button
-                    onClick={() => handleUnban(ban.user_id)}
-                    disabled={loadingId === ban.user_id}
+                    onClick={() => handleUnban(ban.id)}
+                    disabled={loadingId === ban.id}
                     className="px-3 py-1 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                   >
-                    {loadingId === ban.user_id ? "Unbanning..." : "Unban"}
+                    {loadingId === ban.id ? "Unbanning..." : "Unban"}
                   </button>
                 )}
               </td>

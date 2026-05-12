@@ -1,156 +1,121 @@
 import { create } from "zustand";
-import { RolePermission } from "@/lib/api";
-import { useHallMembers, useHallRoles } from "./useHallStore";
+import { flattenRolePermissions, RolePermissionsData } from "@/lib/api";
+import { useHallMembers, useHallRoles, useHallStore } from "./useHallStore";
+
+/** permission key -> enabled (from GET role permissions / categories) */
+export type PermissionFlags = Record<string, boolean>;
 
 type PermissionState = {
-    // Cache of role permissions
-    rolePermissions: Record<string, RolePermission>;
+  rolePermissionFlags: Record<string, PermissionFlags>;
 
-    // Actions
-    setRolePermission: (roleId: string, permission: RolePermission) => void;
-    setRolePermissions: (permissions: Record<string, RolePermission>) => void;
-    clearPermissions: () => void;
+  setRolePermissionData: (roleId: string, data: RolePermissionsData) => void;
+  setRolePermissionFlags: (roleId: string, flags: PermissionFlags) => void;
+  setRolePermissionsMap: (map: Record<string, PermissionFlags>) => void;
+  clearPermissions: () => void;
 
-    // Helpers
-    getUserPermissionsInHall: (userId: string, hallId: string) => RolePermission | null;
-    canUserAction: (
-        userId: string,
-        hallId: string,
-        action: keyof Omit<RolePermission, "role_id" | "created_at" | "updated_at">,
-    ) => boolean;
+  canUserAction: (userId: string, hallId: string, permissionKey: string) => boolean;
 };
 
 export const usePermissionStore = create<PermissionState>((set, get) => ({
-    rolePermissions: {},
+  rolePermissionFlags: {},
 
-    // ===== Permission Management =====
-    setRolePermission: (roleId: string, permission: RolePermission) => {
-        set((state) => ({
-            rolePermissions: {
-                ...state.rolePermissions,
-                [roleId]: permission,
-            },
-        }));
-    },
+  setRolePermissionData: (roleId: string, data: RolePermissionsData) => {
+    const flags = flattenRolePermissions(data);
+    set((state) => ({
+      rolePermissionFlags: { ...state.rolePermissionFlags, [roleId]: flags },
+    }));
+  },
 
-    setRolePermissions: (permissions: Record<string, RolePermission>) => {
-        set({ rolePermissions: permissions });
-    },
+  setRolePermissionFlags: (roleId: string, flags: PermissionFlags) => {
+    set((state) => ({
+      rolePermissionFlags: { ...state.rolePermissionFlags, [roleId]: flags },
+    }));
+  },
 
-    clearPermissions: () => {
-        set({ rolePermissions: {} });
-    },
+  setRolePermissionsMap: (map: Record<string, PermissionFlags>) => {
+    set({ rolePermissionFlags: map });
+  },
 
-    // ===== Helpers =====
-    getUserPermissionsInHall: () => {
-        // This is a basic implementation; in a real scenario you'd fetch from server
-        // or derive from hall members and roles
-        const permissions = get().rolePermissions;
-        // For now, return null - will be populated by the component layer
-        return Object.values(permissions)[0] || null;
-    },
+  clearPermissions: () => {
+    set({ rolePermissionFlags: {} });
+  },
 
-    canUserAction: (
-        userId: string,
-        hallId: string,
-        action: keyof Omit<RolePermission, "role_id" | "created_at" | "updated_at">,
-    ) => {
-        const userPermissions = get().getUserPermissionsInHall(userId, hallId);
-        if (!userPermissions) return false;
+  canUserAction: (userId: string, hallId: string, permissionKey: string) => {
+    const members = useHallStore.getState().members;
+    const member = members.find((m) => m.user_id === userId && m.hall_id === hallId);
+    if (!member) return false;
 
-        const permission = userPermissions[action];
-        return permission === true;
-    },
+    const userRole = useHallStore.getState().roles.find((r) => r.id === member.role_id);
+    if (userRole?.is_admin) return true;
+
+    const flags = get().rolePermissionFlags[member.role_id];
+    if (!flags) return false;
+    return flags[permissionKey] === true;
+  },
 }));
 
-// ===== Permission Check Helpers =====
 export const useCanCreateRoom = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "create_room"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "manage_channels"));
 
 export const useCanDeleteRoom = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "delete_room"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "manage_channels"));
 
 export const useCanSendMessages = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "send_messages"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_send_messages"));
 
 export const useCanManageMessages = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "manage_messages"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_manage_messages"));
 
 export const useCanManageMembers = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "manage_members"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "kick_members"));
 
 export const useCanManageRoles = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "manage_roles"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "manage_roles"));
 
 export const useCanCreateInvites = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "create_invites"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "manage_invites"));
 
 export const useCanManageBans = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "manage_bans"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "ban_members"));
 
 export const useCanReadMessages = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "read_messages"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_read_history"));
 
 export const useCanReactToMessages = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "react_to_messages"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_send_messages"));
 
 export const useCanAttachFiles = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "attach_files"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_attach_files"));
 
 export const useCanMentionEveryone = (userId: string, hallId: string) =>
-    usePermissionStore((state) =>
-        state.canUserAction(userId, hallId, "mention_everyone"),
-    );
+  usePermissionStore((state) => state.canUserAction(userId, hallId, "text_mention_roles"));
 
-// ===== All Permission Check =====
-/**
- * Comprehensive permission checker
- * Derive permission from user's role in a hall
- */
 export const useCheckPermissionInHall = (userId: string, hallId: string) => {
-    const members = useHallMembers();
-    const roles = useHallRoles();
-    const rolePermissions = usePermissionStore((state) => state.rolePermissions);
+  const members = useHallMembers();
+  const roles = useHallRoles();
+  const rolePermissionFlags = usePermissionStore((state) => state.rolePermissionFlags);
 
-    const userMember = members.find(
-        (m) => m.user_id === userId && m.hall_id === hallId,
-    );
-    if (!userMember) return null;
+  const userMember = members.find((m) => m.user_id === userId && m.hall_id === hallId);
+  if (!userMember) return null;
 
-    const userRole = roles.find((r) => r.id === userMember.role_id);
-    if (!userRole) return null;
+  const userRole = roles.find((r) => r.id === userMember.role_id);
+  if (!userRole) return null;
 
-    return rolePermissions[userRole.id] || null;
+  if (userRole.is_admin) {
+    return { is_admin: true as const, flags: rolePermissionFlags[userRole.id] || {} };
+  }
+
+  return rolePermissionFlags[userRole.id] || null;
 };
 
-// ===== Actions =====
-export const useSetRolePermission = () =>
-    usePermissionStore((state) => state.setRolePermission);
+export const useSetRolePermissionData = () =>
+  usePermissionStore((state) => state.setRolePermissionData);
 
-export const useSetRolePermissions = () =>
-    usePermissionStore((state) => state.setRolePermissions);
+export const useSetRolePermissionFlags = () =>
+  usePermissionStore((state) => state.setRolePermissionFlags);
+
+export const useSetRolePermissionsMap = () =>
+  usePermissionStore((state) => state.setRolePermissionsMap);
 
 export const useClearPermissions = () =>
-    usePermissionStore((state) => state.clearPermissions);
+  usePermissionStore((state) => state.clearPermissions);

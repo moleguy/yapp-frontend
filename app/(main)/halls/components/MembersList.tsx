@@ -1,15 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { HallMember, Role, UserMeRes, getUser } from "@/lib/api";
-import { HiOutlineEllipsisVertical, HiOutlineUserMinus, HiOutlineShieldCheck } from "react-icons/hi2";
-import Image from "next/image";
+import { HallMember, Role } from "@/lib/api";
+import { HiOutlineUserMinus } from "react-icons/hi2";
 
 interface MembersListProps {
   members: HallMember[];
   roles: Role[];
-  onKick: (userId: string) => Promise<void>;
-  onUpdateRole: (userId: string, roleId: string) => Promise<void>;
+  onKick: (memberId: string) => Promise<void>;
+  onUpdateRole: (memberId: string, roleId: string) => Promise<void>;
   currentUserId?: string;
   isOwner: boolean;
 }
@@ -29,13 +28,13 @@ export default function MembersList({
   };
 
   const getRoleColor = (roleId: string) => {
-    return roles.find((r) => r.id === roleId)?.color || "#73726e";
+    return roles.find((r) => r.id === roleId)?.color ?? "#73726e";
   };
 
-  const handleKick = async (userId: string) => {
+  const handleKick = async (memberId: string) => {
     if (window.confirm("Are you sure you want to kick this member?")) {
-      setLoadingId(userId);
-      await onKick(userId);
+      setLoadingId(memberId);
+      await onKick(memberId);
       setLoadingId(null);
     }
   };
@@ -53,7 +52,7 @@ export default function MembersList({
         </thead>
         <tbody className="divide-y divide-[#dcd9d3]">
           {members.map((member) => (
-            <tr key={member.user_id} className="hover:bg-gray-50 transition-colors">
+            <tr key={member.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
@@ -88,8 +87,8 @@ export default function MembersList({
                 {isOwner && member.user_id !== currentUserId && (
                   <div className="flex justify-end gap-2">
                     <button
-                      onClick={() => handleKick(member.user_id)}
-                      disabled={loadingId === member.user_id}
+                      onClick={() => handleKick(member.id)}
+                      disabled={loadingId === member.id}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Kick Member"
                     >
