@@ -875,7 +875,7 @@ export function getWebSocketUrl(): string {
   
   // Get JWT token and include in URL as query parameter
   const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
-  const url = token ? `${protocol}://${host}/ws?token=${encodeURIComponent(token)}` : `${protocol}://${host}/ws`;
+  const url = token ? `${protocol}://${host}/ws/?token=${encodeURIComponent(token)}` : `${protocol}://${host}/ws`;
   
   console.log("[WebSocket] URL:", url);
   return url;
