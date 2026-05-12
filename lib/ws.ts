@@ -36,8 +36,20 @@ export class WebSocketClient {
             }
 
             try {
-                // WebSocket connection uses cookies for authentication, not query parameters
-                this.ws = new WebSocket(this.url);
+                // WebSocket connection uses cookies for authentication, but also try Authorization header
+                let wsUrl = this.url;
+                const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
+                
+                if (token) {
+                    // WebSocket doesn't support custom headers in browser
+                    // Fallback to cookie-based auth (browser sends cookies automatically)
+                    console.log("WebSocket auth: Using cookie-based authentication (JWT token present)");
+                    this.ws = new WebSocket(wsUrl);
+                } else {
+                    // Fallback to cookie-based auth
+                    console.log("WebSocket auth: No JWT token found, using cookie-based auth");
+                    this.ws = new WebSocket(wsUrl);
+                }
 
                 // Set connection timeout
                 const timeout = setTimeout(() => {

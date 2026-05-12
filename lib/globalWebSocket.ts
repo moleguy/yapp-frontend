@@ -36,6 +36,15 @@ class GlobalWebSocketManagerImpl implements GlobalWebSocketManager {
 
     this.connectionPromise = new Promise<void>((resolve, reject) => {
       try {
+        // Get JWT token for debugging
+        const token = typeof window !== "undefined" ? localStorage.getItem("yapp_access_token") : null;
+        console.log("WebSocket connection attempt:", {
+          url: this.url,
+          hasToken: !!token,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+          timestamp: new Date().toISOString()
+        });
+
         this.client = new WebSocketClient(getWebSocketUrl());
         
         this.client.connect({
