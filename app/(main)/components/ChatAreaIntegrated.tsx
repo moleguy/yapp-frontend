@@ -115,14 +115,36 @@ function ChatAreaContent() {
     setInput("");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   const visibleTyping = typingUsers.filter((id) => id !== user?.id);
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4">
         {messages.map((m) => (
-          <div key={m.id} className="mb-2">
-            <b>{m.author?.display_name}</b>: {m.content}
+          <div key={m.id} className="mb-3">
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="font-semibold text-sm text-gray-700">
+                {m.author?.display_name}
+              </span>
+              <span className="text-xs text-gray-400">
+                {m.sent_at && formatTime(m.sent_at)}
+              </span>
+            </div>
+            <div className="text-gray-900 pl-1">
+              {m.content}
+            </div>
             {m.isOptimistic && (
               <span className="text-xs ml-2 text-gray-400">
                 sending...
@@ -132,7 +154,7 @@ function ChatAreaContent() {
         ))}
 
         {visibleTyping.length > 0 && (
-          <div className="text-sm italic text-gray-500">
+          <div className="text-sm italic text-gray-500 mb-2">
             typing...
           </div>
         )}
@@ -140,13 +162,18 @@ function ChatAreaContent() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 border-t flex gap-2">
+      <div className="p-3 border-t border-[#dcd9d3] flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 border rounded px-3 py-2"
+          onKeyDown={handleKeyDown}
+          className="flex-1 border border-[#dcd9d3] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Type a message..."
         />
-        <button onClick={handleSend}>
+        <button 
+          onClick={handleSend}
+          className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
           <FiSend />
         </button>
       </div>
