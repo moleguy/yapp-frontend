@@ -54,9 +54,20 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
                 switch (message.type) {
                     case 'text':
-                        // Resolve optimistic message if it exists
-                        if (message.id) {
-                            useMessageStore.getState().resolveOptimisticMessage(roomId, message.id, message as any);
+                        // Resolve optimistic message for current user
+                        if (message.author_id === useUserStore.getState().user?.id) {
+                            // Find and resolve the most recent optimistic message from this user
+                            const state = useMessageStore.getState();
+                            const roomMessages = state.messagesByRoom[roomId] || [];
+                            const lastOptimistic = roomMessages
+                                .filter(m => m.isOptimistic && m.author_id === message.author_id)
+                                .pop();
+                            
+                            if (lastOptimistic) {
+                                useMessageStore.getState().resolveOptimisticMessage(roomId, lastOptimistic.id, message as any);
+                            } else {
+                                addMessage(roomId, message as any);
+                            }
                         } else {
                             addMessage(roomId, message as any);
                         }
@@ -164,7 +175,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 type: "text",
                 room_id: roomId,
                 content,
-                client_id: tempId, // Important for resolving optimistic message
                 sent_at: new Date().toISOString(),
                 mention_everyone: false,
                 mentions: [],
