@@ -57,7 +57,7 @@ export default function ChatArea({
 
   // Username resolver (fixes missing username issue)
   const getUsername = (m: any) =>
-    m?.author?.display_name || m?.sender || "Unknown";
+    m?.author?.username || m?.author?.display_name || m?.sender || "Unknown";
 
   const formatTime = (t?: string) =>
     t
