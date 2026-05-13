@@ -156,15 +156,22 @@ export function useWebSocket(options: UseWebSocketOptions) {
         if (client?.isConnected() && roomId) {
             // Add optimistic message locally
             const tempId = `temp-${Date.now()}`;
+            const currentUser = useUserStore.getState().user;
             const optimisticMessage: any = {
                 id: tempId,
                 room_id: roomId,
-                author_id: useUserStore.getState().user?.id,
+                author_id: currentUser?.id,
                 content,
                 sent_at: new Date().toISOString(),
                 edited_at: null,
                 deleted_at: null,
-                author: useUserStore.getState().user,
+                author: {
+                    id: currentUser?.id,
+                    username: currentUser?.username,
+                    display_name: currentUser?.display_name,
+                    email: currentUser?.email,
+                    avatar_url: currentUser?.avatar_url,
+                },
                 isOptimistic: true,
             };
             
