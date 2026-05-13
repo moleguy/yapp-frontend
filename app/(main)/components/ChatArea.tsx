@@ -55,9 +55,14 @@ export default function ChatArea({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  // Username resolver (fixes missing username issue)
-  const getUsername = (m: any) =>
-    m?.author?.username || m?.author?.display_name || m?.sender || "Unknown";
+  // Username resolver — optimistic messages already carry full author data, but
+  // if for any reason author is missing, fall back to the logged-in user's display_name
+  const getUsername = (m: any) => {
+    if (m?.author?.display_name) return m.author.display_name;
+    if (m?.author?.username) return m.author.username;
+    if (m?.isOptimistic && user) return user.display_name || user.username;
+    return m?.sender || "Unknown";
+  };
 
   const formatTime = (t?: string) =>
     t

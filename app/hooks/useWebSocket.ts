@@ -27,6 +27,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     const addMessage = useMessageStore((state) => state.addMessage);
 
+    // addMessage is still used for incoming messages from other users (see 'text' handler)
+
     const clearTypingIndicator = useCallback((userId: string) => {
         const entry = typingRef.current.get(userId);
         if (entry) {
@@ -53,25 +55,17 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 if (message.room_id !== roomId) return;
 
                 switch (message.type) {
-                    case 'text':
-                        // Resolve optimistic message for current user
-                        if (message.author_id === useUserStore.getState().user?.id) {
-                            // Find and resolve the most recent optimistic message from this user
-                            const state = useMessageStore.getState();
-                            const roomMessages = state.messagesByRoom[roomId] || [];
-                            const lastOptimistic = roomMessages
-                                .filter(m => m.isOptimistic && m.author_id === message.author_id)
-                                .pop();
-                            
-                            if (lastOptimistic) {
-                                useMessageStore.getState().resolveOptimisticMessage(roomId, lastOptimistic.id, message as any);
-                            } else {
-                                addMessage(roomId, message as any);
-                            }
+                    case 'text': {
+                        // If the server echoed our tempId back, resolve the optimistic message precisely.
+                        // Otherwise treat it as a new message from another user.
+                        const echoedTempId = (message as any).temp_id as string | undefined;
+                        if (echoedTempId) {
+                            useMessageStore.getState().resolveOptimisticMessage(roomId, echoedTempId, message as any);
                         } else {
                             addMessage(roomId, message as any);
                         }
                         break;
+                    }
                     case 'edit':
                         useMessageStore.getState().updateMessage(roomId, message.id, message as any);
                         break;
@@ -154,22 +148,26 @@ export function useWebSocket(options: UseWebSocketOptions) {
     const sendMessage = useCallback((content: string) => {
         const client = WebSocketClient.getGlobalInstance();
         if (client?.isConnected() && roomId) {
-            // Add optimistic message locally
-            const tempId = `temp-${Date.now()}`;
             const currentUser = useUserStore.getState().user;
-            
-            // Ensure we have user data before creating optimistic message
+
             if (!currentUser) {
                 console.error("No current user data available for optimistic message");
                 return;
             }
-            
+
+            // Use crypto.randomUUID for a unique tempId per message (safe for rapid sends)
+            const tempId = crypto.randomUUID();
+            const sentAt = new Date().toISOString();
+
+            // Insert via addOptimisticMessage (not addMessage) so it bypasses the
+            // id-dedupe guard and is clearly flagged as pending resolution
             const optimisticMessage: any = {
                 id: tempId,
+                tempId,
                 room_id: roomId,
                 author_id: currentUser.id,
                 content,
-                sent_at: new Date().toISOString(),
+                sent_at: sentAt,
                 edited_at: null,
                 deleted_at: null,
                 author: {
@@ -181,15 +179,16 @@ export function useWebSocket(options: UseWebSocketOptions) {
                 },
                 isOptimistic: true,
             };
-            
-            addMessage(roomId, optimisticMessage);
-            
-            // Send via WebSocket
+
+            useMessageStore.getState().addOptimisticMessage(roomId, optimisticMessage);
+
+            // Include temp_id so the server echo carries it back for precise resolution
             client.send({
                 type: "text",
                 room_id: roomId,
                 content,
-                sent_at: new Date().toISOString(),
+                sent_at: sentAt,
+                temp_id: tempId,
                 mention_everyone: false,
                 mentions: [],
                 attachments: [],
