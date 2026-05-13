@@ -78,20 +78,30 @@ export default function ChatArea({
     <div className="flex flex-col h-full">
       {/* messages */}
       <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((m) => (
-          <div key={m.id} className="mb-3">
-            <div className="flex gap-2 text-sm text-gray-600">
-              <span className="font-semibold">{getUsername(m)}</span>
-              <span>{formatTime(m.sent_at)}</span>
+        {messages.map((m) => {
+          const isCurrentUser = m.author_id === user?.id;
+          return (
+            <div 
+              key={m.id} 
+              className={`mb-3 ${isCurrentUser ? 'flex justify-end' : 'flex justify-start'}`}
+            >
+              <div className={`max-w-[70%] ${isCurrentUser ? 'text-right' : 'text-left'}`}>
+                <div className="flex gap-2 text-sm text-gray-600 mb-1">
+                  <span className="font-semibold">{getUsername(m)}</span>
+                  <span>{formatTime(m.sent_at)}</span>
+                </div>
+
+                <div className={`text-gray-900 ${isCurrentUser ? 'bg-blue-100 rounded-l-lg rounded-tr-lg px-3 py-2 inline-block' : 'bg-gray-100 rounded-r-lg rounded-tl-lg px-3 py-2 inline-block'}`}>
+                  {m.content}
+                </div>
+
+                {m.isOptimistic && (
+                  <span className="text-xs text-gray-400 ml-2">sending...</span>
+                )}
+              </div>
             </div>
-
-            <div className="text-gray-900">{m.content}</div>
-
-            {m.isOptimistic && (
-              <span className="text-xs text-gray-400">sending...</span>
-            )}
-          </div>
-        ))}
+          );
+        })}
 
         {typingUsers.length > 0 && (
           <div className="text-xs italic text-gray-400">typing...</div>
