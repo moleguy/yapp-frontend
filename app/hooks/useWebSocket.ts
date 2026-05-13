@@ -56,14 +56,39 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
                 switch (message.type) {
                     case 'text': {
-                        // If the server echoed our tempId back, resolve the optimistic message precisely.
-                        // Otherwise treat it as a new message from another user.
+                        const store = useMessageStore.getState();
+                        const currentUserId = useUserStore.getState().user?.id;
+
+                        // Strategy 1: server echoed temp_id back (ideal, requires Go server support)
                         const echoedTempId = (message as any).temp_id as string | undefined;
                         if (echoedTempId) {
-                            useMessageStore.getState().resolveOptimisticMessage(roomId, echoedTempId, message as any);
-                        } else {
-                            addMessage(roomId, message as any);
+                            store.resolveOptimisticMessage(roomId, echoedTempId, message as any);
+                            break;
                         }
+
+                        // Strategy 2: match by author + content against pending optimistic messages.
+                        // Handles the case where the Go server strips temp_id from the broadcast.
+                        if (message.author_id === currentUserId) {
+                            const roomMessages = store.messagesByRoom[roomId] || [];
+                            const echoWindowMs = 10_000; // 10 seconds — generous for slow connections
+                            const echoTime = new Date(message.sent_at).getTime();
+
+                            const matched = roomMessages.find(
+                                (m) =>
+                                    m.isOptimistic &&
+                                    m.author_id === message.author_id &&
+                                    m.content === message.content &&
+                                    Math.abs(new Date(m.sent_at).getTime() - echoTime) < echoWindowMs
+                            );
+
+                            if (matched) {
+                                store.resolveOptimisticMessage(roomId, matched.id, message as any);
+                                break;
+                            }
+                        }
+
+                        // Strategy 3: genuine new message from another user (or unmatched echo)
+                        addMessage(roomId, message as any);
                         break;
                     }
                     case 'edit':
