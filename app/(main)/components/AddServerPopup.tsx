@@ -11,6 +11,8 @@ type Props = {
   onClose: () => void;
   onCreate: (name: string, imageString?: string) => void;
   onJoin: (link: string) => void;
+  joinError?: string | null;
+  isJoining?: boolean;
 };
 
 export default function AddServerPopup({
@@ -19,6 +21,8 @@ export default function AddServerPopup({
   onCreate,
   onJoin,
   initialStep = "choice",
+  joinError = null,
+  isJoining = false,
 }: Props) {
   const [step, setStep] = useState<"choice" | "create" | "join">(initialStep);
   const [serverName, setServerName] = useState("");
@@ -319,25 +323,32 @@ export default function AddServerPopup({
             Join a server
           </label>
           <label className={`text-sm text-[#525358] mb-4`}>
-            Enter a link below to join an existing server
+            Enter an invite code below to join an existing server
           </label>
           <div
             className={`flex flex-col justify-center items-start gap-2 mb-5`}
           >
-            <label className={`text-[#525358]`}>Invite link</label>
+            <label className={`text-[#525358]`}>Invite code</label>
             <input
               ref={joinInputRef}
               type="text"
-              placeholder="Invite Link"
+              placeholder="Invite Code"
               value={inviteLink}
               onChange={(e) => setInviteLink(e.target.value)}
-              className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none"
+              disabled={isJoining}
+              className="w-full border rounded-lg p-2 mb-3 border-[#dcd9d3] focus:outline-none disabled:opacity-50"
             />
+            {joinError && (
+              <p className="text-red-500 text-sm w-full">
+                {joinError}
+              </p>
+            )}
           </div>
           <div className="flex gap-2 justify-between">
             <button
               onClick={() => setStep("choice")}
-              className="py-2 px-4 rounded-lg text-[#7e7f83] cursor-pointer hover:underline"
+              disabled={isJoining}
+              className="py-2 px-4 rounded-lg text-[#7e7f83] cursor-pointer hover:underline disabled:opacity-50"
             >
               Back
             </button>
@@ -345,12 +356,15 @@ export default function AddServerPopup({
               onClick={() => {
                 if (inviteLink.trim()) {
                   onJoin(inviteLink);
-                  onClose();
                 }
               }}
-              className="py-2 px-5 rounded-lg bg-[#6164f2] hover:bg-[#4c52bd] text-white cursor-pointer"
+              disabled={isJoining || !inviteLink.trim()}
+              className={`py-2 px-5 rounded-lg text-white cursor-pointer ${isJoining || !inviteLink.trim()
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#6164f2] hover:bg-[#4c52bd]"
+                }`}
             >
-              Join Server
+              {isJoining ? "Joining..." : "Join Server"}
             </button>
           </div>
         </div>

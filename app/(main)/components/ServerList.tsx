@@ -8,7 +8,7 @@ import AddServerPopup from "./AddServerPopup";
 import { FaLayerGroup } from "react-icons/fa6";
 import Image from "next/image";
 import { useEdgeStore } from "@/lib/edgestore";
-import { Hall, createHall } from "@/lib/api";
+import { Hall, createHall, acceptInvite, getUserHalls } from "@/lib/api";
 
 interface ServerListProps {
 	servers: Hall[];
@@ -187,11 +187,54 @@ export default function ServerList({
 		return new File([u8arr], filename, { type: mime });
 	}
 
-	const handleJoinServer = () => console.log("Join Hall clicked");
+	const [joinError, setJoinError] = useState<string | null>(null);
+	const [isJoining, setIsJoining] = useState(false);
+
+	const handleJoinServer = async (inviteCode: string) => {
+		if (!inviteCode.trim()) {
+			setJoinError("Please enter an invite code");
+			return;
+		}
+
+		setIsJoining(true);
+		setJoinError(null);
+
+		try {
+			// Extract invite code from URL if a full URL is provided
+			let code = inviteCode.trim();
+			if (code.includes("/")) {
+				// If it's a URL like yapp.com/invite/ABC123, extract the code
+				code = code.split("/").pop() || code;
+			}
+
+			const result = await acceptInvite(code);
+
+			if (result) {
+				// Refresh halls list after successful join
+				const updatedHalls = await getUserHalls();
+				if (updatedHalls) {
+					setServers(updatedHalls);
+					// Find and select the newly joined hall
+					const newHall = updatedHalls.find((h) => h.id === result.hall_id);
+					if (newHall) {
+						onServerClick(newHall);
+					}
+				}
+			} else {
+				setJoinError("Failed to join hall. Please check the invite code.");
+			}
+		} catch (err) {
+			console.error("Error joining hall:", err);
+			setJoinError("Error joining hall. Please try again.");
+		} finally {
+			setIsJoining(false);
+		}
+	};
+
 	const toggleChannelsVisibility = () => setShowChannels((p) => !p);
 
 	const serverContextMenuItems = [
-		{ label: "Invite People", danger: false, onClick: () => {} },
+		{ label: "Invite People", danger: false, onClick: () => { } },
 		{ label: "Create Floor", danger: false, onClick: () => { if (contextMenu) { const s = servers.find((s) => s.id === contextMenu.serverId); if (s) onCreateCategoryClick(s); } setContextMenu(null); } },
 		{ label: "Create Room", danger: false, onClick: () => { if (contextMenu) { const s = servers.find((s) => s.id === contextMenu.serverId); if (s) onCreateRoomClick(s); } setContextMenu(null); } },
 		{ label: "Hall Settings", danger: false, onClick: () => { if (contextMenu) window.location.href = `/halls/${contextMenu.serverId}/settings/profile`; setContextMenu(null); } },
@@ -360,10 +403,12 @@ export default function ServerList({
 
 			<AddServerPopup
 				isOpen={showPopup}
-				onClose={() => { setShowPopup(false); setPopupStep("choice"); }}
+				onClose={() => { setShowPopup(false); setPopupStep("choice"); setJoinError(null); }}
 				onCreate={handleCreateServer}
 				onJoin={handleJoinServer}
 				initialStep={popupStep}
+				joinError={joinError}
+				isJoining={isJoining}
 			/>
 		</div>
 	);
