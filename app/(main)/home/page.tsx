@@ -11,12 +11,14 @@ import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
-import { Hall, getUserHalls, Room, deleteHall, leaveHall } from "@/lib/api";
+import { Hall, getUserHalls, Room, deleteHall, leaveHall, updateMyPresence, PresenceStatus } from "@/lib/api";
+import { useSelectHall } from "@/app/store/useHallStore";
+import { useFetchFriends, useFriends } from "@/app/store/useFriendsStore";
 import { useResizable } from "@/app/hooks/useResizable";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 
 type Friend = {
-  id: number;
+  id: string;
   name: string;
   avatarUrl?: string;
   status?: "online" | "offline";
@@ -65,13 +67,23 @@ export default function HomePage() {
     collapseThreshold: 180,
   });
 
-  const [friends] = useState<Friend[]>([
-    { id: 1, name: "Nischal", username: "jasontheween123", status: "online", mutualFriends: 2, memberSince: "2 Jan 2014", mutualServers: 3 },
-    { id: 2, name: "Manish", username: "manish123", status: "offline", mutualFriends: 4, memberSince: "2 Jan 2018", mutualServers: 8 },
-  ]);
+  const fetchFriends = useFetchFriends();
+  const apiFriends = useFriends();
+  const selectHall = useSelectHall();
+
+  const friends: Friend[] = apiFriends.map((u: { id: string; display_name: string; username: string; avatar_thumbnail_url?: string | null; mutual_friend_count?: number }) => ({
+    id: u.id,
+    name: u.display_name,
+    username: u.username,
+    avatarUrl: u.avatar_thumbnail_url ?? undefined,
+    status: "offline" as const,
+    mutualFriends: u.mutual_friend_count,
+  }));
 
   const onlineFriends = friends.filter((f) => f.status === "online");
   const offlineFriends = friends.filter((f) => f.status === "offline");
+
+  const [presenceStatus, setPresenceStatus] = useState<PresenceStatus>("online");
 
   // Fix: Handle the promise and loading state correctly
   useEffect(() => {
@@ -90,8 +102,9 @@ export default function HomePage() {
         setHallsLoading(false);
       }
     };
-    void fetchHalls(); // Properly handle floating promise
-  }, []);
+    void fetchHalls();
+    void fetchFriends();
+  }, [fetchFriends]);
 
   useEffect(() => {
     const savedView = localStorage.getItem("lastActiveView") as "server" | "dm" | null;
@@ -116,7 +129,7 @@ export default function HomePage() {
     }
 
     if (!friendDeselected && savedFriendId) {
-      const savedFriend = friends.find((f) => f.id.toString() === savedFriendId);
+      const savedFriend = friends.find((f) => f.id === savedFriendId);
       if (savedFriend) setSelectedFriend(savedFriend);
     }
   }, [halls, friends]);
@@ -129,7 +142,7 @@ export default function HomePage() {
     if (activeHall?.id) localStorage.setItem("lastActiveServerId", activeHall.id);
     else if (lastActiveHall?.id) localStorage.setItem("lastActiveServerId", lastActiveHall.id);
 
-    if (selectedFriend) localStorage.setItem("lastSelectedFriendId", selectedFriend.id.toString());
+    if (selectedFriend) localStorage.setItem("lastSelectedFriendId", selectedFriend.id);
     else localStorage.removeItem("lastSelectedFriendId");
   }, [activeView, activeHall, lastActiveHall, hallDeselectedManually, selectedFriend, friendDeselectedManually]);
 
@@ -140,6 +153,7 @@ export default function HomePage() {
     setLastActiveHall(hall);
     setHallDeselectedManually(false);
     setActiveView("server");
+    void selectHall(hall.id);
   };
 
   const handleLeaveHall = async (hallId: string) => {
@@ -224,7 +238,7 @@ export default function HomePage() {
                 {activeView === "server" && activeHall ? (
                     <ServerDetails
                         activeServer={activeHall}
-                        onSelectChannel={(room: Room) => setSelectedRoom(room)} // Fix: Explicit Room typing
+                        onSelectChannel={(room) => setSelectedRoom(room)}
                         showCategoryPopup={showFloorPopup && floorPopupHall?.id === activeHall.id}
                         onCloseCategoryPopup={() => setShowFloorPopup(false)}
                         onOpenCategoryPopup={() => { setFloorPopupHall(activeHall); setShowFloorPopup(true); }}
@@ -249,6 +263,20 @@ export default function HomePage() {
                   <div className="ml-2 font-MyFont text-[#393E46] min-w-0">
                     <p className="text-sm font-medium truncate">{user?.display_name || "No Name"}</p>
                     <p className="text-xs truncate text-gray-500">@{user?.username || "no-username"}</p>
+                    <select
+                      value={presenceStatus}
+                      onChange={async (e) => {
+                        const status = e.target.value as PresenceStatus;
+                        setPresenceStatus(status);
+                        await updateMyPresence(status);
+                      }}
+                      className="text-xs text-gray-500 bg-transparent border-none outline-none cursor-pointer mt-0.5"
+                    >
+                      <option value="online">Online</option>
+                      <option value="away">Away</option>
+                      <option value="busy">Busy</option>
+                      <option value="offline">Offline</option>
+                    </select>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -282,7 +310,7 @@ export default function HomePage() {
               ) : activeView === "dm" && selectedFriend ? (
                   <ChatArea
                       friendDisplayName={selectedFriend.name}
-                      friendId={selectedFriend.id.toString()}
+                      friendId={selectedFriend.id}
                       isDm={true}
                   />
               ) : (

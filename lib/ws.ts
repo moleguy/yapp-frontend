@@ -117,6 +117,7 @@ export class WebSocketClient {
                     clearTimeout(timeout);
                     console.log("WebSocket connected");
                     this.reconnectAttempts = 0;
+                    this.sendSyncSubscriptions();
                     this.emit('open', null);
                     resolve();
                 };
@@ -202,8 +203,20 @@ export class WebSocketClient {
         this.send({ type: "stop_typing", room_id: roomId, sent_at: new Date().toISOString() });
     }
 
-    sendRead(messageId: string): void {
-        this.send({ type: "read", message_id: messageId, sent_at: new Date().toISOString() });
+    sendRead(roomId: string, messageId: string): void {
+        this.send({
+            type: "read",
+            room_id: roomId,
+            message_id: messageId,
+            sent_at: new Date().toISOString(),
+        });
+    }
+
+    sendSyncSubscriptions(): void {
+        this.send({
+            type: "sync_subscriptions",
+            sent_at: new Date().toISOString(),
+        });
     }
 
     // ========== MESSAGE HANDLER ==========

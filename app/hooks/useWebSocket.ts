@@ -2,11 +2,20 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { WebSocketClient } from "@/lib/ws";
-import { WSMessage } from "@/lib/api";
+import {
+    WSMessage,
+    Message,
+    updateMessage,
+    deleteMessage,
+    addReaction,
+    removeReaction,
+} from "@/lib/api";
 import { useMessageStore } from "@/app/store/useMessageStore";
 import { useSelectedHallId } from "@/app/store/useHallStore";
 import { useReactionStore } from "@/app/store/useReactionStore";
 import { useUserStore } from "@/app/store/useUserStore";
+import { useHallStore } from "@/app/store/useHallStore";
+import { enrichMessageAuthor } from "@/lib/messageUtils";
 
 interface UseWebSocketOptions {
     roomId: string | null;
@@ -22,20 +31,33 @@ interface TypingEntry {
 export function useWebSocket(options: UseWebSocketOptions) {
     const { roomId, hallId, enabled = true } = options;
     const [isConnected, setIsConnected] = useState(false);
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
     const typingRef = useRef<Map<string, TypingEntry>>(new Map());
     const unsubscribeRef = useRef<(() => void) | null>(null);
 
     const addMessage = useMessageStore((state) => state.addMessage);
 
-    // addMessage is still used for incoming messages from other users (see 'text' handler)
+    const enrichWsMessage = useCallback((msg: Message): Message => {
+        const currentUser = useUserStore.getState().user;
+        const hallMembers = useHallStore.getState().members;
+        return enrichMessageAuthor(msg, currentUser, hallMembers);
+    }, []);
 
     const clearTypingIndicator = useCallback((userId: string) => {
         const entry = typingRef.current.get(userId);
         if (entry) {
             clearTimeout(entry.timeout);
             typingRef.current.delete(userId);
+            setTypingUsers(Array.from(typingRef.current.keys()));
         }
     }, []);
+
+    const setTypingUser = useCallback((userId: string) => {
+        clearTypingIndicator(userId);
+        const timeout = setTimeout(() => clearTypingIndicator(userId), 3000);
+        typingRef.current.set(userId, { userId, timeout });
+        setTypingUsers(Array.from(typingRef.current.keys()));
+    }, [clearTypingIndicator]);
 
     // Message handler + room subscription
     const handleMessageRef = useRef<(message: WSMessage) => void>(() => {});
@@ -62,7 +84,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
                         // Strategy 1: server echoed temp_id back (ideal, requires Go server support)
                         const echoedTempId = (message as any).temp_id as string | undefined;
                         if (echoedTempId) {
-                            store.resolveOptimisticMessage(roomId, echoedTempId, message as any);
+                            store.resolveOptimisticMessage(
+                                roomId,
+                                echoedTempId,
+                                enrichWsMessage(message as Message)
+                            );
                             break;
                         }
 
@@ -82,13 +108,17 @@ export function useWebSocket(options: UseWebSocketOptions) {
                             );
 
                             if (matched) {
-                                store.resolveOptimisticMessage(roomId, matched.id, message as any);
+                                store.resolveOptimisticMessage(
+                                    roomId,
+                                    matched.id,
+                                    enrichWsMessage(message as Message)
+                                );
                                 break;
                             }
                         }
 
                         // Strategy 3: genuine new message from another user (or unmatched echo)
-                        addMessage(roomId, message as any);
+                        addMessage(roomId, enrichWsMessage(message as Message));
                         break;
                     }
                     case 'edit':
@@ -110,14 +140,15 @@ export function useWebSocket(options: UseWebSocketOptions) {
                         }
                         break;
                     case 'typing': {
-                        clearTypingIndicator(message.author_id);
-                        const timeout = setTimeout(() => clearTypingIndicator(message.author_id), 3000);
-                        typingRef.current.set(message.author_id, { userId: message.author_id, timeout });
+                        const typingUser = (message as { typing_user?: string }).typing_user || message.author_id;
+                        setTypingUser(typingUser);
                         break;
                     }
-                    case 'stop_typing':
-                        clearTypingIndicator(message.author_id);
+                    case 'stop_typing': {
+                        const typingUser = (message as { typing_user?: string }).typing_user || message.author_id;
+                        clearTypingIndicator(typingUser);
                         break;
+                    }
                     case 'join':
                         console.log(`User ${message.author_id} joined room ${message.room_id}`);
                         break;
@@ -221,44 +252,42 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
     }, [roomId]);
 
-    const sendEdit = useCallback((messageId: string, content: string) => {
-        const client = WebSocketClient.getGlobalInstance();
-        if (client?.isConnected() && roomId) {
-            client.send({
-                type: "edit",
-                room_id: roomId,
-                id: messageId,
-                content,
-                sent_at: new Date().toISOString(),
-            });
+    const sendEdit = useCallback(async (messageId: string, content: string) => {
+        if (!hallId || !roomId) return;
+        const updated = await updateMessage(hallId, roomId, messageId, { content });
+        if (updated) {
+            useMessageStore.getState().updateMessage(roomId, messageId, updated);
         }
-    }, [roomId]);
+    }, [hallId, roomId]);
 
-    const sendDelete = useCallback((messageId: string) => {
-        const client = WebSocketClient.getGlobalInstance();
-        if (client?.isConnected() && roomId) {
-            client.send({
-                type: "delete",
-                room_id: roomId,
-                id: messageId,
-                sent_at: new Date().toISOString(),
-            });
+    const sendDelete = useCallback(async (messageId: string) => {
+        if (!hallId || !roomId) return;
+        const ok = await deleteMessage(hallId, roomId, messageId);
+        if (ok) {
+            useMessageStore.getState().deleteMessage(roomId, messageId);
         }
-    }, [roomId]);
+    }, [hallId, roomId]);
 
-    const sendReact = useCallback((messageId: string, emoji: string, action: "add" | "remove") => {
-        const client = WebSocketClient.getGlobalInstance();
-        if (client?.isConnected() && roomId) {
-            client.send({
-                type: "react",
-                room_id: roomId,
+    const sendReact = useCallback(async (messageId: string, emoji: string, action: "add" | "remove") => {
+        if (!hallId || !roomId) return;
+        const ok =
+            action === "add"
+                ? await addReaction(hallId, roomId, messageId, emoji)
+                : await removeReaction(hallId, roomId, messageId, emoji);
+        if (!ok) return;
+        const userId = useUserStore.getState().user?.id;
+        if (!userId) return;
+        if (action === "add") {
+            useReactionStore.getState().addReaction(roomId, messageId, {
                 message_id: messageId,
+                user_id: userId,
                 emoji,
-                action,
-                sent_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
             });
+        } else {
+            useReactionStore.getState().removeReaction(roomId, messageId, userId, emoji);
         }
-    }, [roomId]);
+    }, [hallId, roomId]);
 
     const sendTyping = useCallback(() => {
         const client = WebSocketClient.getGlobalInstance();
@@ -303,8 +332,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
         sendTyping,
         sendStopTyping,
         sendRead,
-        typingUsers: Array.from(typingRef.current.values()).map((e) => e.userId),
-        getTypingUsers: () => Array.from(typingRef.current.values()).map((e) => e.userId),
+        typingUsers,
+        getTypingUsers: () => typingUsers,
     };
 }
 

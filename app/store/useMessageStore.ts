@@ -242,13 +242,16 @@ export const useMessageStore = create<MessageState>()(
         set((state) => ({
           messagesByRoom: {
             ...state.messagesByRoom,
-            // Match on either id or tempId — addOptimisticMessage stores the UUID in both fields
-            [roomId]: (state.messagesByRoom[roomId] || []).map(
-              (m) =>
-                m.id === tempId || (m as any).tempId === tempId
-                  ? { ...realMessage, isOptimistic: false }
-                  : m
-            ),
+            [roomId]: (state.messagesByRoom[roomId] || []).map((m) => {
+              if (m.id !== tempId && (m as { tempId?: string }).tempId !== tempId) {
+                return m;
+              }
+              return {
+                ...realMessage,
+                author: realMessage.author ?? m.author,
+                isOptimistic: false,
+              };
+            }),
           },
         }));
       },

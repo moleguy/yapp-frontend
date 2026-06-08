@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserMeRes, UpdateUserMeReq } from "@/lib/api";
+import { UserMeRes, UpdateUserMeReq, AppProvider, upsertAppLink, deleteAppLink } from "@/lib/api";
 import ProfileAvatar from "./ProfileAvatar";
-import { Save, X, Loader2, Twitter, Linkedin, Github, Mail } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
 
 interface UserProfileFormProps {
     user: UserMeRes;
@@ -12,12 +12,19 @@ interface UserProfileFormProps {
     isLoading?: boolean;
 }
 
-interface SocialLinks {
-    twitter?: string;
-    linkedin?: string;
-    github?: string;
-    discord?: string;
+interface AppLinkFields {
+  spotify?: string;
+  reddit?: string;
+  twitter?: string;
+  steam?: string;
 }
+
+const APP_LINK_PROVIDERS: { key: AppProvider; label: string }[] = [
+  { key: "twitter", label: "Twitter / X" },
+  { key: "reddit", label: "Reddit" },
+  { key: "spotify", label: "Spotify" },
+  { key: "steam", label: "Steam" },
+];
 
 export default function UserProfileForm({
     user,
@@ -36,25 +43,22 @@ export default function UserProfileForm({
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [socialLinks, setSocialLinks] = useState<SocialLinks>(() => {
-        // Load social links from localStorage
-        try {
-            const stored = localStorage.getItem(`social_links_${user.id}`);
-            return stored ? JSON.parse(stored) : {};
-        } catch {
-            return {};
-        }
+    const [appLinks, setAppLinks] = useState<AppLinkFields>(() => {
+        const fields: AppLinkFields = {};
+        (user.app_links || []).forEach((link) => {
+            if (link.provider in fields || APP_LINK_PROVIDERS.some((p) => p.key === link.provider)) {
+                fields[link.provider as keyof AppLinkFields] = link.url;
+            }
+        });
+        return fields;
     });
 
     const handleAvatarChange = (file: File) => {
         setAvatarFile(file);
     };
 
-    const handleSocialLinkChange = (platform: keyof SocialLinks, value: string) => {
-        setSocialLinks((prev) => ({
-            ...prev,
-            [platform]: value.trim() || undefined,
-        }));
+    const handleAppLinkChange = (provider: AppProvider, value: string) => {
+        setAppLinks((prev) => ({ ...prev, [provider]: value.trim() || undefined }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -68,15 +72,20 @@ export default function UserProfileForm({
 
         setIsSaving(true);
         try {
-            // Save social links to localStorage
-            localStorage.setItem(`social_links_${user.id}`, JSON.stringify(socialLinks));
+            for (const { key } of APP_LINK_PROVIDERS) {
+                const url = appLinks[key];
+                if (url) {
+                    await upsertAppLink({ provider: key, url, show_on_profile: true });
+                } else if ((user.app_links || []).some((l) => l.provider === key)) {
+                    await deleteAppLink(key);
+                }
+            }
 
             const updateData: UpdateUserMeReq = {
                 display_name: displayName.trim(),
+                description: description.trim() || null,
                 avatar_url: user.avatar_url,
                 avatar_thumbnail_url: user.avatar_thumbnail_url,
-                // Note: File upload would be handled separately via EdgeStore
-                // For now, we only update the metadata
             };
 
             const success = await onSave(updateData);
@@ -149,79 +158,23 @@ export default function UserProfileForm({
                 </p>
             </div>
 
-            {/* Social Links Section */}
+            {/* App Links */}
             <div className="border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Social Links</h3>
-                <p className="text-sm text-gray-400 mb-4">Add your social media profiles (optional)</p>
-
-                {/* Twitter */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                        <Twitter size={16} /> Twitter
-                    </label>
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm">x.com/</span>
+                <h3 className="text-lg font-semibold text-white mb-4">App Links</h3>
+                <p className="text-sm text-gray-400 mb-4">Full profile URLs (optional)</p>
+                {APP_LINK_PROVIDERS.map(({ key, label }) => (
+                    <div key={key} className="mb-4">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
                         <input
-                            type="text"
-                            value={socialLinks.twitter || ""}
-                            onChange={(e) => handleSocialLinkChange("twitter", e.target.value)}
+                            type="url"
+                            value={appLinks[key] || ""}
+                            onChange={(e) => handleAppLinkChange(key, e.target.value)}
                             disabled={isSaving || isLoading}
-                            placeholder="username"
-                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            placeholder={`https://${key}.com/...`}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                         />
                     </div>
-                </div>
-
-                {/* LinkedIn */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                        <Linkedin size={16} /> LinkedIn
-                    </label>
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm">linkedin.com/in/</span>
-                        <input
-                            type="text"
-                            value={socialLinks.linkedin || ""}
-                            onChange={(e) => handleSocialLinkChange("linkedin", e.target.value)}
-                            disabled={isSaving || isLoading}
-                            placeholder="username"
-                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                        />
-                    </div>
-                </div>
-
-                {/* GitHub */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                        <Github size={16} /> GitHub
-                    </label>
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm">github.com/</span>
-                        <input
-                            type="text"
-                            value={socialLinks.github || ""}
-                            onChange={(e) => handleSocialLinkChange("github", e.target.value)}
-                            disabled={isSaving || isLoading}
-                            placeholder="username"
-                            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                        />
-                    </div>
-                </div>
-
-                {/* Discord */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                        <Mail size={16} /> Discord
-                    </label>
-                    <input
-                        type="text"
-                        value={socialLinks.discord || ""}
-                        onChange={(e) => handleSocialLinkChange("discord", e.target.value)}
-                        disabled={isSaving || isLoading}
-                        placeholder="username#0000 or just username"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    />
-                </div>
+                ))}
             </div>
 
             {/* Read-only Fields */}

@@ -6,9 +6,9 @@ import { IoIosSearch, IoIosClose } from "react-icons/io";
 import { GoDotFill } from "react-icons/go";
 
 type Friend = {
-    id: number;
+    id: string;
     name: string;
-    status?: "online" | "offline"; // optional (e.g., online, offline)
+    status?: "online" | "offline";
 };
 
 type FriendContextMenu = {

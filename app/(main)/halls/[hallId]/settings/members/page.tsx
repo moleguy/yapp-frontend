@@ -10,7 +10,7 @@ import {
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
 import MembersList from "@/app/(main)/halls/components/MembersList";
-import { kickHallMember, updateHallMemberRole } from "@/lib/api";
+import { kickHallMember, updateHallMemberRole, updateHallMemberNickname, banUser } from "@/lib/api";
 
 export default function HallMembersSettings() {
   const params = useParams();
@@ -40,14 +40,31 @@ export default function HallMembersSettings() {
     }
   };
 
+  const handleUpdateNickname = async (memberId: string, nickname: string | null) => {
+    if (!hallId) return;
+    try {
+      const updated = await updateHallMemberNickname(hallId, memberId, { nickname });
+      if (updated) selectHall(hallId);
+    } catch (error) {
+      console.error("Failed to update nickname:", error);
+    }
+  };
+
+  const handleBan = async (userId: string) => {
+    if (!hallId) return;
+    try {
+      const success = await banUser(hallId, { user_id: userId, reason: "Banned by moderator" });
+      if (success) selectHall(hallId);
+    } catch (error) {
+      console.error("Failed to ban user:", error);
+    }
+  };
+
   const handleUpdateRole = async (memberId: string, roleId: string) => {
     if (!hallId) return;
     try {
       const updated = await updateHallMemberRole(hallId, memberId, { role_id: roleId });
-      if (updated) {
-        // Refresh members list
-        selectHall(hallId);
-      }
+      if (updated) selectHall(hallId);
     } catch (error) {
       console.error("Failed to update member role:", error);
     }
@@ -72,6 +89,8 @@ export default function HallMembersSettings() {
           roles={roles}
           onKick={handleKick}
           onUpdateRole={handleUpdateRole}
+          onUpdateNickname={handleUpdateNickname}
+          onBan={handleBan}
           currentUserId={user?.id}
           isOwner={isOwner}
         />

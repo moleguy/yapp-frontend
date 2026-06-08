@@ -127,6 +127,53 @@ export type UserMeRes = {
   phone_number: string | null; avatar_url: string | null; avatar_thumbnail_url: string | null;
   description: string | null; friend_policy: string; active: boolean;
   created_at: string; updated_at: string; access_token?: string;
+  app_links?: AppLink[];
+  friend_count?: number;
+  mutual_friend_count?: number;
+  is_friend?: boolean;
+};
+
+export type AppProvider = "spotify" | "reddit" | "twitter" | "steam";
+
+export type AppLink = {
+  provider: AppProvider;
+  url: string;
+  show_on_profile: boolean;
+};
+
+export type UserPublic = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  avatar_thumbnail_url: string | null;
+  description: string | null;
+  app_links?: AppLink[];
+  friend_count?: number;
+  mutual_friend_count?: number;
+  is_friend?: boolean;
+};
+
+export type FriendListRes = { users: UserPublic[]; total: number };
+export type MutualFriendsRes = { users: UserPublic[]; total: number };
+export type FriendRequestRes = {
+  id: string;
+  sender: UserPublic;
+  receiver: UserPublic;
+  created_at: string;
+};
+
+export type SendFriendRequestReq = { receiver_id: string };
+export type RespondFriendRequestReq = { action: "accept" | "decline" };
+export type UpsertAppLinkReq = { provider: AppProvider; url: string; show_on_profile?: boolean };
+export type UpsertAppLinkRes = {
+  id: string;
+  user_id: string;
+  provider: AppProvider;
+  url: string;
+  show_on_profile: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type UpdateUserMeReq = {
@@ -843,6 +890,65 @@ export async function acceptJoinRequest(hallId: string, requestId: string): Prom
 export async function declineJoinRequest(hallId: string, requestId: string): Promise<boolean> {
   try {
     await request<unknown>(`/api/v1/halls/${hallId}/settings/requests/${requestId}`, { method: "DELETE" });
+    return true;
+  } catch (err) { console.error(err); return false; }
+}
+
+// ========== FRIENDS & APP LINKS ==========
+
+export async function getFriends(): Promise<FriendListRes | null> {
+  try {
+    return await request<FriendListRes>("/api/v1/me/friends", { method: "GET" });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function sendFriendRequest(receiverId: string): Promise<FriendRequestRes | null> {
+  try {
+    return await request<FriendRequestRes>("/api/v1/me/friends/requests", {
+      method: "POST",
+      body: JSON.stringify({ receiver_id: receiverId } satisfies SendFriendRequestReq),
+    });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function respondFriendRequest(
+  requestId: string,
+  action: "accept" | "decline",
+): Promise<boolean> {
+  try {
+    await request<unknown>(`/api/v1/me/friends/requests/${requestId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action } satisfies RespondFriendRequestReq),
+    });
+    return true;
+  } catch (err) { console.error(err); return false; }
+}
+
+export async function unfriend(userId: string): Promise<boolean> {
+  try {
+    await request<unknown>(`/api/v1/me/friends/${userId}`, { method: "DELETE" });
+    return true;
+  } catch (err) { console.error(err); return false; }
+}
+
+export async function getMutualFriends(userId: string): Promise<MutualFriendsRes | null> {
+  try {
+    return await request<MutualFriendsRes>(`/api/v1/users/${userId}/mutual`, { method: "GET" });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function upsertAppLink(payload: UpsertAppLinkReq): Promise<UpsertAppLinkRes | null> {
+  try {
+    return await request<UpsertAppLinkRes>("/api/v1/me/app-links", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  } catch (err) { console.error(err); return null; }
+}
+
+export async function deleteAppLink(provider: AppProvider): Promise<boolean> {
+  try {
+    await request<unknown>(`/api/v1/me/app-links/${provider}`, { method: "DELETE" });
     return true;
   } catch (err) { console.error(err); return false; }
 }

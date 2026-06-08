@@ -16,6 +16,7 @@ import {
   getRolePermissions,
   updateRolePermissions,
   createRole,
+  updateRole,
   deleteRole,
   UpdateRolePermissionsReq,
 } from "@/lib/api";
@@ -110,8 +111,15 @@ export default function HallRolesSettings() {
   };
 
   const handleUpdateRole = async (role: Role) => {
-    // This could open a name/color editor, for now just simple implementation
-    console.log("Update role:", role);
+    if (!hallId) return;
+    const name = window.prompt("Role name", role.name);
+    if (!name?.trim() || name === role.name) return;
+    try {
+      const updated = await updateRole(hallId, role.id, { name: name.trim() });
+      if (updated) selectHall(hallId);
+    } catch (error) {
+      console.error("Failed to update role:", error);
+    }
   };
 
   if (!hall) return null;
