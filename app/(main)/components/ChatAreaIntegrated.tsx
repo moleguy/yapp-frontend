@@ -37,8 +37,8 @@ class ErrorBoundary extends React.Component<
 }
 
 type Props = {
-  serverName?: string;
-  channelName?: string;
+  hallName?: string;
+  roomName?: string;
   hallId?: string;
   roomId?: string;
   friendDisplayName?: string;
@@ -110,17 +110,17 @@ function ChatAreaContent(props: Props) {
               className={`mb-3 ${isCurrentUser ? 'flex justify-end' : 'flex justify-start'}`}
             >
               <div className={`max-w-[70%] ${isCurrentUser ? 'text-right' : 'text-left'}`}>
-                <div className="flex gap-2 text-sm text-gray-600 mb-1">
+                <div className="flex gap-2 text-sm text-secondary mb-1">
                   <span className="font-semibold">{getUsername(m)}</span>
                   <span>{m.sent_at && formatTime(m.sent_at)}</span>
                 </div>
 
-                <div className={`text-gray-900 ${isCurrentUser ? 'bg-blue-100 rounded-l-lg rounded-tr-lg px-3 py-2 inline-block' : 'bg-gray-100 rounded-r-lg rounded-tl-lg px-3 py-2 inline-block'}`}>
+                <div className={`text-heading ${isCurrentUser ? 'bg-primary-subtle rounded-l-lg rounded-tr-lg px-3 py-2 inline-block' : 'bg-surface-inset rounded-r-lg rounded-tl-lg px-3 py-2 inline-block'}`}>
                   {m.content}
                 </div>
 
                 {m.isOptimistic && (
-                  <span className="text-xs text-gray-400 ml-2">sending...</span>
+                  <span className="text-xs text-faint ml-2">sending...</span>
                 )}
               </div>
             </div>
@@ -128,7 +128,7 @@ function ChatAreaContent(props: Props) {
         })}
 
         {visibleTyping.length > 0 && (
-          <div className="text-sm italic text-gray-500 mb-2">
+          <div className="text-sm italic text-list-muted mb-2">
             typing...
           </div>
         )}
@@ -136,17 +136,17 @@ function ChatAreaContent(props: Props) {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 border-t border-[#dcd9d3] flex gap-2">
+      <div className="p-3 border-t border-default flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 border border-[#dcd9d3] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 border border-default rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="Type a message..."
         />
         <button 
           onClick={handleSend}
-          className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
         >
           <FiSend />
         </button>

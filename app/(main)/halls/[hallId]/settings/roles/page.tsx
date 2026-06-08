@@ -21,8 +21,11 @@ import {
   UpdateRolePermissionsReq,
 } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
+import { useDialog } from "@/app/contexts/DialogContext";
+import { isCreatorRole } from "@/lib/roleUtils";
 
 export default function HallRolesSettings() {
+  const { confirm, prompt } = useDialog();
   const params = useParams();
   const hallId = params.hallId as string;
   const selectHall = useSelectHall();
@@ -97,7 +100,9 @@ export default function HallRolesSettings() {
 
   const handleDeleteRole = async (roleId: string) => {
     if (!hallId) return;
-    if (window.confirm("Are you sure you want to delete this role?")) {
+    const role = roles.find((r) => r.id === roleId);
+    if (isCreatorRole(role)) return;
+    if (await confirm({ message: "Are you sure you want to delete this role?", destructive: true })) {
       try {
         const success = await deleteRole(hallId, roleId);
         if (success) {
@@ -111,8 +116,8 @@ export default function HallRolesSettings() {
   };
 
   const handleUpdateRole = async (role: Role) => {
-    if (!hallId) return;
-    const name = window.prompt("Role name", role.name);
+    if (!hallId || isCreatorRole(role)) return;
+    const name = await prompt({ title: "Rename role", defaultValue: role.name });
     if (!name?.trim() || name === role.name) return;
     try {
       const updated = await updateRole(hallId, role.id, { name: name.trim() });
@@ -128,17 +133,11 @@ export default function HallRolesSettings() {
 
   return (
     <div className="h-full flex flex-col space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Roles</h1>
-          <p className="text-[#73726e]">
-            Create and manage roles and their associated permissions.
-          </p>
-        </div>
+      <div className="flex justify-end">
         {isOwner && (
           <button
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             <HiOutlinePlus size={20} />
             <span>Create Role</span>
@@ -148,27 +147,27 @@ export default function HallRolesSettings() {
 
       <div className="flex-1 flex gap-8 min-h-0">
         {/* Roles List */}
-        <div className="w-1/3 border border-[#dcd9d3] rounded-xl bg-white overflow-y-auto p-4">
+        <div className="w-1/3 border border-default rounded-xl bg-surface-card overflow-y-auto p-4">
           {isCreating && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg space-y-3">
+            <div className="mb-4 p-3 bg-primary-muted border border-primary-subtle rounded-lg space-y-3">
               <input
                 type="text"
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
                 placeholder="Role name"
-                className="w-full px-3 py-1.5 text-sm border border-blue-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 text-sm border border-primary-soft rounded focus:outline-none focus:ring-2 focus:ring-primary"
                 autoFocus
               />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-xs text-list-muted hover:text-strong"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateRole}
-                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-3 py-1 text-xs bg-primary text-white rounded hover:bg-primary-hover"
                 >
                   Create
                 </button>
@@ -186,7 +185,7 @@ export default function HallRolesSettings() {
         </div>
 
         {/* Permission Editor */}
-        <div className="flex-1 border border-[#dcd9d3] rounded-xl bg-white overflow-y-auto p-6">
+        <div className="flex-1 border border-default rounded-xl bg-surface-card overflow-y-auto p-6">
           <RolePermissionEditor
             permissions={permissions}
             onSave={handleSavePermissions}

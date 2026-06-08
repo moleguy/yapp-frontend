@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { LoadingState } from './FeedbackStates';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth();
@@ -15,7 +16,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     }, [loading, user, router]);
 
     if (loading) {
-        return <p>Loading...</p>; // Or a spinner component
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-surface-app">
+                <LoadingState message="Loading…" fullHeight={false} />
+            </div>
+        );
     }
 
     if (!user) {

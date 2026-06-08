@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { FaHashtag } from "react-icons/fa";
 import { HiSpeakerWave } from "react-icons/hi2";
 import { RoomType } from "@/lib/api";
+import Modal from "./Modal";
 
 export interface AddRoomPopupProps {
   isOpen: boolean;
@@ -26,29 +27,6 @@ export default function AddRoomPopup({
   const [name, setName] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
 
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Handle outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   const handleSubmit = () => {
     if (!name.trim()) return;
     onAddRoom(name.trim(), type, isPrivate);
@@ -66,118 +44,114 @@ export default function AddRoomPopup({
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-      <div ref={modalRef} className="bg-white rounded-lg p-6 w-120 shadow-lg">
-        <h2 className="text-2xl font-medium mb-4 text-[#323339] tracking-wide">
-          Create Room {floorName ? `in ${floorName}` : ""}
-        </h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      panelClassName="bg-surface-card rounded-lg p-6 w-120 shadow-lg"
+    >
+      <h2 className="text-2xl font-medium mb-4 text-popup-heading tracking-wide">
+        Create Room {floorName ? `in ${floorName}` : ""}
+      </h2>
 
-        {/* Room Type Section */}
-        <div className="mb-6">
-          <label className="block text-lg font-base mb-2 text-[#222831] tracking-wide">
-            Room Type
-          </label>
-          <div className="flex flex-col gap-3">
-            {/* Text Room */}
+      <div className="mb-6">
+        <label className="block text-lg font-base mb-2 text-list-emphasis tracking-wide">
+          Room Type
+        </label>
+        <div className="flex flex-col gap-3">
+          <div
+            onClick={() => setType("text")}
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition text-list-emphasis tracking-wide
+              ${type === "text" ? "border-primary bg-primary-muted" : "border-neutral hover:bg-surface-inset"}`}
+          >
             <div
-              onClick={() => setType("text")}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition text-[#222831] tracking-wide
-                                ${type === "text" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-100"}`}
+              className={`w-4 h-4 rounded-full border flex items-center justify-center text-list-emphasis tracking-wide
+                ${type === "text" ? "border-primary" : "border-neutral"}`}
             >
-              <div
-                className={`w-4 h-4 rounded-full border flex items-center justify-center text-[#222831] tracking-wide
-                                    ${type === "text" ? "border-blue-500" : "border-gray-400"}`}
-              >
-                {type === "text" && (
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                )}
-              </div>
-              <FaHashtag className="text-[#7d7e82] w-6 h-6" />
-              <div>
-                <div className="font-base text-lg text-[#7d7e82]">Text</div>
-                <div className="text-sm text-gray-500">
-                  Send messages, images, GIFs, and more
-                </div>
-              </div>
+              {type === "text" && (
+                <div className="w-2 h-2 rounded-full bg-primary"></div>
+              )}
             </div>
-
-            {/* Audio Room */}
-            <div
-              onClick={() => setType("audio")}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition
-                                ${type === "audio" ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-100"}`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full border flex items-center justify-center
-                                    ${type === "audio" ? "border-blue-500" : "border-gray-400 hover:bg-[#efefef]"}`}
-              >
-                {type === "audio" && (
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                )}
-              </div>
-              <HiSpeakerWave className="text-[#7d7e82] w-6 h-6" />
-              <div>
-                <div className="text-lg font-base text-[#7d7e82]">Audio</div>
-                <div className="text-sm text-[#7d7e82]">
-                  Hang out with voice, video, and screen share
-                </div>
+            <FaHashtag className="text-icon-muted w-6 h-6" />
+            <div>
+              <div className="font-base text-lg text-icon-muted">Text</div>
+              <div className="text-sm text-list-muted">
+                Send messages, images, GIFs, and more
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Room Name Input */}
-        <div className="mb-6">
-          <label className="block text-lg font-base mb-2 text-[#222831] tracking-wide">
-            Room Name
-          </label>
-          <div className="flex items-center border border-gray-300 rounded-lg py-1 px-2">
-            {type === "text" ? (
-              <FaHashtag className="text-[#2f3035] w-5 h-5" />
-            ) : (
-              <HiSpeakerWave className="text-[#2f3035] w-5 h-5" />
-            )}
-            <input
-              type="text"
-              value={name}
-              onKeyDown={handleKeyDown}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="new-room"
-              className="w-full p-2 outline-none text"
-            />
-          </div>
-        </div>
-
-        {/* Private Toggle */}
-        <div className="mb-6 flex items-center justify-between">
-            <div className="flex flex-col">
-                <span className="text-lg font-base text-[#222831] tracking-wide">Private Room</span>
-                <span className="text-sm text-gray-500">Only selected members and roles will be able to view this room.</span>
+          <div
+            onClick={() => setType("audio")}
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition
+              ${type === "audio" ? "border-primary bg-primary-muted" : "border-neutral hover:bg-surface-inset"}`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border flex items-center justify-center
+                ${type === "audio" ? "border-primary" : "border-neutral hover:bg-list-hover"}`}
+            >
+              {type === "audio" && (
+                <div className="w-2 h-2 rounded-full bg-primary"></div>
+              )}
             </div>
-            <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-                className="w-5 h-5"
-            />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex justify-between gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
-          >
-            Create Room
-          </button>
+            <HiSpeakerWave className="text-icon-muted w-6 h-6" />
+            <div>
+              <div className="text-lg font-base text-icon-muted">Audio</div>
+              <div className="text-sm text-icon-muted">
+                Hang out with voice, video, and screen share
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="mb-6">
+        <label className="block text-lg font-base mb-2 text-list-emphasis tracking-wide">
+          Room Name
+        </label>
+        <div className="flex items-center border border-neutral rounded-lg py-1 px-2">
+          {type === "text" ? (
+            <FaHashtag className="text-icon w-5 h-5" />
+          ) : (
+            <HiSpeakerWave className="text-icon w-5 h-5" />
+          )}
+          <input
+            type="text"
+            value={name}
+            onKeyDown={handleKeyDown}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="new-room"
+            className="w-full p-2 outline-none text"
+          />
+        </div>
+      </div>
+
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-lg font-base text-list-emphasis tracking-wide">Private Room</span>
+          <span className="text-sm text-list-muted">Only selected members and roles will be able to view this room.</span>
+        </div>
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          onChange={(e) => setIsPrivate(e.target.checked)}
+          className="w-5 h-5"
+        />
+      </div>
+
+      <div className="flex justify-between gap-2">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg bg-surface-control hover:bg-surface-neutral cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover cursor-pointer"
+        >
+          Create Room
+        </button>
+      </div>
+    </Modal>
   );
 }

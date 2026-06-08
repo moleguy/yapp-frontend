@@ -4,6 +4,9 @@ import './globals.css'
 import {AuthProvider} from './contexts/AuthContext'
 import {WebSocketProvider} from './contexts/WebSocketProvider'
 import {EdgeStoreProvider} from '@/lib/edgestore';
+import {DialogProvider} from './contexts/DialogContext';
+import {ThemeProvider} from './contexts/ThemeContext';
+import ThemeScript from './components/ThemeScript';
 import React from "react";
 
 const geistSans = Geist({
@@ -47,14 +50,21 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
+        <head>
+            <ThemeScript />
+        </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider>
         <AuthProvider>
             <WebSocketProvider>
                 <EdgeStoreProvider>
-                    {children}
+                    <DialogProvider>
+                        {children}
+                    </DialogProvider>
                 </EdgeStoreProvider>
             </WebSocketProvider>
         </AuthProvider>
+        </ThemeProvider>
         </body>
         </html>
     )

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useCallback } from "react";
 import { IoIosClose } from "react-icons/io";
 import { Friend } from "@/app/(main)/components/FriendsProfile";
 import Image from "next/image";
 import { RiMessage3Fill } from "react-icons/ri";
 import { UserCheck } from "lucide-react";
+import Modal from "./Modal";
 
 type ProfileCardProps = {
 	friend: Friend;
@@ -14,9 +15,6 @@ type ProfileCardProps = {
 };
 
 export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCardProps) {
-	const profileRef = useRef<HTMLDivElement | null>(null);
-
-	// Safe close function
 	const handleClose = useCallback(() => {
 		if (typeof onCloseAction === "function") {
 			onCloseAction();
@@ -25,45 +23,6 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 		}
 	}, [onCloseAction]);
 
-	useEffect(() => {
-		if (!isOpen) return;
-
-		const handleClickOutside = (e: MouseEvent) => {
-			if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-				handleClose();
-			}
-		};
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [isOpen, handleClose]);
-
-	useEffect(() => {
-		if (!isOpen) return;
-
-		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				handleClose();
-			}
-		};
-
-		document.addEventListener("keydown", handleEscape);
-		return () => document.removeEventListener("keydown", handleEscape);
-	}, [isOpen, handleClose]);
-
-	// Prevent body scroll
-	useEffect(() => {
-		if (isOpen) {
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "unset";
-		}
-
-		return () => {
-			document.body.style.overflow = "unset";
-		};
-	}, [isOpen, handleClose]);
-
 	if (!isOpen) return null;
 
 	const handleCloseClick = (e: React.MouseEvent) => {
@@ -71,68 +30,63 @@ export default function ProfileCard({ friend, isOpen, onCloseAction }: ProfileCa
 		handleClose();
 	};
 
-	const handleBackdropClick = (e: React.MouseEvent) => {
-		if (e.target === e.currentTarget) {
-			handleClose();
-		}
-	};
-
 	return (
-		<div
-			className="fixed inset-0 flex items-center justify-center bg-black/30 bg-opacity-50 z-50"
-			onClick={handleBackdropClick}
+		<Modal
+			isOpen={isOpen}
+			onClose={handleClose}
+			panelClassName="bg-surface-card shadow-lg w-[640px] max-w-full relative p-2 border border-default rounded-xl"
 		>
-			<div
-				ref={profileRef}
-				className="bg-white shadow-lg w-[640px] max-w-full relative p-2 border border-[#dcd9d3] rounded-xl"
-				onClick={(e) => e.stopPropagation()}
+			<button
+				onClick={handleCloseClick}
+				className="absolute top-3 right-3 bg-surface-control rounded-md text-secondary hover:text-heading cursor-pointer z-10"
 			>
-				<button
-					onClick={handleCloseClick}
-					className="absolute top-3 right-3 bg-[#e5e7eb] rounded-md text-gray-600 hover:text-[#1e1e1e] cursor-pointer z-10"
-				>
-					<IoIosClose className="w-8 h-8" />
-				</button>
+				<IoIosClose className="w-8 h-8" />
+			</button>
 
-				<div className="flex flex-col items-start text-center">
-					<div className="w-full h-40 bg-green-800 rounded-t-lg">banner</div>
-					<Image
-						src={friend.avatarUrl || "/icons/default-avatar.png"}
-						alt={friend.name}
-						width={90}
-						height={90}
-						className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-2 bg-gray-200"
-					/>
+			<div className="flex flex-col items-start text-center">
+				<div className="w-full h-40 bg-green-800 rounded-t-lg">banner</div>
+				<Image
+					src={friend.avatarUrl || "/icons/default-avatar.png"}
+					alt={`${friend.name}'s user profile picture`}
+					width={90}
+					height={90}
+					className="absolute top-30 left-12 w-32 h-32 rounded-full object-cover mb-2 bg-surface-control"
+				/>
 
-					<div className={`flex flex-col justify-center items-start w-full py-8 px-8`}>
-						<label className="text-xl font-semibold mt-12">{friend.name}</label>
-						{friend.username && <p className="text-sm text-gray-600">@{friend.username}</p>}
+				<div className="flex flex-col justify-center items-start w-full py-8 px-8">
+					<label className="text-xl font-semibold mt-12">{friend.name}</label>
+					{friend.username && <p className="text-sm text-secondary">@{friend.username}</p>}
 
-						{friend.memberSince && <p className="mt-3 text-base text-gray-700">Member since {friend.memberSince}</p>}
+					{friend.memberSince && (
+						<p className="mt-3 text-base text-strong">Member since {friend.memberSince}</p>
+					)}
 
-						{friend.mutualServers !== undefined && (
-							<p className="mt-2 text-base text-gray-700">Mutual Servers: {friend.mutualServers}</p>
-						)}
+					{friend.mutualHalls !== undefined && (
+						<p className="mt-2 text-base text-strong">Mutual Halls: {friend.mutualHalls}</p>
+					)}
 
-						{friend.mutualFriends !== undefined && (
-							<p className="mt-1 text-base text-gray-700">Mutual Friends: {friend.mutualFriends}</p>
-						)}
+					{friend.mutualFriends !== undefined && (
+						<p className="mt-1 text-base text-strong">Mutual Friends: {friend.mutualFriends}</p>
+					)}
 
-						<div className={`flex gap-4 items-center mt-8`}>
-							<button
-								className={`flex items-center gap-2 border border-[#dcd9d3] py-2 px-3 focus:outline-none rounded-lg cursor-pointer hover:bg-[#e5e7eb] text-[#1e1e1e]`}
-							>
-								<RiMessage3Fill className={`w-6 h-6`} />
-								Message
-							</button>
+					<div className="flex gap-4 items-center mt-8">
+						<button
+							type="button"
+							className="flex items-center gap-2 border border-default py-2 px-3 focus:outline-none rounded-lg cursor-pointer hover:bg-surface-control text-heading"
+						>
+							<RiMessage3Fill className="w-6 h-6" />
+							Message
+						</button>
 
-							<button className={` border border-[#dcd9d3] py-2 px-3 rounded-lg hover:bg-[#e5e7eb] cursor-pointer`}>
-								<UserCheck className={`w-6 h-6`} />
-							</button>
-						</div>
+						<button
+							type="button"
+							className="border border-default py-2 px-3 rounded-lg hover:bg-surface-control cursor-pointer"
+						>
+							<UserCheck className="w-6 h-6" />
+						</button>
 					</div>
 				</div>
 			</div>
-		</div>
+		</Modal>
 	);
 }

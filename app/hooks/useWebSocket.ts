@@ -72,12 +72,14 @@ export function useWebSocket(options: UseWebSocketOptions) {
         }
 
         // Create stable message handler
-        handleMessageRef.current = (message: WSMessage): void => {
+        handleMessageRef.current = (message: WSMessage | null | undefined): void => {
             try {
+                if (!message?.type) return;
+
                 // Connection-level events are not scoped to the active room
                 if (message.type === "subscriptions_synced") return;
 
-                if (message.room_id !== roomId) return;
+                if (!message.room_id || message.room_id !== roomId) return;
 
                 switch (message.type) {
                     case 'text': {
@@ -144,6 +146,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
                         break;
                     case 'typing': {
                         const typingUser = (message as { typing_user?: string }).typing_user || message.author_id;
+                        if (typingUser === useUserStore.getState().user?.id) break;
                         setTypingUser(typingUser);
                         break;
                     }
@@ -165,8 +168,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
         };
 
         // Ensure global connection is up then subscribe
-        WebSocketClient.ensureGlobalConnection()
-            .catch((error) => console.error("Failed to connect WebSocket:", error));
+        void WebSocketClient.ensureGlobalConnection().catch(() => {
+            // Chat falls back to REST; connection retries in ws client.
+        });
 
         const unsubscribe = WebSocketClient.getGlobalInstance().on('*', handleMessageRef.current);
         unsubscribeRef.current = unsubscribe;

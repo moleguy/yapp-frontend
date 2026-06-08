@@ -60,8 +60,8 @@ export default function ForgetPassword(){
 
     const getInputBorder = (value: string, isFocused: boolean, hasError: boolean = false) => {
         if (hasError) return 'border-red-500';
-        if (value || isFocused) return 'border-[#0077d4]';
-        return 'border-[#dcd9d3]';
+        if (value || isFocused) return 'border-auth-accent';
+        return 'border-default';
     };
 
     const validateField = useCallback((field: string, value: string) => {
@@ -95,7 +95,7 @@ export default function ForgetPassword(){
     const isFormValid = email.trim() && validateEmail(email) &&  Object.keys(fieldErrors).length === 0;
 
     return (
-        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1] 
+        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-surface-auth [--color:var(--auth-pattern)] 
         bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px] ">
 
             <div
@@ -109,7 +109,7 @@ export default function ForgetPassword(){
 
             <main className='flex-1 flex justify-center items-center m-8 rounded-[20px]'>
 
-                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3 border-[#dcd9d3]'
+                <motion.div className='flex flex-col justify-center bg-surface-card rounded-3xl p-8 z-1 border-3 border-default'
                 initial={{opacity:0, y:40}}
                 animate={{opacity:1, y:0}}
                 transition={{duration:0.6, ease: 'easeOut'}}>
@@ -120,21 +120,21 @@ export default function ForgetPassword(){
                     </div> */}
 
                     <div className='flex justify-center items-center'>
-                        <MdLockReset size={80} color="#73726e" />
+                        <MdLockReset size={80} className="text-list-muted" />
                     </div>
 
                     <section className='flex flex-col justify-center m-4 items-center'>
 
-                        <p className='text-xl font-semibold font-MyFont text-[#1e1e1e]'>Forgot your password?</p>
-                        <p className='text-xl font-base text-[#a7a7a7] mb-8 font-MyFont'>
+                        <p className='text-xl font-semibold font-MyFont text-heading'>Forgot your password?</p>
+                        <p className='text-xl font-base text-auth-muted mb-8 font-MyFont'>
                             Enter your email to reset your password.
                         </p>
-                        <form onSubmit={handleSubmit} className='flex flex-col justify-center items-center flex-1 text-[#1e1e1e] font-MyFont'
+                        <form onSubmit={handleSubmit} className='flex flex-col justify-center items-center flex-1 text-heading font-MyFont'
                         noValidate>
                             <div className='flex flex-col gap-1 mb-6'>
                                 <label 
                                 htmlFor="email"
-                                className="text-sm text-[#73726e] font-medium">
+                                className="text-sm text-list-muted font-medium">
                                   Email {!email && <span className="text-red-600" aria-label="required">*</span>}
                                 </label>
                                 <input
@@ -142,7 +142,7 @@ export default function ForgetPassword(){
                                     name="email"
                                     type="email"
                                     autoComplete="email"
-                                    className={`rounded-lg px-2 py-3 w-100 mb-2 bg-white text-black font-light border-3 ${getInputBorder(email, focusedField === 'email', !!fieldErrors.email)} focus:outline-none focus:border-[#0077d4]`}
+                                    className={`rounded-lg px-2 py-3 w-100 mb-2 bg-surface-card text-heading font-light border-3 ${getInputBorder(email, focusedField === 'email', !!fieldErrors.email)} focus:outline-none focus:border-auth-accent`}
                                     value={email}
                                     onChange={(e) => handleInputChange('email', e.target.value)}
                                     onFocus={() => setFocusedField('email')}
@@ -163,7 +163,7 @@ export default function ForgetPassword(){
                                     onClick={handleSubmit}
                                     disabled={!isFormValid}
                                     type='submit'
-                                    className='bg-[#2383E2] text-white py-3 rounded-lg text-lg w-100 cursor-pointer hover:bg-[#0077d4] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                    className='bg-auth-button text-white py-3 rounded-lg text-lg w-100 cursor-pointer hover:bg-auth-accent font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                                     aria-describedby="signup-button-description"
                                 >
                                     Send Code
@@ -172,9 +172,9 @@ export default function ForgetPassword(){
                         </form>
 
                         <Link href="/signin" className='w-full'>
-                            <div className='flex justify-center items-center border-3 py-3 rounded-lg bg-white mt-2'>
-                            <IoIosArrowBack size={24} color="#1e1e1e" />
-                            <p className='text-[#1e1e1e]'>Back to Sign In</p>
+                            <div className='flex justify-center items-center border-3 py-3 rounded-lg bg-surface-card mt-2'>
+                            <IoIosArrowBack size={24} className="text-heading" />
+                            <p className='text-heading'>Back to Sign In</p>
                             </div>
                         </Link>    
                     </section>

@@ -8,7 +8,7 @@ import {
     HallInvite,
     getUserHalls,
     getHall,
-    getHallMembers,
+    getHallMembersWithUsers,
     getRoles,
     getHallBans,
     getHallInvites,
@@ -84,7 +84,13 @@ export const useHallStore = create<HallState>()(
             },
 
             selectHall: async (hallId: string) => {
-                set({ loading: true, error: null, selectedHallId: hallId });
+                set({
+                    loading: true,
+                    error: null,
+                    selectedHallId: hallId,
+                    bans: [],
+                    invites: [],
+                });
                 try {
                     const hall = await getHall(hallId);
                     if (hall) {
@@ -93,8 +99,6 @@ export const useHallStore = create<HallState>()(
                         await Promise.all([
                             get().fetchMembers(),
                             get().fetchRoles(),
-                            get().fetchBans(),
-                            get().fetchInvites(),
                         ]);
                     } else {
                         set({ error: "Failed to fetch hall", loading: false });
@@ -163,8 +167,8 @@ export const useHallStore = create<HallState>()(
                 if (!hallId) return;
 
                 try {
-                    const res = await getHallMembers(hallId);
-                    if (res && res.members) {
+                    const res = await getHallMembersWithUsers(hallId);
+                    if (res?.members) {
                         set({ members: res.members, error: null });
                     }
                 } catch (error) {
@@ -190,13 +194,9 @@ export const useHallStore = create<HallState>()(
                 const hallId = get().selectedHallId;
                 if (!hallId) return;
 
-                try {
-                    const bans = await getHallBans(hallId);
-                    if (bans) {
-                        set({ bans, error: null });
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch bans:", error);
+                const bans = await getHallBans(hallId);
+                if (bans) {
+                    set({ bans, error: null });
                 }
             },
 
@@ -204,13 +204,9 @@ export const useHallStore = create<HallState>()(
                 const hallId = get().selectedHallId;
                 if (!hallId) return;
 
-                try {
-                    const invites = await getHallInvites(hallId);
-                    if (invites) {
-                        set({ invites, error: null });
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch invites:", error);
+                const invites = await getHallInvites(hallId);
+                if (invites) {
+                    set({ invites, error: null });
                 }
             },
 
@@ -257,6 +253,8 @@ export const useHallError = () => useHallStore((state) => state.error);
 
 // Actions
 export const useFetchHalls = () => useHallStore((state) => state.fetchHalls);
+export const useFetchBans = () => useHallStore((state) => state.fetchBans);
+export const useFetchInvites = () => useHallStore((state) => state.fetchInvites);
 export const useSelectHall = () => useHallStore((state) => state.selectHall);
 export const useSetSelectedHall = () =>
     useHallStore((state) => state.setSelectedHall);

@@ -4,10 +4,12 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserMe, updateUserMe, UpdateUserMeReq, UserMeRes } from "@/lib/api";
 import UserProfileForm from "@/app/(main)/components/UserProfileForm";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useDialog } from "@/app/contexts/DialogContext";
+import { LoadingState, ErrorState } from "@/app/(main)/components/FeedbackStates";
 
 export default function ProfileSettingsPage() {
     const router = useRouter();
+    const { alert: showAlert } = useDialog();
     const [user, setUser] = useState<UserMeRes | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -63,25 +65,16 @@ export default function ProfileSettingsPage() {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 size={32} className="text-blue-500 animate-spin" />
-            </div>
-        );
+        return <LoadingState message="Loading profile…" />;
     }
 
     if (error || !user) {
         return (
-            <div className="flex flex-col items-center justify-center h-96 gap-4">
-                <AlertCircle size={48} className="text-red-500" />
-                <h2 className="text-xl font-semibold text-white">{error || "Unable to load profile"}</h2>
-                <button
-                    onClick={() => router.push("/home")}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                >
-                    Go Home
-                </button>
-            </div>
+            <ErrorState
+                title="Unable to load profile"
+                message={error || "Something went wrong while loading your profile."}
+                action={{ label: "Go Home", onClick: () => router.push("/home") }}
+            />
         );
     }
 
@@ -89,8 +82,8 @@ export default function ProfileSettingsPage() {
         <div className="max-w-2xl mx-auto space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
-                <p className="text-gray-400 mt-2">Edit your profile information</p>
+                <h1 className="text-3xl font-bold text-heading">Profile Settings</h1>
+                <p className="text-faint mt-2">Edit your profile information</p>
             </div>
 
             {/* Success Message */}
@@ -108,15 +101,15 @@ export default function ProfileSettingsPage() {
             )}
 
             {/* Current Profile Preview */}
-            <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">Current Profile</h2>
+            <div className="bg-surface-elevated rounded-lg border border-default p-6">
+                <h2 className="text-lg font-semibold text-heading mb-4">Current Profile</h2>
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-2xl">
+                    <div className="w-16 h-16 rounded-full bg-surface-inverse flex items-center justify-center text-2xl">
                         {user.display_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <p className="text-white font-semibold">{user.display_name}</p>
-                        <p className="text-gray-400 text-sm">@{user.username}</p>
+                        <p className="text-heading font-semibold">{user.display_name}</p>
+                        <p className="text-faint text-sm">@{user.username}</p>
                     </div>
                 </div>
             </div>
@@ -129,17 +122,17 @@ export default function ProfileSettingsPage() {
             />
 
             {/* Security Section */}
-            <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 space-y-4">
-                <h2 className="text-lg font-semibold text-white">Security Settings</h2>
-                <p className="text-gray-400 text-sm">
+            <div className="bg-surface-elevated rounded-lg border border-default p-6 space-y-4">
+                <h2 className="text-lg font-semibold text-heading">Security Settings</h2>
+                <p className="text-faint text-sm">
                     For email and username changes, contact support.
                 </p>
                 <button
-                    onClick={() => {
-                        // TODO: Implement password change modal
-                        alert("Password change coming soon");
-                    }}
-                    className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition"
+                    onClick={() => void showAlert({
+                        title: "Coming soon",
+                        message: "Password change coming soon",
+                    })}
+                    className="bg-surface-inverse hover:bg-surface-neutral text-heading px-4 py-2 rounded-lg transition"
                 >
                     Change Password
                 </button>

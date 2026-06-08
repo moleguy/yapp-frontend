@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { acceptInvite, getPublicInviteInfo, InviteInfo } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { LoadingState, ErrorState, InlineError } from "@/app/(main)/components/FeedbackStates";
 
 export default function InvitePage() {
   const params = useParams();
@@ -37,39 +37,34 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#EAE4D5]">
-        <Loader2 className="animate-spin text-blue-600" size={32} />
+      <div className="min-h-screen flex items-center justify-center bg-surface-shell">
+        <LoadingState message="Loading invite…" fullHeight={false} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#EAE4D5] p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+    <div className="min-h-screen flex items-center justify-center bg-surface-shell p-4">
+      <div className="bg-surface-card rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
         {error && !invite ? (
-          <>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">Invalid Invite</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button
-              type="button"
-              onClick={() => router.push("/home")}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-            >
-              Go Home
-            </button>
-          </>
+          <ErrorState
+            title="Invalid invite"
+            message={error}
+            action={{ label: "Go Home", onClick: () => router.push("/home") }}
+            fullHeight={false}
+          />
         ) : invite ? (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re invited!</h1>
-            <p className="text-gray-600 mb-6">
+            <h1 className="text-2xl font-bold text-heading mb-2">You&apos;re invited!</h1>
+            <p className="text-secondary mb-6">
               Join <strong>{invite.hall_name}</strong>
             </p>
-            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+            {error && <InlineError message={error} className="mb-4" />}
             <button
               type="button"
               onClick={handleAccept}
               disabled={accepting}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
             >
               {accepting ? "Joining..." : "Accept Invite"}
             </button>

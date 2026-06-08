@@ -50,7 +50,7 @@ export default function SignIn() {
     hasError: boolean,
   ) => {
     if (hasError) return "border-red-500";
-    return value || isFocused ? "border-[#0077d4]" : "border-[#dcd9d3]";
+    return value || isFocused ? "border-auth-accent" : "border-default";
   };
 
   const validateField = useCallback(
@@ -149,7 +149,7 @@ export default function SignIn() {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3] [--color:#E1E1E1]
+      className="min-h-screen flex flex-col bg-center font-MyFont bg-surface-auth [--color:var(--auth-pattern)]
      bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]"
     >
       {/* Screen reader announcements */}
@@ -164,7 +164,7 @@ export default function SignIn() {
 
       <main className="flex-1 flex justify-center items-center m-8 rounded-[20px]">
         <motion.div
-          className="flex flex-col justify-center bg-white rounded-3xl p-8 z-10 border-3 max-w-xl border-[#dcd9d3]"
+          className="flex flex-col justify-center bg-surface-card rounded-3xl p-8 z-10 border-3 max-w-xl border-default"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
@@ -180,22 +180,22 @@ export default function SignIn() {
           </div>
 
           <section className="flex flex-col justify-center m-8 mt-2">
-            <p className="text-xl font-medium font-MyFont mt-4 text-[#1e1e1e]">
+            <p className="text-xl font-medium font-MyFont mt-4 text-heading">
               Yapp — Connect. Collaborate. Communicate.
             </p>
-            <p className="text-xl font-base text-[#B6B09F] mb-8 tracking-wide">
+            <p className="text-xl font-base text-auth-subtitle mb-8 tracking-wide">
               Sign In to your Yapp account
             </p>
 
             <form
               onSubmit={handleSubmit}
-              className="flex flex-col justify-center text-[#1e1e1e] font-[SF_Pro_Rounded]"
+              className="flex flex-col justify-center text-heading font-[SF_Pro_Rounded]"
               noValidate
             >
               <div className="flex flex-col gap-1 mb-4">
                 <label
                   htmlFor="email"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Email{" "}
                   {!email && (
@@ -209,7 +209,7 @@ export default function SignIn() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-white text-black font-light border-3 font-MyFont ${getInputBorder(email, focusedField === "email", !!fieldErrors.email)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(email, focusedField === "email", !!fieldErrors.email)} focus:outline-none focus:border-auth-accent transition-colors`}
                   value={email}
                   onChange={handleEmailChange}
                   onFocus={() => setFocusedField("email")}
@@ -236,7 +236,7 @@ export default function SignIn() {
                 <div className="flex flex-row items-center">
                   <label
                     htmlFor="password"
-                    className="text-sm font-medium text-[#73726e] flex-1"
+                    className="text-sm font-medium text-list-muted flex-1"
                   >
                     Password{" "}
                     {!password && (
@@ -247,7 +247,7 @@ export default function SignIn() {
                   </label>
                   <Link
                     href="/forget-password"
-                    className="text-xs text-[#0077d4] hover:underline"
+                    className="text-xs text-auth-accent hover:underline"
                   >
                     Forgot Password?
                   </Link>
@@ -258,7 +258,7 @@ export default function SignIn() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-white text-black font-light border-3 font-MyFont ${getInputBorder(password, focusedField === "password", !!fieldErrors.password)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(password, focusedField === "password", !!fieldErrors.password)} focus:outline-none focus:border-auth-accent transition-colors`}
                     value={password}
                     onChange={handlePasswordChange}
                     onFocus={() => setFocusedField("password")}
@@ -273,7 +273,7 @@ export default function SignIn() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-4 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
+                    className="absolute right-4 top-4 cursor-pointer hover:text-auth-accent transition-colors disabled:cursor-not-allowed"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
@@ -301,7 +301,7 @@ export default function SignIn() {
                 <input
                   id="remember-me"
                   type="checkbox"
-                  className="w-4 h-4 accent-[#0077d4] focus:outline-none"
+                  className="w-4 h-4 accent-auth-accent focus:outline-none"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={isLoading}
@@ -330,7 +330,7 @@ export default function SignIn() {
                 <button
                   type="submit"
                   disabled={isLoading || !isFormValid}
-                  className="bg-[#2383E2] text-white py-3 rounded-lg text-base w-full cursor-pointer hover:bg-[#0077d4] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#0077d4] focus:ring-offset-2"
+                  className="bg-auth-button text-white py-3 rounded-lg text-base w-full cursor-pointer hover:bg-auth-accent font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-auth-accent focus:ring-offset-2"
                   aria-describedby="signin-button-description"
                 >
                   {isLoading ? (
@@ -348,11 +348,11 @@ export default function SignIn() {
                 </div>
               </div>
 
-              <p className="flex justify-center text-sm mt-4 text-[#1e1e1e]">
+              <p className="flex justify-center text-sm mt-4 text-heading">
                 Don&apos;t have an account?{" "}
                 <Link
                   href="/signup"
-                  className="text-[#0077d4] ml-2 hover:underline focus:underline"
+                  className="text-auth-accent ml-2 hover:underline focus:underline"
                 >
                   Sign Up with email
                 </Link>

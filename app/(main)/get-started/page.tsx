@@ -32,7 +32,7 @@ const lineVariants: Variants = {
 export default function CoverPage() {
     return (
         <div
-            className="flex flex-col min-h-screen bg-[#F3F3F3] [--color:#E1E1E1]
+            className="flex flex-col min-h-screen bg-surface-auth [--color:var(--auth-pattern)]
           bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]"
         >
             {/* Header */}
@@ -47,7 +47,7 @@ export default function CoverPage() {
                 <div className="flex flex-1 flex-col justify-start items-center h-full w-full p-6 md:p-10">
                     {/* Headings */}
                     <motion.div
-                        className="text-center mt-6 mb-8 leading-tight text-[#1e1e1e] font-Heading text-[clamp(2rem,6vw,4.5rem)]"
+                        className="text-center mt-6 mb-8 leading-tight text-heading font-Heading text-[clamp(2rem,6vw,4.5rem)]"
                         variants={containerVariants}
                         initial="hidden"
                         animate="show"
@@ -60,7 +60,7 @@ export default function CoverPage() {
                     {/* Subtitle + Button */}
                     <div className="flex flex-col justify-center items-center z-10 text-center max-w-3xl">
                         <motion.p
-                            className="subtitle text-[#1e1e1e] font-MyFont mb-8 tracking-tight text-[clamp(1rem,3vw,2rem)]"
+                            className="subtitle text-heading font-MyFont mb-8 tracking-tight text-[clamp(1rem,3vw,2rem)]"
                             initial={{ opacity: 0, y: 50 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 1, ease: "easeOut" }}
@@ -71,7 +71,7 @@ export default function CoverPage() {
 
                         <Link href="/signin">
                             <motion.button
-                                className="flex items-center gap-2 bg-[#1e1e1e] text-white px-6 md:px-8 py-3 md:py-4 rounded-lg hover:bg-black cursor-pointer"
+                                className="flex items-center gap-2 bg-heading text-white px-6 md:px-8 py-3 md:py-4 rounded-lg hover:bg-black cursor-pointer"
                                 initial={{ opacity: 0, y: 50 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 1, ease: "easeOut" }}

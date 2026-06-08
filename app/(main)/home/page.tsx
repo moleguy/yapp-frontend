@@ -1,47 +1,58 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
-import ServerList from "../components/ServerList";
+import HallList from "../components/HallList";
+import InvitePeoplePopup from "../components/InvitePeoplePopup";
 import ProtectedRoute from "../components/ProtectedRoute";
-import ServerDetails from "@/app/(main)/components/ServerDetails";
+import HallDetails from "@/app/(main)/components/HallDetails";
 import DirectMessages from "../components/DirectMessages";
 import FriendsProfile from "../components/FriendsProfile";
 import ChatArea from "@/app/(main)/components/ChatArea";
 import { useAvatar, useUser } from "@/app/store/useUserStore";
-import { Hall, getUserHalls, Room, deleteHall, leaveHall, updateMyPresence, PresenceStatus } from "@/lib/api";
-import { useSelectHall } from "@/app/store/useHallStore";
+import { Hall, getUserHalls, Room, deleteHall, leaveHall, type PresenceStatus } from "@/lib/api";
+import { useHallMembers, useHallRoles, useHallStore, useSelectHall } from "@/app/store/useHallStore";
+import { setLastRoomIdForHall, clearLastRoomIdForHall } from "@/lib/hallRoomPersistence";
 import { useFetchFriends, useFriends } from "@/app/store/useFriendsStore";
+import { useMyPresence, usePresenceByUserId, useSetMyPresence } from "@/app/store/usePresenceStore";
+import { usePresenceSync } from "@/app/hooks/usePresenceSync";
 import { useResizable } from "@/app/hooks/useResizable";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { useDialog } from "@/app/contexts/DialogContext";
+import { LoadingState, EmptyState, ErrorState } from "@/app/(main)/components/FeedbackStates";
+import { Hash, MessageCircle } from "lucide-react";
+import PresenceSelect from "../components/PresenceSelect";
+import HallMembersPanel from "../components/HallMembersPanel";
 
 type Friend = {
   id: string;
   name: string;
   avatarUrl?: string;
-  status?: "online" | "offline";
+  status?: PresenceStatus;
   mutualFriends?: number;
   username?: string;
   memberSince?: string;
-  mutualServers?: number;
+  mutualHalls?: number;
   tags?: string;
 };
 
 export default function HomePage() {
+  const { confirm } = useDialog();
   const [showMicrophone, setShowMicrophone] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeView, setActiveView] = useState<"server" | "dm" | null>(null);
+  const [settingsTab, setSettingsTab] = useState("General");
+  const [activeView, setActiveView] = useState<"hall" | "dm" | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [activeHall, setActiveHall] = useState<Hall | null>(null);
   const [lastActiveHall, setLastActiveHall] = useState<Hall | null>(null);
   const [halls, setHalls] = useState<Hall[]>([]);
-  const [showChannels, setShowChannels] = useState(false);
+  const [showRooms, setShowRooms] = useState(false);
   const [showFloorPopup, setShowFloorPopup] = useState(false);
   const [showRoomPopup, setShowRoomPopup] = useState(false);
   const [floorPopupHall, setFloorPopupHall] = useState<Hall | null>(null);
+  const [inviteHall, setInviteHall] = useState<Hall | null>(null);
 
   const [hallDeselectedManually, setHallDeselectedManually] = useState(false);
   const [friendDeselectedManually, setFriendDeselectedManually] = useState(false);
@@ -65,11 +76,26 @@ export default function HomePage() {
     direction: "right",
     isCollapsible: true,
     collapseThreshold: 180,
+    storageKey: "members-panel",
   });
 
   const fetchFriends = useFetchFriends();
   const apiFriends = useFriends();
   const selectHall = useSelectHall();
+  const hallMembers = useHallMembers();
+  const hallRoles = useHallRoles();
+  const hallMembersLoading = useHallStore((s) => s.loading);
+  const presenceByUserId = usePresenceByUserId();
+  const presenceStatus = useMyPresence();
+  const setMyPresence = useSetMyPresence();
+
+  const watchedUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const friend of apiFriends) ids.add(friend.id);
+    for (const member of hallMembers) ids.add(member.user_id);
+    return [...ids];
+  }, [apiFriends, hallMembers]);
+  usePresenceSync(watchedUserIds);
 
   const friends: Friend[] = useMemo(
     () =>
@@ -78,19 +104,26 @@ export default function HomePage() {
         name: u.display_name,
         username: u.username,
         avatarUrl: u.avatar_thumbnail_url ?? undefined,
-        status: "offline" as const,
+        status: presenceByUserId[u.id] ?? "offline",
         mutualFriends: u.mutual_friend_count,
       })),
-    [apiFriends]
+    [apiFriends, presenceByUserId]
+  );
+
+  const selectedFriend = useMemo(
+    () => friends.find((f) => f.id === selectedFriendId) ?? null,
+    [friends, selectedFriendId]
   );
 
   const sessionRestoredRef = useRef(false);
   const friendRestoredRef = useRef(false);
 
-  const onlineFriends = friends.filter((f) => f.status === "online");
-  const offlineFriends = friends.filter((f) => f.status === "offline");
-
-  const [presenceStatus, setPresenceStatus] = useState<PresenceStatus>("online");
+  useEffect(() => {
+    if (activeView !== "hall" || !activeHall?.id) return;
+    if (useHallStore.getState().selectedHallId !== activeHall.id) {
+      void selectHall(activeHall.id);
+    }
+  }, [activeView, activeHall?.id, selectHall]);
 
   // Fix: Handle the promise and loading state correctly
   useEffect(() => {
@@ -118,8 +151,11 @@ export default function HomePage() {
     if (sessionRestoredRef.current || halls.length === 0) return;
     sessionRestoredRef.current = true;
 
-    const savedView = localStorage.getItem("lastActiveView") as "server" | "dm" | null;
-    const savedServerId = localStorage.getItem("lastActiveServerId");
+    const rawView = localStorage.getItem("lastActiveView");
+    const savedView = (rawView === "server" ? "hall" : rawView) as "hall" | "dm" | null;
+    const savedHallId =
+      localStorage.getItem("lastActiveHallId") ??
+      localStorage.getItem("lastActiveServerId");
     const hallDeselected = JSON.parse(localStorage.getItem("hallDeselectedManually") || "false");
     const friendDeselected = JSON.parse(localStorage.getItem("friendDeselectedManually") || "false");
 
@@ -127,11 +163,11 @@ export default function HomePage() {
     setFriendDeselectedManually(friendDeselected);
     if (savedView) setActiveView(savedView);
 
-    if (!hallDeselected && savedServerId) {
-      const savedHall = halls.find((h) => h.id === savedServerId);
+    if (!hallDeselected && savedHallId) {
+      const savedHall = halls.find((h) => h.id === savedHallId);
       if (savedHall) {
         setLastActiveHall(savedHall);
-        if (savedView === "server") {
+        if (savedView === "hall") {
           setActiveHall(savedHall);
           setSelectedRoom(null);
           void selectHall(savedHall.id);
@@ -152,9 +188,8 @@ export default function HomePage() {
     const savedFriendId = localStorage.getItem("lastSelectedFriendId");
     friendRestoredRef.current = true;
 
-    if (!friendDeselected && savedFriendId) {
-      const savedFriend = friends.find((f) => f.id === savedFriendId);
-      if (savedFriend) setSelectedFriend(savedFriend);
+    if (!friendDeselected && savedFriendId && friends.some((f) => f.id === savedFriendId)) {
+      setSelectedFriendId(savedFriendId);
     }
   }, [friends]);
 
@@ -163,12 +198,12 @@ export default function HomePage() {
     localStorage.setItem("hallDeselectedManually", JSON.stringify(hallDeselectedManually));
     localStorage.setItem("friendDeselectedManually", JSON.stringify(friendDeselectedManually));
 
-    if (activeHall?.id) localStorage.setItem("lastActiveServerId", activeHall.id);
-    else if (lastActiveHall?.id) localStorage.setItem("lastActiveServerId", lastActiveHall.id);
+    if (activeHall?.id) localStorage.setItem("lastActiveHallId", activeHall.id);
+    else if (lastActiveHall?.id) localStorage.setItem("lastActiveHallId", lastActiveHall.id);
 
-    if (selectedFriend) localStorage.setItem("lastSelectedFriendId", selectedFriend.id);
+    if (selectedFriendId) localStorage.setItem("lastSelectedFriendId", selectedFriendId);
     else localStorage.removeItem("lastSelectedFriendId");
-  }, [activeView, activeHall, lastActiveHall, hallDeselectedManually, selectedFriend, friendDeselectedManually]);
+  }, [activeView, activeHall, lastActiveHall, hallDeselectedManually, selectedFriendId, friendDeselectedManually]);
 
   const handleHallClick = (hall: Hall) => {
     if (activeHall?.id === hall.id) return;
@@ -176,9 +211,9 @@ export default function HomePage() {
     setSelectedRoom(null);
     setLastActiveHall(hall);
     setHallDeselectedManually(false);
-    setActiveView("server");
-    localStorage.setItem("lastActiveView", "server");
-    localStorage.setItem("lastActiveServerId", hall.id);
+    setActiveView("hall");
+    localStorage.setItem("lastActiveView", "hall");
+    localStorage.setItem("lastActiveHallId", hall.id);
     localStorage.setItem("hallDeselectedManually", "false");
     void selectHall(hall.id);
   };
@@ -190,17 +225,21 @@ export default function HomePage() {
 
       let success = false;
       if (isOwner) {
-        if (!window.confirm("Delete this Hall?")) return;
+        if (!(await confirm({ message: "Delete this Hall?", destructive: true }))) return;
         success = await deleteHall(hallId);
       } else {
-        if (!window.confirm("Leave this Hall?")) return;
+        if (!(await confirm({ message: "Leave this Hall?", destructive: true, confirmLabel: "Leave" }))) return;
         success = await leaveHall(hallId);
       }
 
       if (success) {
+        clearLastRoomIdForHall(hallId);
         const newHalls = halls.filter((h) => h.id !== hallId);
         setHalls(newHalls);
-        if (activeHall?.id === hallId) setActiveHall(newHalls[0] || null);
+        if (activeHall?.id === hallId) {
+          setActiveHall(newHalls[0] || null);
+          setSelectedRoom(null);
+        }
       }
     } catch (error) {
       console.error("Error leaving hall:", error);
@@ -208,12 +247,12 @@ export default function HomePage() {
   };
 
   const handleHallsTabClick = () => {
-    if (activeView === "server" && activeHall) {
+    if (activeView === "hall" && activeHall) {
       setActiveHall(null);
       setSelectedRoom(null);
       setHallDeselectedManually(true);
     } else {
-      setActiveView("server");
+      setActiveView("hall");
       if (!hallDeselectedManually && lastActiveHall) setActiveHall(lastActiveHall);
       else if (halls.length > 0 && !hallDeselectedManually) setActiveHall(halls[0]);
     }
@@ -221,19 +260,35 @@ export default function HomePage() {
 
   const handleDMTabClick = () => {
     if (activeView === "dm") {
-      setSelectedFriend(null);
+      setSelectedFriendId(null);
       setFriendDeselectedManually(true);
       localStorage.setItem("friendDeselectedManually", "true");
       localStorage.removeItem("lastSelectedFriendId");
     } else {
       setActiveView("dm");
       localStorage.setItem("lastActiveView", "dm");
-      if (!friendDeselectedManually && selectedFriend) setSelectedFriend(selectedFriend);
+      if (!friendDeselectedManually && selectedFriendId) setSelectedFriendId(selectedFriendId);
     }
   };
 
+  const openSettings = useCallback((tab: string = "General") => {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
+
+  const handleSelectRoom = useCallback((room: Room) => {
+    if (!activeHall || room.hall_id !== activeHall.id) return;
+    setSelectedRoom(room);
+    setLastRoomIdForHall(room.hall_id, room.id);
+  }, [activeHall]);
+
+  const handleDeselectRoom = useCallback((hallId: string) => {
+    setSelectedRoom(null);
+    clearLastRoomIdForHall(hallId);
+  }, []);
+
   const handleFriendClick = (friend: Friend) => {
-    setSelectedFriend(friend);
+    setSelectedFriendId(friend.id);
     setFriendDeselectedManually(false);
     setActiveView("dm");
     localStorage.setItem("lastActiveView", "dm");
@@ -243,42 +298,53 @@ export default function HomePage() {
 
   return (
       <ProtectedRoute>
-        <div className="flex h-screen bg-black text-black font-MyFont">
-          <div className="relative w-full flex bg-[#EAE4D5] m-1 overflow-hidden">
+        <div className="flex h-screen bg-black text-heading font-MyFont">
+          <div className="relative w-full flex bg-surface-shell m-1 overflow-hidden">
             {/* Left Sidebar */}
             <div
                 style={{ width: `${leftSidebar.width}px` }}
-                className="flex flex-col h-full bg-[#f3f3f4] rounded-l-lg transition-[width] duration-75 ease-out relative flex-shrink-0"
+                className="flex flex-col h-full bg-surface-sidebar rounded-l-lg transition-[width] duration-75 ease-out relative flex-shrink-0"
             >
-              <ServerList
-                  servers={halls}
-                  setServers={setHalls}
-                  activeServer={activeHall}
-                  onServerClick={handleHallClick}
-                  onLeaveServer={handleLeaveHall}
+              <HallList
+                  halls={halls}
+                  setHalls={setHalls}
+                  activeHall={activeHall}
+                  onHallClick={handleHallClick}
+                  onLeaveHall={handleLeaveHall}
                   onDirectMessagesClick={handleDMTabClick}
-                  onServersToggle={handleHallsTabClick}
+                  onHallsToggle={handleHallsTabClick}
                   activeView={activeView}
                   onCreateCategoryClick={(hall) => { setFloorPopupHall(hall); setShowFloorPopup(true); }}
                   onCreateRoomClick={(hall) => { setActiveHall(hall); setShowRoomPopup(true); }}
                   isLoading={hallsLoading}
-                  showChannels={showChannels}
-                  setShowChannels={setShowChannels}
+                  showRooms={showRooms}
+                  setShowRooms={setShowRooms}
                   currentUserId={user?.id}
+                  onInviteHall={setInviteHall}
               />
 
-              <div className={`flex-1 min-h-0 overflow-y-auto ${activeView === "server" && activeHall ? "border-t border-[#dcd9d3]" : ""}`}>
-                {activeView === "server" && activeHall ? (
-                    <ServerDetails
-                        activeServer={activeHall}
-                        onSelectChannel={(room) => setSelectedRoom(room)}
+              <div className={`flex-1 min-h-0 overflow-y-auto ${activeView === "hall" && activeHall ? "border-t border-default" : ""}`}>
+                {activeView === "hall" && activeHall ? (
+                    <HallDetails
+                        activeHall={activeHall}
+                        selectedRoomId={
+                          selectedRoom?.hall_id === activeHall.id
+                            ? selectedRoom.id
+                            : null
+                        }
+                        onSelectRoom={handleSelectRoom}
+                        onDeselectRoom={handleDeselectRoom}
+                        onToggleRightSidebar={rightSidebar.toggleCollapse}
+                        isRightSidebarCollapsed={rightSidebar.isCollapsed}
                         showCategoryPopup={showFloorPopup && floorPopupHall?.id === activeHall.id}
                         onCloseCategoryPopup={() => setShowFloorPopup(false)}
                         onOpenCategoryPopup={() => { setFloorPopupHall(activeHall); setShowFloorPopup(true); }}
-                        showChannels={showChannels}
                         showRoomPopup={showRoomPopup}
                         onCloseRoomPopup={() => setShowRoomPopup(false)}
                         onOpenRoomPopup={() => setShowRoomPopup(true)}
+                        currentUserId={user?.id}
+                        onInviteHall={setInviteHall}
+                        onLeaveHall={handleLeaveHall}
                     />
                 ) : activeView === "dm" ? (
                     <DirectMessages friends={friends} onSelectFriend={handleFriendClick} selectedFriend={selectedFriend} />
@@ -286,56 +352,82 @@ export default function HomePage() {
               </div>
 
               {/* Profile Section */}
-              <div className="flex m-3 py-2 px-2 bg-white border border-[#D4C9BE] rounded-xl items-center justify-between gap-2 overflow-hidden">
-                <div className="flex items-center min-w-0">
+              <div className="relative z-30 flex m-3 py-2 px-2 bg-surface-card border border-accent rounded-xl items-center justify-between gap-2">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openSettings("Profile")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openSettings("Profile");
+                    }
+                  }}
+                  className="flex items-center min-w-0 flex-1 text-left rounded-lg pl-1.5 pr-1 -my-1 py-1 cursor-pointer transition-colors hover:bg-list-hover active:bg-list-selected"
+                  aria-label="Open profile settings"
+                >
                   {hasAvatar ? (
-                      <Image src={avatarThumbnailUrl} alt="Profile" className="w-10 h-10 object-cover rounded-full flex-shrink-0" width={80} height={80} />
+                      <Image
+                        key={avatarThumbnailUrl}
+                        src={avatarThumbnailUrl}
+                        alt="User profile picture"
+                        className="w-10 h-10 object-cover rounded-full flex-shrink-0"
+                        width={80}
+                        height={80}
+                        unoptimized
+                      />
                   ) : (
-                      <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">{fallback}</div>
+                      <div className="w-10 h-10 bg-surface-strong rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">{fallback}</div>
                   )}
-                  <div className="ml-2 font-MyFont text-[#393E46] min-w-0">
-                    <p className="text-sm font-medium truncate">{user?.display_name || "No Name"}</p>
-                    <p className="text-xs truncate text-gray-500">@{user?.username || "no-username"}</p>
-                    <select
-                      value={presenceStatus}
-                      onChange={async (e) => {
-                        const status = e.target.value as PresenceStatus;
-                        setPresenceStatus(status);
-                        await updateMyPresence(status);
-                      }}
-                      className="text-xs text-gray-500 bg-transparent border-none outline-none cursor-pointer mt-0.5"
-                    >
-                      <option value="online">Online</option>
-                      <option value="away">Away</option>
-                      <option value="busy">Busy</option>
-                      <option value="offline">Offline</option>
-                    </select>
+                  <div className="ml-2 font-MyFont text-body min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {user?.display_name || "No Name"}
+                      </p>
+                      <PresenceSelect
+                        value={presenceStatus}
+                        onChange={(status) => setMyPresence(status)}
+                      />
+                    </div>
+                    <p className="text-xs truncate text-list-muted">
+                      @{user?.username || "no-username"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <div
-                      className={`cursor-pointer flex justify-center items-center p-1.5 rounded-lg transition-colors ${showMicrophone ? "hover:bg-[#dfdfe1] text-gray-500" : "bg-[#ebc8ca] text-[#cb3b40]"}`}
+                  {/* TODO: Add back the microphone toggle component after voice call feature is available in the backend*/}
+                  {/* <div
+                      className={`cursor-pointer flex justify-center items-center p-1.5 rounded-lg transition-colors ${showMicrophone ? "hover:bg-surface-control-hover text-list-muted" : "bg-destructive-hover text-destructive"}`}
                       onClick={() => setShowMicrophone(!showMicrophone)}
                   >
                     {showMicrophone ? <BiSolidMicrophone size={20} /> : <BiSolidMicrophoneOff size={20} />}
-                  </div>
-                  <div onClick={() => setSettingsOpen(true)} className="flex justify-center items-center p-1.5 rounded-lg hover:bg-[#dfdfe1] cursor-pointer">
-                    <SettingsPopup isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onOpen={() => setSettingsOpen(true)} />
-                  </div>
+                  </div> */}
+                  <SettingsPopup
+                    isOpen={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    onOpen={() => openSettings("General")}
+                    initialTab={settingsTab}
+                  />
                 </div>
               </div>
 
-              <div onMouseDown={leftSidebar.startResizing} className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400/30 active:bg-blue-500/50 transition-colors z-10" />
+              <div onMouseDown={leftSidebar.startResizing} className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10" />
             </div>
 
             {/* Main Chat Area */}
-            <div className="relative flex-1 flex flex-col justify-between bg-[#fbfbfb] border-r border-[#dcd9d3] min-w-0">
+            <div className="relative flex-1 flex flex-col justify-between bg-surface-app border-r border-default min-w-0">
               {hallsLoading ? (
-                  <div className="flex-1 flex items-center justify-center text-gray-500">Loading your halls...</div>
-              ) : activeView === "server" && activeHall && selectedRoom ? (
+                  <LoadingState message="Loading your halls…" />
+              ) : userHalls === null ? (
+                  <ErrorState
+                    title="Couldn't load halls"
+                    message="Something went wrong while fetching your halls. Please try again."
+                    action={{ label: "Retry", onClick: () => window.location.reload() }}
+                  />
+              ) : activeView === "hall" && activeHall && selectedRoom ? (
                   <ChatArea
-                      serverName={activeHall.name}
-                      channelName={selectedRoom.name}
+                      hallName={activeHall.name}
+                      roomName={selectedRoom.name}
                       hallId={activeHall.id}
                       roomId={selectedRoom.id}
                       isDm={false}
@@ -346,67 +438,43 @@ export default function HomePage() {
                       friendId={selectedFriend.id}
                       isDm={true}
                   />
+              ) : activeView === "dm" ? (
+                  <EmptyState
+                    title="No conversation selected"
+                    description="Select a friend from the sidebar to start chatting."
+                    icon={<MessageCircle className="w-7 h-7" />}
+                  />
               ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 text-center px-4">
-                    {activeView === "dm" ? "Select a friend to start chatting" : "Select a channel to start chatting"}
-                  </div>
+                  <EmptyState
+                    title="No room selected"
+                    description="Pick a room from the sidebar to start chatting."
+                    icon={<Hash className="w-7 h-7" />}
+                  />
               )}
             </div>
 
             {/* Right Sidebar (Friends/Profile) */}
             <div
                 style={{ width: rightSidebar.isCollapsed ? "0px" : `${rightSidebar.width}px` }}
-                className={`flex flex-col bg-[#fbfbfb] rounded-r-lg transition-[width] duration-150 ease-out relative flex-shrink-0 ${
-                    !rightSidebar.isCollapsed ? "border-l border-[#dcd9d3]" : ""
+                className={`flex flex-col bg-surface-app rounded-r-lg transition-[width] duration-150 ease-out relative flex-shrink-0 ${
+                    !rightSidebar.isCollapsed ? "border-l border-default" : ""
                 }`}
             >
-              {/* Persistent Edge Toggle Button */}
-              <button
-                  onClick={rightSidebar.toggleCollapse}
-                  className={`absolute top-1/2 -translate-y-1/2 z-50 flex items-center justify-center 
-    w-7 h-14 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-    bg-white border-2 border-[#dcd9d3] rounded-lg shadow-[4px_0_12px_rgba(0,0,0,0.15)]
-    hover:bg-[#fbfbfb] active:scale-90
-    ${rightSidebar.isCollapsed
-                      ? "-left-6 opacity-100 scale-110 hover:-left-7" // Significant offset and slight grow when collapsed
-                      : "-left-3.5 opacity-100 hover:-left-4"
-                  }`}
-                  title={rightSidebar.isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              >
-                <div className="flex items-center justify-center w-full">
-                  {rightSidebar.isCollapsed ? (
-                      <ChevronLeft size={20} className="text-gray-500 stroke-[3px] animate-pulse-subtle" />
-                  ) : (
-                      <ChevronRight size={18} className="text-gray-500 stroke-[2px]" />
-                  )}
-                </div>
-              </button>
               {!rightSidebar.isCollapsed && (
                   <>
-                    <div onMouseDown={rightSidebar.startResizing} className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-400/30 active:bg-blue-500/50 transition-colors z-10" />
+                    <div onMouseDown={rightSidebar.startResizing} className="absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10" />
                     <div className="h-full flex flex-col overflow-y-auto overflow-x-hidden">
-                      {activeView === "server" && activeHall ? (
-                          <div className="py-6 px-3">
-                            <label className="text-sm px-3 font-base text-[#73726e] tracking-wide mb-2 block">Online — {onlineFriends.length}</label>
-                            <div className="space-y-2 mb-8">
-                              {onlineFriends.map((f) => (
-                                  <div key={f.id} className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer hover:bg-[#e7e7e9] text-[#73726e] hover:text-[#222831]">
-                                    <div className="relative flex-shrink-0">
-                                      <div className="w-10 h-10 bg-[#3a6f43] rounded-full flex items-center justify-center text-white text-lg font-medium">{f.name.charAt(0).toUpperCase()}</div>
-                                      <div className="absolute -bottom-0 right-0 w-3 h-3 bg-[#08cb00] border-2 border-white rounded-full"></div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-md font-medium truncate">{f.name}</p>
-                                    </div>
-                                  </div>
-                              ))}
-                            </div>
-                            {/* Offline friends placeholder... */}
-                          </div>
+                      {activeView === "hall" && activeHall ? (
+                          <HallMembersPanel
+                            members={hallMembers}
+                            roles={hallRoles}
+                            currentUserId={user?.id}
+                            loading={hallMembersLoading && hallMembers.length === 0}
+                          />
                       ) : activeView === "dm" ? (
                           <FriendsProfile friend={selectedFriend} />
                       ) : (
-                          <div className="flex-1 flex items-center justify-center text-gray-500 px-4 text-center">Select something to view details</div>
+                          <div className="flex-1 flex items-center justify-center text-list-muted px-4 text-center">Select something to view details</div>
                       )}
                     </div>
                   </>
@@ -414,6 +482,13 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        <InvitePeoplePopup
+          isOpen={!!inviteHall}
+          onClose={() => setInviteHall(null)}
+          hall={inviteHall}
+          currentUserId={user?.id}
+        />
       </ProtectedRoute>
   );
 }

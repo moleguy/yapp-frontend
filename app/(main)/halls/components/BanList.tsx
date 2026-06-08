@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { HallBan } from "@/lib/api";
 import { HiOutlineUserMinus, HiOutlineShieldExclamation } from "react-icons/hi2";
+import { useDialog } from "@/app/contexts/DialogContext";
 
 interface BanListProps {
   bans: HallBan[];
@@ -11,10 +12,11 @@ interface BanListProps {
 }
 
 export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
+  const { confirm } = useDialog();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleUnban = async (banId: string) => {
-    if (window.confirm("Are you sure you want to unban this user?")) {
+    if (await confirm({ message: "Are you sure you want to unban this user?", confirmLabel: "Unban" })) {
       setLoadingId(banId);
       await onUnban(banId);
       setLoadingId(null);
@@ -23,9 +25,9 @@ export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
 
   if (bans.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <HiOutlineShieldExclamation size={32} className="text-gray-400" />
+      <div className="flex flex-col items-center justify-center py-12 text-list-muted">
+        <div className="w-16 h-16 bg-surface-inset rounded-full flex items-center justify-center mb-4">
+          <HiOutlineShieldExclamation size={32} className="text-faint" />
         </div>
         <p className="text-lg font-medium">No bans yet</p>
         <p className="text-sm">Banned users will appear here.</p>
@@ -37,26 +39,26 @@ export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-[#dcd9d3] text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <tr className="border-b border-default text-xs font-semibold text-list-muted uppercase tracking-wider">
             <th className="px-4 py-3">User</th>
             <th className="px-4 py-3">Reason</th>
             <th className="px-4 py-3">Banned At</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#dcd9d3]">
+        <tbody className="divide-y divide-divider">
           {bans.map((ban) => (
-            <tr key={ban.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={ban.id} className="hover:bg-list-hover transition-colors">
               <td className="px-4 py-4">
-                <div className="font-medium text-[#1e1e1e]">
+                <div className="font-medium text-heading">
                   {ban.username}
                 </div>
-                <div className="text-xs text-gray-500">User ID: {ban.user_id.substring(0, 8)}…</div>
+                <div className="text-xs text-list-muted">User ID: {ban.user_id.substring(0, 8)}…</div>
               </td>
-              <td className="px-4 py-4 text-sm text-[#73726e]">
+              <td className="px-4 py-4 text-sm text-list-muted">
                 {ban.reason || "No reason provided."}
               </td>
-              <td className="px-4 py-4 text-sm text-gray-500">
+              <td className="px-4 py-4 text-sm text-list-muted">
                 {new Date(ban.created_at).toLocaleDateString()}
               </td>
               <td className="px-4 py-4 text-right">
@@ -64,7 +66,7 @@ export default function BanList({ bans, onUnban, isOwner }: BanListProps) {
                   <button
                     onClick={() => handleUnban(ban.id)}
                     disabled={loadingId === ban.id}
-                    className="px-3 py-1 text-sm border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                    className="px-3 py-1 text-sm border border-destructive text-destructive rounded-lg hover:bg-destructive-muted transition-colors disabled:opacity-50"
                   >
                     {loadingId === ban.id ? "Unbanning..." : "Unban"}
                   </button>

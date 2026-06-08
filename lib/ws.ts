@@ -89,12 +89,14 @@ export class WebSocketClient {
         };
     }
 
+    private static readonly LIFECYCLE_EVENTS = new Set(["open", "close", "error"]);
+
     private emit(event: string, data: any): void {
         // Emit to specific event listeners
         this.eventListeners.get(event)?.forEach((cb) => cb(data));
-        // Emit to wildcard listeners
-        if (event !== '*') {
-            this.eventListeners.get('*')?.forEach((cb) => cb(data));
+        // Wildcard listeners only receive room/message payloads, not connection lifecycle
+        if (event !== "*" && !WebSocketClient.LIFECYCLE_EVENTS.has(event)) {
+            this.eventListeners.get("*")?.forEach((cb) => cb(data));
         }
     }
 
@@ -102,6 +104,18 @@ export class WebSocketClient {
 
     connect(): Promise<void> {
         return new Promise((resolve, reject) => {
+            let settled = false;
+
+            const finish = (
+                outcome: "resolve" | "reject",
+                value?: void | Error,
+            ) => {
+                if (settled) return;
+                settled = true;
+                if (outcome === "resolve") resolve();
+                else reject(value ?? new Error("WebSocket connection failed"));
+            };
+
             try {
                 console.log("WebSocket connecting to:", this.url);
                 this.ws = new WebSocket(this.url);
@@ -109,7 +123,7 @@ export class WebSocketClient {
                 const timeout = setTimeout(() => {
                     if (this.ws?.readyState === WebSocket.CONNECTING) {
                         this.ws.close();
-                        reject(new Error("WebSocket connection timeout"));
+                        finish("reject", new Error("WebSocket connection timeout"));
                     }
                 }, 10000);
 
@@ -118,8 +132,8 @@ export class WebSocketClient {
                     console.log("WebSocket connected");
                     this.reconnectAttempts = 0;
                     this.sendSyncSubscriptions();
-                    this.emit('open', null);
-                    resolve();
+                    this.emit("open", null);
+                    finish("resolve");
                 };
 
                 this.ws.onmessage = (event) => {
@@ -131,26 +145,64 @@ export class WebSocketClient {
                     }
                 };
 
-                this.ws.onerror = (error) => {
-                    const err = new Error(`WebSocket error: ${error}`);
-                    console.error(err);
-                    this.emit('error', err);
-                };
+                // Browser WebSocket onerror carries no useful fields; onclose has code/reason.
+                this.ws.onerror = () => {};
 
-                this.ws.onclose = () => {
+                this.ws.onclose = (event: CloseEvent) => {
                     clearTimeout(timeout);
-                    console.log("WebSocket closed");
-                    this.emit('close', null);
+                    this.emit("close", null);
 
-                    if (!this.isManualClose && this.reconnectAttempts < this.maxReconnectAttempts) {
+                    const scheduleReconnect = () => {
+                        if (this.isManualClose) return;
+                        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                            console.warn("WebSocket max reconnect attempts reached");
+                            this.emit(
+                                "error",
+                                new Error("WebSocket max reconnect attempts reached"),
+                            );
+                            return;
+                        }
                         this.reconnectAttempts++;
                         const delay = this.reconnectDelay * this.reconnectAttempts;
-                        console.log(`Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts})`);
-                        setTimeout(() => this.connect(), delay);
+                        setTimeout(() => {
+                            this.connect().catch(() => {
+                                // Background reconnect failures are retried until max attempts.
+                            });
+                        }, delay);
+                    };
+
+                    if (!settled) {
+                        if (!this.isManualClose) {
+                            const reason = event.reason ? `: ${event.reason}` : "";
+                            finish(
+                                "reject",
+                                new Error(
+                                    `WebSocket connection failed (code ${event.code}${reason})`,
+                                ),
+                            );
+                            scheduleReconnect();
+                        }
+                        return;
                     }
+
+                    if (this.isManualClose) return;
+
+                    if (event.code !== 1000) {
+                        const reason = event.reason ? `: ${event.reason}` : "";
+                        console.warn(
+                            `WebSocket disconnected (code ${event.code}${reason})`,
+                        );
+                    }
+
+                    scheduleReconnect();
                 };
             } catch (error) {
-                reject(error);
+                finish(
+                    "reject",
+                    error instanceof Error
+                        ? error
+                        : new Error("WebSocket connection failed"),
+                );
             }
         });
     }
@@ -299,7 +351,10 @@ export class WebSocketClient {
                     synced.subscribed_room_count ?? synced.subscribed_rooms?.length ?? 0,
                     "rooms"
                 );
-                this.emit("subscriptions_synced", synced);
+                this.emit("subscriptions_synced", {
+                    type: "subscriptions_synced",
+                    ...synced,
+                });
                 break;
             }
             default:

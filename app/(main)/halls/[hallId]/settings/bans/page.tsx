@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import {
   useHallBans,
   useSelectHall,
-  useSelectedHall
+  useSelectedHall,
+  useFetchBans,
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
 import BanList from "@/app/(main)/halls/components/BanList";
@@ -17,21 +18,27 @@ export default function HallBansSettings() {
   const selectHall = useSelectHall();
   const hall = useSelectedHall();
   const bans = useHallBans();
+  const fetchBans = useFetchBans();
   const user = useUser();
 
   useEffect(() => {
     if (hallId) {
-      selectHall(hallId);
+      void selectHall(hallId);
     }
   }, [hallId, selectHall]);
+
+  useEffect(() => {
+    if (hall?.id === hallId) {
+      void fetchBans();
+    }
+  }, [hall?.id, hallId, fetchBans]);
 
   const handleUnban = async (banId: string) => {
     if (!hallId) return;
     try {
       const success = await unbanUser(hallId, banId);
       if (success) {
-        // Refresh bans list
-        selectHall(hallId);
+        void fetchBans();
       }
     } catch (error) {
       console.error("Failed to unban user:", error);
@@ -44,14 +51,7 @@ export default function HallBansSettings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Bans</h1>
-        <p className="text-[#73726e]">
-          Manage banned users in this hall.
-        </p>
-      </div>
-
-      <div className="bg-white border border-[#dcd9d3] rounded-xl overflow-hidden">
+      <div className="bg-surface-card border border-default rounded-xl overflow-hidden">
         <BanList
           bans={bans}
           onUnban={handleUnban}

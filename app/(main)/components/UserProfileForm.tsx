@@ -102,7 +102,7 @@ export default function UserProfileForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="bg-gray-900 rounded-lg border border-gray-800 p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-surface-elevated rounded-lg border border-default p-6 space-y-6">
             {/* Error Message */}
             {error && (
                 <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
@@ -110,7 +110,7 @@ export default function UserProfileForm({
                 </div>
             )}
 
-            {/* Avatar Section */}
+            {/* User profile picture */}
             <div className="flex justify-center">
                 <ProfileAvatar
                     currentAvatar={user.avatar_thumbnail_url}
@@ -122,7 +122,7 @@ export default function UserProfileForm({
 
             {/* Display Name */}
             <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-soft mb-2">
                     Display Name
                 </label>
                 <input
@@ -131,17 +131,17 @@ export default function UserProfileForm({
                     onChange={(e) => setDisplayName(e.target.value)}
                     disabled={isSaving || isLoading}
                     maxLength={50}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="w-full bg-surface-inverse border border-neutral rounded-lg px-4 py-2 text-white placeholder:text-list-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                     placeholder="Enter your display name"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-list-muted mt-1">
                     {displayName.length}/50
                 </p>
             </div>
 
             {/* Bio/Description */}
             <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-soft mb-2">
                     Bio
                 </label>
                 <textarea
@@ -150,59 +150,59 @@ export default function UserProfileForm({
                     disabled={isSaving || isLoading}
                     maxLength={500}
                     rows={4}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
+                    className="w-full bg-surface-inverse border border-neutral rounded-lg px-4 py-2 text-white placeholder:text-list-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none"
                     placeholder="Tell us about yourself..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-list-muted mt-1">
                     {description.length}/500
                 </p>
             </div>
 
             {/* App Links */}
-            <div className="border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-semibold text-white mb-4">App Links</h3>
-                <p className="text-sm text-gray-400 mb-4">Full profile URLs (optional)</p>
+            <div className="border-t border-neutral pt-6">
+                <h3 className="text-lg font-semibold text-heading mb-4">App Links</h3>
+                <p className="text-sm text-faint mb-4">Full profile URLs (optional)</p>
                 {APP_LINK_PROVIDERS.map(({ key, label }) => (
                     <div key={key} className="mb-4">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+                        <label className="block text-sm font-medium text-soft mb-2">{label}</label>
                         <input
                             type="url"
                             value={appLinks[key] || ""}
                             onChange={(e) => handleAppLinkChange(key, e.target.value)}
                             disabled={isSaving || isLoading}
                             placeholder={`https://${key}.com/...`}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            className="w-full bg-surface-inverse border border-neutral rounded-lg px-4 py-2 text-white placeholder:text-list-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                         />
                     </div>
                 ))}
             </div>
 
             {/* Read-only Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-neutral">
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-faint mb-2">
                         Username
                     </label>
                     <input
                         type="text"
                         value={user.username}
                         disabled
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed"
+                        className="w-full bg-surface-inverse border border-neutral rounded-lg px-4 py-2 text-list-muted cursor-not-allowed"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Cannot be changed</p>
+                    <p className="text-xs text-list-muted mt-1">Cannot be changed</p>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-faint mb-2">
                         Email
                     </label>
                     <input
                         type="email"
                         value={user.email}
                         disabled
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed"
+                        className="w-full bg-surface-inverse border border-neutral rounded-lg px-4 py-2 text-list-muted cursor-not-allowed"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Contact support to change</p>
+                    <p className="text-xs text-list-muted mt-1">Contact support to change</p>
                 </div>
             </div>
 
@@ -212,7 +212,7 @@ export default function UserProfileForm({
                     type="button"
                     onClick={onCancel}
                     disabled={isSaving || isLoading}
-                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition"
+                    className="flex items-center gap-2 bg-surface-inverse hover:bg-surface-neutral disabled:bg-surface-inverse disabled:opacity-50 text-white px-4 py-2 rounded-lg transition"
                 >
                     <X size={18} />
                     Cancel
@@ -221,7 +221,7 @@ export default function UserProfileForm({
                 <button
                     type="submit"
                     disabled={isSaving || isLoading}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg transition"
+                    className="flex items-center gap-2 bg-primary hover:bg-primary-hover disabled:bg-primary-hover disabled:opacity-50 text-white px-6 py-2 rounded-lg transition"
                 >
                     {isSaving ? (
                         <>

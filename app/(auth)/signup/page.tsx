@@ -88,8 +88,8 @@ export default function SignUp() {
     hasError: boolean = false,
   ) => {
     if (hasError) return "border-red-500";
-    if (value || isFocused) return "border-[#0077d4]";
-    return "border-[#dcd9d3]";
+    if (value || isFocused) return "border-auth-accent";
+    return "border-default";
   };
 
   const validateField = useCallback(
@@ -255,7 +255,7 @@ export default function SignUp() {
       case PasswordStrength.FAIR:
         return "bg-yellow-500";
       case PasswordStrength.GOOD:
-        return "bg-blue-500";
+        return "bg-primary";
       case PasswordStrength.STRONG:
         return "bg-green-500";
     }
@@ -276,7 +276,7 @@ export default function SignUp() {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-center bg-[#F3F3F3] [--color:#E1E1E1] \
+      className="min-h-screen flex flex-col bg-center bg-surface-auth [--color:var(--auth-pattern)] \
     bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]"
     >
       {/* Screen reader announcements */}
@@ -291,7 +291,7 @@ export default function SignUp() {
 
       <main className="flex-1 flex justify-center items-center m-8 rounded-[20px]">
         <motion.div
-          className="flex flex-col justify-center bg-white w-[545px] rounded-3xl p-8 z-10 border-3 border-[#dcd9d3]"
+          className="flex flex-col justify-center bg-surface-card w-[545px] rounded-3xl p-8 z-10 border-3 border-default"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
@@ -307,23 +307,23 @@ export default function SignUp() {
           </div>
 
           <section className="flex flex-col justify-center m-8 mt-2 mb-2">
-            <p className="text-xl font-medium font-MyFont mt-4 text-[#1e1e1e] w-full">
+            <p className="text-xl font-medium font-MyFont mt-4 text-heading w-full">
               Yapp — Connect. Collaborate. Communicate.
             </p>
-            <p className="text-xl font-base text-[#B6B09F] mb-8 tracking-wide">
+            <p className="text-xl font-base text-auth-subtitle mb-8 tracking-wide">
               Register into Yapp account
             </p>
 
             <form
               onSubmit={handleSubmit}
-              className="flex flex-col justify-center flex-1 text-[#1e1e1e] font-MyFont"
+              className="flex flex-col justify-center flex-1 text-heading font-MyFont"
               noValidate
             >
               {/* email field */}
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="email"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Email{" "}
                   {!email && (
@@ -337,7 +337,7 @@ export default function SignUp() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-white text-black font-light border-3 font-MyFont ${getInputBorder(email, focusedField === "email", !!fieldErrors.email)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(email, focusedField === "email", !!fieldErrors.email)} focus:outline-none focus:border-auth-accent transition-colors`}
                   value={email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   onFocus={() => setFocusedField("email")}
@@ -364,7 +364,7 @@ export default function SignUp() {
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="username"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Username{" "}
                   {!username && (
@@ -378,7 +378,7 @@ export default function SignUp() {
                   name="username"
                   type="text"
                   autoComplete="username"
-                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-white text-black font-light border-3 font-MyFont ${getInputBorder(username, focusedField === "username", !!fieldErrors.username)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(username, focusedField === "username", !!fieldErrors.username)} focus:outline-none focus:border-auth-accent transition-colors`}
                   value={username}
                   onChange={(e) =>
                     handleInputChange("username", e.target.value)
@@ -407,7 +407,7 @@ export default function SignUp() {
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="displayName"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Display Name{" "}
                   {!displayName && (
@@ -421,7 +421,7 @@ export default function SignUp() {
                   name="displayName"
                   type="text"
                   autoComplete="name"
-                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-white text-black font-light border-3 font-MyFont ${getInputBorder(displayName, focusedField === "displayName", !!fieldErrors.displayName)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                  className={`rounded-lg px-2 py-3 pl-3 w-full bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(displayName, focusedField === "displayName", !!fieldErrors.displayName)} focus:outline-none focus:border-auth-accent transition-colors`}
                   value={displayName}
                   onChange={(e) =>
                     handleInputChange("displayName", e.target.value)
@@ -450,7 +450,7 @@ export default function SignUp() {
               <div className="flex flex-col gap-1 mb-8">
                 <label
                   htmlFor="password"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Password{" "}
                   {!password && (
@@ -465,7 +465,7 @@ export default function SignUp() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-white text-black font-light border-3 font-MyFont ${getInputBorder(password, focusedField === "password", !!fieldErrors.password)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(password, focusedField === "password", !!fieldErrors.password)} focus:outline-none focus:border-auth-accent transition-colors`}
                     value={password}
                     onChange={(e) =>
                       handleInputChange("password", e.target.value)
@@ -480,7 +480,7 @@ export default function SignUp() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3.5 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
+                    className="absolute right-3 top-3.5 cursor-pointer hover:text-auth-accent transition-colors disabled:cursor-not-allowed"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
@@ -498,12 +498,12 @@ export default function SignUp() {
                 {password && passwordStrength && (
                   <div className="mt-2 space-y-1">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-surface-control rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all duration-300 ${getPasswordStrengthColor(passwordStrength)} ${getPasswordStrengthWidth(passwordStrength)}`}
                         />
                       </div>
-                      <span className="text-xs font-medium capitalize text-gray-600">
+                      <span className="text-xs font-medium capitalize text-secondary">
                         {passwordStrength}
                       </span>
                     </div>
@@ -531,7 +531,7 @@ export default function SignUp() {
                     </div>
                   )}
                   {!password && (
-                    <div className="text-xs text-gray-500 space-y-1">
+                    <div className="text-xs text-list-muted space-y-1">
                       <div>Password must contain:</div>
                       <div className="ml-2 space-y-0.5">
                         <div>• At least 8 characters long</div>
@@ -549,7 +549,7 @@ export default function SignUp() {
               <div className="flex flex-col gap-1 mb-4">
                 <label
                   htmlFor="confirmPassword"
-                  className="text-sm text-[#73726e] font-medium"
+                  className="text-sm text-list-muted font-medium"
                 >
                   Re-type Password{" "}
                   {!confirmPassword && (
@@ -564,7 +564,7 @@ export default function SignUp() {
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-white text-black font-light border-3 font-MyFont ${getInputBorder(confirmPassword, focusedField === "confirm", !!fieldErrors.confirmPassword)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(confirmPassword, focusedField === "confirm", !!fieldErrors.confirmPassword)} focus:outline-none focus:border-auth-accent transition-colors`}
                     value={confirmPassword}
                     onChange={(e) =>
                       handleInputChange("confirmPassword", e.target.value)
@@ -578,7 +578,7 @@ export default function SignUp() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3.5 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
+                    className="absolute right-3 top-3.5 cursor-pointer hover:text-auth-accent transition-colors disabled:cursor-not-allowed"
                     aria-label={
                       showConfirmPassword
                         ? "Hide confirm password"
@@ -618,7 +618,7 @@ export default function SignUp() {
                   type="checkbox"
                   checked={agreeToTerms}
                   onChange={(e) => setAgreeToTerms(e.target.checked)}
-                  className="w-4 h-4 accent-[#0077d4] focuc:outline-none"
+                  className="w-4 h-4 accent-auth-accent focuc:outline-none"
                   aria-describedby={
                     fieldErrors.terms ? "terms-error" : undefined
                   }
@@ -633,7 +633,7 @@ export default function SignUp() {
                   I agree to all{" "}
                   <Link
                     href="/terms"
-                    className="text-[#0077d4] hover:underline"
+                    className="text-auth-accent hover:underline"
                     target="_blank"
                   >
                     Terms
@@ -641,7 +641,7 @@ export default function SignUp() {
                   ,{" "}
                   <Link
                     href="/privacy"
-                    className="text-[#0077d4] hover:underline"
+                    className="text-auth-accent hover:underline"
                     target="_blank"
                   >
                     Privacy Policy
@@ -649,7 +649,7 @@ export default function SignUp() {
                   and{" "}
                   <Link
                     href="/fees"
-                    className="text-[#0077d4] hover:underline"
+                    className="text-auth-accent hover:underline"
                     target="_blank"
                   >
                     Fees
@@ -682,7 +682,7 @@ export default function SignUp() {
                 <button
                   type="submit"
                   disabled={isLoading || !isFormValid}
-                  className="bg-[#2383E2] text-white py-3 rounded-lg text-lg w-full cursor-pointer hover:bg-[#0077d4] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#0077d4] focus:ring-offset-2"
+                  className="bg-auth-button text-white py-3 rounded-lg text-lg w-full cursor-pointer hover:bg-auth-accent font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-auth-accent focus:ring-offset-2"
                   aria-describedby="signup-button-description"
                 >
                   {isLoading ? (
@@ -700,11 +700,11 @@ export default function SignUp() {
                 </div>
               </div>
 
-              <p className="text-sm mt-2 text-[#1e1e1e] flex justify-center items-center gap-2">
+              <p className="text-sm mt-2 text-heading flex justify-center items-center gap-2">
                 Already have an account?
                 <Link
                   href="/signin"
-                  className="text-[#1371FF] hover:underline focus:underline"
+                  className="text-auth-link hover:underline focus:underline"
                 >
                   Sign In
                 </Link>

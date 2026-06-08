@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import Image from "next/image";
 import { Upload, X } from "lucide-react";
+import { useDialog } from "@/app/contexts/DialogContext";
 
 interface ProfileAvatarProps {
     currentAvatar?: string | null;
@@ -17,22 +18,21 @@ export default function ProfileAvatar({
     onAvatarChange,
     isLoading = false,
 }: ProfileAvatarProps) {
+    const { alert: showAlert } = useDialog();
     const [preview, setPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
         if (!file.type.startsWith("image/")) {
-            alert("Please select an image file");
+            await showAlert("Please select an image file");
             return;
         }
 
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert("File size must be less than 5MB");
+            await showAlert("File size must be less than 5MB");
             return;
         }
 
@@ -58,17 +58,17 @@ export default function ProfileAvatar({
 
     return (
         <div className="flex flex-col items-center gap-4">
-            {/* Avatar Display */}
+            {/* User profile picture */}
             <div className="relative w-32 h-32">
                 {displayImage ? (
                     <Image
                         src={displayImage}
-                        alt={displayName}
+                        alt={`${displayName}'s user profile picture`}
                         fill
                         className="rounded-full object-cover"
                     />
                 ) : (
-                    <div className="w-full h-full rounded-full bg-gray-800 flex items-center justify-center text-4xl text-gray-600">
+                    <div className="w-full h-full rounded-full bg-surface-inverse flex items-center justify-center text-4xl text-secondary">
                         {displayName.charAt(0).toUpperCase()}
                     </div>
                 )}
@@ -77,7 +77,7 @@ export default function ProfileAvatar({
                 <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading}
-                    className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white p-2 rounded-full transition"
+                    className="absolute bottom-0 right-0 bg-primary hover:bg-primary-hover disabled:bg-divider text-white p-2 rounded-full transition"
                 >
                     <Upload size={20} />
                 </button>
@@ -95,7 +95,7 @@ export default function ProfileAvatar({
 
             {/* File Info */}
             <div className="text-center">
-                <p className="text-sm text-gray-400">JPG, PNG, GIF up to 5MB</p>
+                <p className="text-sm text-faint">JPG, PNG, GIF up to 5MB</p>
             </div>
 
             {/* Remove Preview Button */}
@@ -103,7 +103,7 @@ export default function ProfileAvatar({
                 <button
                     onClick={handleRemovePreview}
                     disabled={isLoading}
-                    className="flex items-center gap-2 text-red-500 hover:text-red-600 disabled:opacity-50 text-sm"
+                    className="flex items-center gap-2 text-destructive hover:opacity-80 disabled:opacity-50 text-sm"
                 >
                     <X size={16} />
                     Remove

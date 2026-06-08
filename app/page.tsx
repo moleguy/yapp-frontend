@@ -45,7 +45,7 @@ export default function CoverPage() {
 
   return (
 
-    <div className="flex flex-col min-h-screen bg-[#f4f4f4]">
+    <div className="flex flex-col min-h-screen bg-surface-page">
 
       <header className="flex justify-left items-center">
         <div className='ml-8 mt-8 flex justify-center items-center'>
@@ -58,7 +58,7 @@ export default function CoverPage() {
         <div className="flex flex-1 flex-col justify-start items-center h-full w-full p-10">
 
           <motion.div
-            className="text-7xl text-center mt-[16px] mb-[32px] font-bold leading-tight tracking-tight text-[#1e1e1e] font-Heading"
+            className="text-7xl text-center mt-[16px] mb-[32px] font-bold leading-tight tracking-tight text-heading font-Heading"
             variants={containerVariants}
             initial="hidden"
             animate="show"
@@ -72,7 +72,7 @@ export default function CoverPage() {
 
           <div className="flex flex-col justify-center items-center z-10">
             <motion.p
-              className="text-3xl text-[#1e1e1e] font-MyFont mb-[32px] font-base tracking-tight"
+              className="text-3xl text-heading font-MyFont mb-[32px] font-base tracking-tight"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: 'easeOut' }}
@@ -82,7 +82,7 @@ export default function CoverPage() {
 
             <Link href="/signin">
               <motion.button
-                className="flex items-center gap-2 bg-[#1e1e1e] text-white px-8 py-4 rounded-lg hover:bg-black cursor-pointer"
+                className="flex items-center gap-2 bg-heading text-white px-8 py-4 rounded-lg hover:bg-black cursor-pointer"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, ease: "easeOut" }}

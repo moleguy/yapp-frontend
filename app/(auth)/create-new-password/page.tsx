@@ -104,8 +104,8 @@ export default function ChangePassword(){
 
     const getInputBorder = (value: string, isFocused: boolean, hasError: boolean = false) => {
         if (hasError) return 'border-red-500';
-        if (value || isFocused) return 'border-[#0077d4]';
-        return 'border-[#dcd9d3]';
+        if (value || isFocused) return 'border-auth-accent';
+        return 'border-default';
     };
 
     const validateField = useCallback((field: string, value: string) => {
@@ -150,7 +150,7 @@ export default function ChangePassword(){
         switch (strength) {
           case PasswordStrength.WEAK: return 'bg-red-500';
           case PasswordStrength.FAIR: return 'bg-yellow-500';
-          case PasswordStrength.GOOD: return 'bg-blue-500';
+          case PasswordStrength.GOOD: return 'bg-primary';
           case PasswordStrength.STRONG: return 'bg-green-500';
         }
     };
@@ -168,7 +168,7 @@ export default function ChangePassword(){
     passwordValidation.isValid && Object.keys(fieldErrors).length === 0;
 
     return (
-        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-[#F3F3F3]     [--color:#E1E1E1] 
+        <div className="min-h-screen flex flex-col bg-center font-MyFont bg-surface-auth [--color:var(--auth-pattern)] 
           bg-[linear-gradient(0deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,var(--color)_25%,var(--color)_26%,transparent_27%,transparent_74%,var(--color)_75%,var(--color)_76%,transparent_77%,transparent)] bg-[length:55px_55px]">
 
         <div
@@ -182,25 +182,25 @@ export default function ChangePassword(){
 
             <main className='flex flex-1 justify-center items-center m-8 rounded-[20px]'>
 
-                <motion.div className='flex flex-col justify-center bg-white rounded-3xl p-8 z-1 border-3 border-[#dcd9d3]'
+                <motion.div className='flex flex-col justify-center bg-surface-card rounded-3xl p-8 z-1 border-3 border-default'
                 initial={{opacity:0, y:40}}
                 animate={{opacity:1, y:0}}
                 transition={{duration:0.6, ease: 'easeOut'}}>
 
                     <div className='flex justify-center items-center'>
-                        <IoLockClosed className='w-20 h-20 text-[#73726e]'/>
+                        <IoLockClosed className='w-20 h-20 text-list-muted'/>
                     </div>
 
                     <section className='flex flex-col justify-center m-4 items-center'>
 
-                        <p className='text-xl font-medium text-[#1e1e1e] mb-8 font-MyFont'>Reset your password</p>
+                        <p className='text-xl font-medium text-heading mb-8 font-MyFont'>Reset your password</p>
 
-                        <form onSubmit={handleSubmit} className='flex flex-1 flex-col justify-center items-center text-[#1e1e1e] font-MyFont' noValidate>
+                        <form onSubmit={handleSubmit} className='flex flex-1 flex-col justify-center items-center text-heading font-MyFont' noValidate>
                                 {/* password field */}
                             <div className="flex flex-col gap-1 mb-8">
                                 <label
                                   htmlFor="password"
-                                  className="text-sm text-[#73726e] font-medium"
+                                  className="text-sm text-list-muted font-medium"
                                 >
                                   Password {!password && <span className="text-red-600" aria-label="required">*</span>}
                                 </label>
@@ -210,7 +210,7 @@ export default function ChangePassword(){
                                     name="password"
                                     type={showPassword ? 'text' : 'password'}
                                     autoComplete="new-password"
-                                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-white text-black font-light border-3 font-MyFont ${getInputBorder(password, focusedField === 'password', !!fieldErrors.password)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(password, focusedField === 'password', !!fieldErrors.password)} focus:outline-none focus:border-auth-accent transition-colors`}
                                     value={password}
                                     onChange={(e) => handleInputChange('password', e.target.value)}
                                     onFocus={() => setFocusedField('password')}
@@ -222,7 +222,7 @@ export default function ChangePassword(){
                                   <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-3.5 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
+                                    className="absolute right-3 top-3.5 cursor-pointer hover:text-auth-accent transition-colors disabled:cursor-not-allowed"
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                   >
                                     {showPassword ? <FaEye size={24} /> : <FaEyeSlash size={24} />}
@@ -233,10 +233,10 @@ export default function ChangePassword(){
                                 {password && passwordStrength && (
                                   <div className="mt-2 space-y-1">
                                     <div className="flex items-center gap-2">
-                                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                      <div className="flex-1 h-2 bg-surface-control rounded-full overflow-hidden">
                                         <div className={`h-full transition-all duration-300 ${getPasswordStrengthColor(passwordStrength)} ${getPasswordStrengthWidth(passwordStrength)}`} />
                                       </div>
-                                      <span className="text-xs font-medium capitalize text-gray-600">
+                                      <span className="text-xs font-medium capitalize text-secondary">
                                         {passwordStrength}
                                       </span>
                                     </div>
@@ -258,7 +258,7 @@ export default function ChangePassword(){
                                     </div>
                                   )}
                                   {!password && (
-                                    <div className="text-xs text-gray-500 space-y-1">
+                                    <div className="text-xs text-list-muted space-y-1">
                                       <div>Password must contain:</div>
                                       <div className="ml-2 space-y-0.5">
                                         <div>• At least 8 characters long</div>
@@ -276,7 +276,7 @@ export default function ChangePassword(){
                             <div className="flex flex-col gap-1 mb-4">
                                 <label
                                   htmlFor="confirmPassword"
-                                  className="text-sm text-[#73726e] font-medium"
+                                  className="text-sm text-list-muted font-medium"
                                 >
                                   Confirm Password {!confirmPassword && <span className="text-red-600" aria-label="required">*</span>}
                                 </label>
@@ -286,7 +286,7 @@ export default function ChangePassword(){
                                     name="confirmPassword"
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     autoComplete="new-password"
-                                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-white text-black font-light border-3 font-MyFont ${getInputBorder(confirmPassword, focusedField === 'confirm', !!fieldErrors.confirmPassword)} focus:outline-none focus:border-[#0077d4] transition-colors`}
+                                    className={`rounded-lg px-2 py-3 pl-3 w-full pr-12 bg-surface-card text-heading font-light border-3 font-MyFont ${getInputBorder(confirmPassword, focusedField === 'confirm', !!fieldErrors.confirmPassword)} focus:outline-none focus:border-auth-accent transition-colors`}
                                     value={confirmPassword}
                                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                                     onFocus={() => setFocusedField('confirm')}
@@ -297,7 +297,7 @@ export default function ChangePassword(){
                                   <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-3.5 cursor-pointer hover:text-[#0077d4] transition-colors disabled:cursor-not-allowed"
+                                    className="absolute right-3 top-3.5 cursor-pointer hover:text-auth-accent transition-colors disabled:cursor-not-allowed"
                                     aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                                   >
                                     {showConfirmPassword ? <FaEye size={24} /> : <FaEyeSlash size={24} />}
@@ -319,7 +319,7 @@ export default function ChangePassword(){
                                 <button
                                   type="submit"
                                   disabled={!isFormValid}
-                                  className="bg-[#2383E2] text-white py-3 rounded-lg text-lg w-full cursor-pointer hover:bg-[#0077d4] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-[#0077d4] focus:ring-offset-2"
+                                  className="bg-auth-button text-white py-3 rounded-lg text-lg w-full cursor-pointer hover:bg-auth-accent font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-auth-accent focus:ring-offset-2"
                                   aria-describedby="signup-button-description"
                                 >
                                   <p className='flex justify-center items-center text-white'>Reset Password</p>

@@ -4,11 +4,17 @@
 import React, { useRef, useState, useEffect } from "react";
 import { IoIosSearch, IoIosClose } from "react-icons/io";
 import { GoDotFill } from "react-icons/go";
+import { ContextMenu, type ContextMenuItem } from "@/app/(main)/components/ContextMenu";
+import { listItemClasses } from "@/lib/listItemClasses";
+import { EmptyState } from "@/app/(main)/components/FeedbackStates";
+import { Search, Users } from "lucide-react";
+import type { PresenceStatus } from "@/lib/api";
+import { presenceTextClass } from "@/lib/presenceUtils";
 
 type Friend = {
     id: string;
     name: string;
-    status?: "online" | "offline";
+    status?: PresenceStatus;
 };
 
 type FriendContextMenu = {
@@ -59,8 +65,8 @@ export default function DirectMessages({
         e.preventDefault();
         e.stopPropagation();
         setFriendContextMenu({
-            x: e.pageX,
-            y: e.pageY,
+            x: e.clientX,
+            y: e.clientY,
             friend: friend,
         });
     };
@@ -80,51 +86,58 @@ export default function DirectMessages({
             <h2 className="text-lg font-medium px-4 py-2 tracking-wide">
                 Direct Messages
             </h2>
-            <div className="relative border-b border-[#dcd9d3] px-4 pb-4">
-                <input
-                    value={query}
-                    ref={inputRef}
-                    placeholder={`Search for friends...`}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="relative py-2 px-2 border border-[#dcd9d3] text-[#222831] rounded-lg w-full focus:outline-none"
-                />
-                {query ? (
-                    <button onClick={handleClear}>
-                        <IoIosClose className="absolute w-8 h-8 top-5 right-7 -translate-y-1/2 cursor-pointer" />
-                    </button>
-                ) : (
-                    <button>
-                        <IoIosSearch className="absolute w-7 h-7 top-5 right-7 -translate-y-1/2" />
-                    </button>
-                )}
+            <div className="relative border-b border-default px-4 pb-4">
+                <div className="relative">
+                    <input
+                        value={query}
+                        ref={inputRef}
+                        placeholder="Search for friends..."
+                        onChange={(e) => setQuery(e.target.value)}
+                        className="w-full py-2 pl-2 pr-10 border border-default text-list-emphasis rounded-lg focus:outline-none"
+                    />
+                    {query ? (
+                        <button
+                            type="button"
+                            onClick={handleClear}
+                            aria-label="Clear search"
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-list-muted hover:bg-list-hover hover:text-list-emphasis transition-colors cursor-pointer"
+                        >
+                            <IoIosClose className="w-6 h-6" />
+                        </button>
+                    ) : (
+                        <IoIosSearch className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 text-list-muted pointer-events-none" />
+                    )}
+                </div>
             </div>
             <div className="flex-1 overflow-y-auto">
                 {filteredFriends.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
-                        {query ? (
-                            <p>No friends found matching &quot;{query}&quot;</p>
-                        ) : (
-                            <>
-                                <p className="text-lg mb-2">
-                                    There are no friends online at this time.
-                                </p>
-                                <p className="text-sm">Check back later</p>
-                            </>
-                        )}
-                    </div>
+                    query ? (
+                        <EmptyState
+                            title="No matches"
+                            description={`No friends found matching "${query}".`}
+                            icon={<Search className="w-7 h-7" />}
+                            fullHeight={false}
+                        />
+                    ) : (
+                        <EmptyState
+                            title="No friends yet"
+                            description="Add friends to start direct messages."
+                            icon={<Users className="w-7 h-7" />}
+                            fullHeight={false}
+                        />
+                    )
                 ) : (
                     <ul className="space-y-2">
                         {filteredFriends.map((friend) => (
                             <li
                                 key={friend.id}
-                                className={`relative flex items-center justify-start gap-3 mx-2 px-2 py-2 rounded-lg cursor-pointer group ${selectedFriend?.id === friend.id ? 'bg-[#dddde0]' : 'hover:bg-[#e7e7e9]'
-                                    }`}
+                                className={`relative flex items-center justify-start gap-3 mx-2 px-2 py-2 rounded-lg cursor-pointer group ${listItemClasses(selectedFriend?.id === friend.id)}`}
                                 onClick={() => {
                                     onSelectFriend(friend);
                                 }}
                                 onContextMenu={(e) => handleFriendRightClick(e, friend)}
                             >
-                                <div className="rounded-full w-12 h-12 bg-gray-500">
+                                <div className="rounded-full w-12 h-12 bg-surface-strong">
                                     {/* NEEDS TO FETCH USER IMAGE HERE */}
                                     {/*<Image*/}
                                     {/*    // src={}*/}
@@ -132,11 +145,11 @@ export default function DirectMessages({
                                     {/*/>*/}
                                 </div>
                                 <span className={`absolute bottom-3 left-11 w-4 h-4 rounded-full flex items-center justify-center duration-200 ${selectedFriend?.id === friend.id
-                                    ? 'bg-[#dddde0]'
-                                    : 'bg-[#f3f3f4] group-hover:bg-[#e7e7e9]'
+                                    ? 'bg-list-selected'
+                                    : 'bg-surface-sidebar group-hover:bg-list-hover'
                                     }`}
                                 >
-                                    <GoDotFill className={`w-4 h-4 ${friend.status === "online" ? "text-[#08cb00]" : "text-[#7e7f87]"}`} />
+                                    <GoDotFill className={`w-4 h-4 ${presenceTextClass(friend.status)}`} />
                                 </span>
                                 <div className="flex justify-center items-center gap-4">
                                     <span>{friend.name}</span>
@@ -157,36 +170,19 @@ export default function DirectMessages({
     */}
 
             {friendContextMenu && (
-                <div
+                <ContextMenu
                     ref={friendMenuRef}
-                    className={`flex flex-col items-center gap-1 py-2 px-2 fixed z-100 border rounded-xl border-[#dcd9d3] shadow-xl w-44  bg-[#ffffff] text-[#1e1e1e] text-sm tracking-wide font-base`}
-                    style={{ top: friendContextMenu.y, left: friendContextMenu.x }}
-                >
-                    {[
-                        { label: "Profile", action: "profile" },
-                        { label: "Call", action: "call" },
-                        { label: "Invite to Server", action: "invite" },
-                        { label: "Block", action: "block" },
-                        { label: "Mute", action: "mute" },
-                    ].map((item) => (
-                        <React.Fragment key={item.action}>
-                            <button
-                                className={` w-full text-left hover:bg-[#f2f2f3] rounded-md cursor-pointer py-2 px-2 font-base tracking-wide ${item.action === "block" ? "text-[#cb3b40] hover:bg-[#fbeff0]" : "text-[#1e1e1e]"
-                                    }`}
-                            >
-                                {item.label}
-                            </button>
-                            {/*{*/}
-                            {/*    index<array.length -1 && (*/}
-                            {/*        <div className={`h-px bg-gray-200 w-full my-1`}/>*/}
-                            {/*    )*/}
-                            {/*}*/}
-                        </React.Fragment>
-                    ))
-                    }
-                </div>
+                    x={friendContextMenu.x}
+                    y={friendContextMenu.y}
+                    items={[
+                        { label: "Profile", onClick: () => setFriendContextMenu(null) },
+                        { label: "Call", onClick: () => setFriendContextMenu(null) },
+                        { label: "Invite to Hall", onClick: () => setFriendContextMenu(null) },
+                        { label: "Block", danger: true, onClick: () => setFriendContextMenu(null) },
+                        { label: "Mute", onClick: () => setFriendContextMenu(null) },
+                    ] satisfies ContextMenuItem[]}
+                />
             )}
-
         </div>
     );
 };

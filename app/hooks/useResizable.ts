@@ -1,5 +1,37 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+const STORAGE_PREFIX = 'yapp-resizable:';
+
+type PersistedPanel = { isCollapsed: boolean; width: number };
+
+function readPanel(key: string): PersistedPanel | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedPanel;
+    if (
+      typeof parsed.isCollapsed === 'boolean' &&
+      typeof parsed.width === 'number' &&
+      Number.isFinite(parsed.width)
+    ) {
+      return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function writePanel(key: string, data: PersistedPanel): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
+  } catch {
+    /* ignore */
+  }
+}
+
 interface UseResizableProps {
   initialWidth: number;
   minWidth: number;
@@ -7,6 +39,8 @@ interface UseResizableProps {
   direction: 'left' | 'right';
   isCollapsible?: boolean;
   collapseThreshold?: number;
+  /** When set, collapsed state and width are restored from localStorage */
+  storageKey?: string;
 }
 
 export const useResizable = ({
@@ -16,11 +50,41 @@ export const useResizable = ({
   direction,
   isCollapsible = false,
   collapseThreshold = 150,
+  storageKey,
 }: UseResizableProps) => {
   const [width, setWidth] = useState(initialWidth);
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const lastWidthRef = useRef(initialWidth);
+  const hydratedRef = useRef(!storageKey);
+
+  useEffect(() => {
+    if (!storageKey) return;
+
+    const saved = readPanel(storageKey);
+    if (saved) {
+      const savedWidth = Math.max(minWidth, Math.min(saved.width, maxWidth));
+      lastWidthRef.current = savedWidth;
+
+      if (saved.isCollapsed) {
+        setIsCollapsed(true);
+        setWidth(0);
+      } else {
+        setIsCollapsed(false);
+        setWidth(savedWidth);
+      }
+    }
+
+    hydratedRef.current = true;
+  }, [storageKey, minWidth, maxWidth]);
+
+  useEffect(() => {
+    if (!storageKey || !hydratedRef.current) return;
+    writePanel(storageKey, {
+      isCollapsed,
+      width: isCollapsed ? lastWidthRef.current : width,
+    });
+  }, [storageKey, isCollapsed, width]);
 
   const startResizing = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.preventDefault();
@@ -37,7 +101,7 @@ export const useResizable = ({
 
       let newWidth: number;
       if (direction === 'left') {
-        newWidth = e.clientX - 4; // Subtracting the small margin/padding if necessary
+        newWidth = e.clientX - 4;
       } else {
         newWidth = window.innerWidth - e.clientX - 4;
       }
@@ -77,10 +141,11 @@ export const useResizable = ({
       setIsCollapsed(false);
       setWidth(lastWidthRef.current);
     } else {
+      lastWidthRef.current = width > 0 ? width : lastWidthRef.current;
       setIsCollapsed(true);
       setWidth(0);
     }
-  }, [isCollapsed]);
+  }, [isCollapsed, width]);
 
   return { width, isResizing, startResizing, isCollapsed, toggleCollapse, setWidth };
 };

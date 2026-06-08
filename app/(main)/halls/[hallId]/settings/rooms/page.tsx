@@ -17,8 +17,10 @@ import {
 import { useSelectHall, useSelectedHall } from "@/app/store/useHallStore";
 import AddFloorPopup from "@/app/(main)/components/AddFloorPopup";
 import AddRoomPopup from "@/app/(main)/components/AddRoomPopup";
+import { useDialog } from "@/app/contexts/DialogContext";
 
 export default function HallRoomsSettings() {
+  const { confirm, prompt } = useDialog();
   const params = useParams();
   const hallId = params.hallId as string;
   const selectHall = useSelectHall();
@@ -50,17 +52,17 @@ export default function HallRoomsSettings() {
   }, [load]);
 
   const handleDeleteRoom = async (room: Room) => {
-    if (!window.confirm(`Delete "${room.name}"?`)) return;
+    if (!(await confirm({ message: `Delete "${room.name}"?`, destructive: true }))) return;
     if (await deleteRoom(hallId, room.id)) load();
   };
 
   const handleDeleteFloor = async (floor: Floor) => {
-    if (!window.confirm(`Delete floor "${floor.name}"?`)) return;
+    if (!(await confirm({ message: `Delete floor "${floor.name}"?`, destructive: true }))) return;
     if (await deleteFloor(hallId, floor.id)) load();
   };
 
   const handleRenameRoom = async (room: Room) => {
-    const name = window.prompt("Rename room", room.name);
+    const name = await prompt("Rename room", room.name);
     if (!name?.trim()) return;
     if (await updateRoom(hallId, room.id, { name: name.trim() })) load();
   };
@@ -69,16 +71,12 @@ export default function HallRoomsSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Rooms & Floors</h1>
-          <p className="text-[#73726e]">Manage channel structure for {hall.name}.</p>
-        </div>
+      <div className="flex justify-end">
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setShowFloorPopup(true)}
-            className="px-4 py-2 bg-[#6164f2] text-white rounded-lg text-sm"
+            className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
           >
             Create Floor
           </button>
@@ -88,18 +86,18 @@ export default function HallRoomsSettings() {
               setRoomFloorId(null);
               setShowRoomPopup(true);
             }}
-            className="px-4 py-2 border border-[#dcd9d3] rounded-lg text-sm"
+            className="px-4 py-2 border border-default rounded-lg text-sm"
           >
             Create Room
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-[#dcd9d3] rounded-xl p-4 space-y-4">
+      <div className="bg-surface-card border border-default rounded-xl p-4 space-y-4">
         <section>
-          <h2 className="text-sm font-semibold uppercase text-[#73726e] mb-2">Top-level Rooms</h2>
+          <h2 className="text-sm font-semibold uppercase text-list-muted mb-2">Top-level Rooms</h2>
           {topLevelRooms.length === 0 ? (
-            <p className="text-sm text-gray-400">No top-level rooms.</p>
+            <p className="text-sm text-faint">No top-level rooms.</p>
           ) : (
             topLevelRooms.map((room) => (
               <RoomRow
@@ -115,11 +113,11 @@ export default function HallRoomsSettings() {
         {floors.map((floor) => (
           <section key={floor.id}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold uppercase text-[#73726e]">{floor.name}</h2>
+              <h2 className="text-sm font-semibold uppercase text-list-muted">{floor.name}</h2>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="text-xs text-blue-600"
+                  className="text-xs text-primary"
                   onClick={() => {
                     setRoomFloorId(floor.id);
                     setShowRoomPopup(true);
@@ -129,7 +127,7 @@ export default function HallRoomsSettings() {
                 </button>
                 <button
                   type="button"
-                  className="text-xs text-red-600"
+                  className="text-xs text-destructive"
                   onClick={() => handleDeleteFloor(floor)}
                 >
                   Delete floor
@@ -185,16 +183,16 @@ function RoomRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-[#f0f0f0] last:border-0">
+    <div className="flex items-center justify-between py-2 border-b border-subtle last:border-0">
       <div>
         <span className="font-medium">#{room.name}</span>
-        <span className="text-xs text-gray-400 ml-2">{room.room_type}</span>
+        <span className="text-xs text-faint ml-2">{room.room_type}</span>
       </div>
       <div className="flex gap-3 text-sm">
-        <button type="button" onClick={onRename} className="text-blue-600">
+        <button type="button" onClick={onRename} className="text-primary">
           Rename
         </button>
-        <button type="button" onClick={onDelete} className="text-red-600">
+        <button type="button" onClick={onDelete} className="text-destructive">
           Delete
         </button>
       </div>

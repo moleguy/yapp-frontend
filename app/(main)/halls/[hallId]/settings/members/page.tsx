@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import {
   useHallMembers,
@@ -11,6 +11,7 @@ import {
 import { useUser } from "@/app/store/useUserStore";
 import MembersList from "@/app/(main)/halls/components/MembersList";
 import { kickHallMember, updateHallMemberRole, updateHallMemberNickname, banUser } from "@/lib/api";
+import { usePresenceSync } from "@/app/hooks/usePresenceSync";
 
 export default function HallMembersSettings() {
   const params = useParams();
@@ -20,6 +21,8 @@ export default function HallMembersSettings() {
   const members = useHallMembers();
   const roles = useHallRoles();
   const user = useUser();
+  const memberUserIds = useMemo(() => members.map((m) => m.user_id), [members]);
+  usePresenceSync(memberUserIds);
 
   useEffect(() => {
     if (hallId) {
@@ -76,14 +79,7 @@ export default function HallMembersSettings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Members</h1>
-        <p className="text-[#73726e]">
-          Manage members of your hall, their roles, and permissions.
-        </p>
-      </div>
-
-      <div className="bg-white border border-[#dcd9d3] rounded-xl overflow-hidden">
+      <div className="bg-surface-card border border-default rounded-xl overflow-hidden">
         <MembersList
           members={members}
           roles={roles}

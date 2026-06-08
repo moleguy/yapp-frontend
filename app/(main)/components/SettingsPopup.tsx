@@ -9,22 +9,22 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
+  initialTab?: string;
 };
 
-const SettingsPopup: React.FC<Props> = ({ isOpen, onClose, onOpen }) => {
+const SettingsPopup: React.FC<Props> = ({ isOpen, onClose, onOpen, initialTab }) => {
   return (
     <>
       <button
+        type="button"
         onClick={onOpen}
-        className=" text-white hover:text-black cursor-pointer"
+        aria-label="Open settings"
+        className="flex justify-center items-center p-1.5 rounded-lg text-list-muted hover:bg-surface-control-hover cursor-pointer transition-colors"
       >
-        <IoMdSettings
-          size={24}
-          className="flex justify-center items-center text-2xl text-gray-500 cursor-pointer"
-        />
+        <IoMdSettings size={20} />
       </button>
 
-      <SettingsModal isOpen={isOpen} onClose={onClose} />
+      <SettingsModal isOpen={isOpen} onClose={onClose} initialTab={initialTab} />
     </>
   );
 };

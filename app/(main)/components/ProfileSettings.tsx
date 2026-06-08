@@ -1,375 +1,1103 @@
 "use client";
 
+
+
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
+
 import { useRouter } from "next/navigation";
+
 import Image from "next/image";
+
 import { FaPen, FaPlus, FaCopy } from "react-icons/fa";
+
 import { HiOutlineUser } from "react-icons/hi2";
+
+import { Loader2 } from "lucide-react";
+import { IoIosClose } from "react-icons/io";
+
 import TagManager from "@/app/(main)/components/TagManager";
+import Modal from "@/app/(main)/components/Modal";
+import {
+  SettingsForm,
+  SettingsField,
+  SETTINGS_INPUT_CLASS,
+} from "@/app/(main)/components/UserSettingsContent";
+
+import { ContextMenuList, contextMenuPanelClass } from "@/app/(main)/components/ContextMenu";
+
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { preloadImage } from "@/lib/preloadImage";
+
+
 
 import { useEdgeStore } from "@/lib/edgestore";
+
 import {
+
   useUserStore,
+
   useUpdateUser,
+
   useSetUser,
+
   useAvatar,
+
+  useSetAvatarPreviewUrl,
+
+  useClearAvatarPreviewUrl,
+
 } from "@/app/store/useUserStore";
+
 import {
+
   authSignOut,
+
   updateUserMe,
+
   UpdateUserMeReq,
+
   UserMeRes,
+
 } from "@/lib/api";
 
+
+
+type ProfileField = "display name" | "username" | "email";
+
+
+
+const FIELD_LABELS: Record<ProfileField, string> = {
+
+  "display name": "Display Name",
+
+  username: "Username",
+
+  email: "Email",
+
+};
+
+const DISPLAY_NAME_MAX_LENGTH = 32;
+
+const DISPLAY_NAME_MIN_LENGTH = 3;
+
+function validateDisplayName(name: string): string | null {
+
+  const trimmed = name.trim().replace(/\s+/g, " ");
+
+  const length = [...trimmed].length;
+
+  if (!trimmed) return "Display name cannot be empty.";
+
+  if (length < DISPLAY_NAME_MIN_LENGTH) {
+
+    return `Display name must be at least ${DISPLAY_NAME_MIN_LENGTH} characters.`;
+
+  }
+
+  if (length > DISPLAY_NAME_MAX_LENGTH) {
+
+    return `Display name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer.`;
+
+  }
+
+  return null;
+
+}
+
+function formatSaveError(message: string): string {
+
+  if (
+
+    message === "Invalid Data" ||
+
+    message.includes("Invalid Display Name")
+
+  ) {
+
+    return `Display name must be ${DISPLAY_NAME_MIN_LENGTH}–${DISPLAY_NAME_MAX_LENGTH} characters.`;
+
+  }
+
+  return message.startsWith("Failed to save")
+
+    ? message
+
+    : `Failed to save changes. ${message}`;
+
+}
+
+
+
 export default function ProfileSettings() {
+
   const router = useRouter();
+
   const optionsRef = useRef<HTMLDivElement | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+
+
   const user = useUserStore((state) => state.user);
+
   const setUser = useSetUser();
+
   const updateUser = useUpdateUser();
+
+  const setAvatarPreviewUrl = useSetAvatarPreviewUrl();
+
+  const clearAvatarPreviewUrl = useClearAvatarPreviewUrl();
+
   const { edgestore } = useEdgeStore();
 
+  const previewRef = useRef<string | null>(null);
+
+
+
   const [showOptions, setShowOptions] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
+  const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+
+  const [editingField, setEditingField] = useState<ProfileField | null>(null);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [copiedField, setCopiedField] = useState<string | null>(null); // New state for copy feedback
+
+  const [copiedField, setCopiedField] = useState<ProfileField | null>(null);
+
+  const [avatarStatus, setAvatarStatus] = useState<"idle" | "uploading" | "removing">("idle");
+
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const [fields, setFields] = useState({
+
     "display name": user?.display_name || "",
+
     username: user?.username || "",
+
     email: user?.email || "",
+
   });
+
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { avatarUrl, avatarThumbnailUrl } = useAvatar();
 
-  // Close profile pic options when clicking outside
+
+  const avatarPreviewUrl = useUserStore((state) => state.avatarPreviewUrl);
+  const { avatarUrl, avatarThumbnailUrl, hasAvatar } = useAvatar();
+  const profilePictureViewUrl =
+    avatarPreviewUrl || avatarUrl || avatarThumbnailUrl;
+
+  const avatarBusy = avatarStatus !== "idle";
+
+
+
   useEffect(() => {
+
     if (!showOptions) return;
+
     const handleClickOutside = (e: MouseEvent) => {
+
       if (
+
         optionsRef.current &&
+
         !optionsRef.current.contains(e.target as Node)
+
       ) {
+
         setShowOptions(false);
+
       }
+
     };
+
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
+
   }, [showOptions]);
 
-  // Keep fields in sync with user
+
+
   useEffect(() => {
+
     setFields({
+
       "display name": user?.display_name || "",
+
       username: user?.username || "",
+
       email: user?.email || "",
+
     });
+
     setHasChanges(false);
+
   }, [user]);
 
-  // Handle profile picture upload
-  const handlePicChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage("File size too big! Please select an image under 5MB.");
-      setTimeout(() => setErrorMessage(null), 3000);
-      return;
+
+  const revokePreview = () => {
+
+    if (previewRef.current) {
+
+      URL.revokeObjectURL(previewRef.current);
+
+      previewRef.current = null;
+
     }
 
-    try {
-      if (user?.avatar_url) {
-        try {
-          await edgestore.publicImages.delete({ url: user.avatar_url });
-          console.log("Old avatar deleted:", user.avatar_url); // REMOVE IN PRODUCTION
-        } catch (err) {
-          console.warn("Failed to delete old avatar (ignored):", err);
-        }
-      }
-      // Upload new avatar
-      const res = await edgestore.publicImages.upload({
-        file,
-        onProgressChange: (progress: number) =>
-          console.log("Upload progress:", progress),
-      });
+    clearAvatarPreviewUrl();
 
-      // Update Zustand store
-      updateUser({
-        avatar_url: res.url,
-        avatar_thumbnail_url: res.thumbnailUrl,
-      });
-
-      // Update backend
-      if (user) {
-        const updatedUser: UpdateUserMeReq = {
-          display_name: user.display_name,
-          avatar_url: res.url,
-          avatar_thumbnail_url: res.thumbnailUrl,
-        };
-        await updateUserMe(updatedUser);
-      }
-    } catch (err) {
-      console.error("Image upload failed.", err);
-    }
-
-    setShowOptions(false);
   };
 
-  const handleRemovePic = async () => {
+
+
+  const setLocalPreview = (file: File) => {
+
+    revokePreview();
+
+    const preview = URL.createObjectURL(file);
+
+    previewRef.current = preview;
+
+    setAvatarPreviewUrl(preview);
+
+  };
+
+
+
+  const handlePicChange = async (e: ChangeEvent<HTMLInputElement>) => {
+
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+
+
+    if (file.size > 5 * 1024 * 1024) {
+
+      setErrorMessage("File size too big! Please select an image under 5MB.");
+
+      setTimeout(() => setErrorMessage(null), 3000);
+
+      return;
+
+    }
+
+
+
+    setLocalPreview(file);
+
+    setAvatarStatus("uploading");
+
+    setUploadProgress(0);
+
+    setErrorMessage(null);
+
+
+
+    const previousAvatarUrl = user?.avatar_url ?? null;
+
+
+
     try {
-      if (!user?.avatar_url) {
-        console.warn("No avatar to delete");
-        return;
+
+      const res = await edgestore.publicImages.upload({
+
+        file,
+
+        onProgressChange: (progress: number) => setUploadProgress(progress),
+
+      });
+
+
+
+      const thumbnailUrl = res.thumbnailUrl || res.url;
+
+
+
+      updateUser({
+
+        avatar_url: res.url,
+
+        avatar_thumbnail_url: thumbnailUrl,
+
+      });
+
+
+
+      if (user) {
+
+        const updatedUser: UpdateUserMeReq = {
+
+          display_name: user.display_name,
+
+          avatar_url: res.url,
+
+          avatar_thumbnail_url: thumbnailUrl,
+
+        };
+
+        const saved = await updateUserMe(updatedUser);
+
+        if (saved) {
+
+          updateUser({
+
+            avatar_url: saved.avatar_url ?? res.url,
+
+            avatar_thumbnail_url: saved.avatar_thumbnail_url ?? thumbnailUrl,
+
+          });
+
+        }
+
       }
 
-      console.log("Trying to delete:", user.avatar_url);
+
+
+      const remoteReady = await preloadImage(thumbnailUrl);
+
+      if (remoteReady) {
+
+        revokePreview();
+
+      }
+
+
+
+      if (previousAvatarUrl && previousAvatarUrl !== res.url) {
+
+        void edgestore.publicImages.delete({ url: previousAvatarUrl }).catch((err) => {
+
+          console.warn("Failed to delete old user profile picture (ignored):", err);
+
+        });
+
+      }
+
+    } catch (err) {
+
+      console.error("Image upload failed.", err);
+
+      revokePreview();
+
+      setErrorMessage("Failed to upload user profile picture. Please try again.");
+
+      setTimeout(() => setErrorMessage(null), 3000);
+
+    } finally {
+
+      setAvatarStatus("idle");
+
+      setUploadProgress(0);
+
+      setShowOptions(false);
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+    }
+
+  };
+
+
+
+  const handleRemovePic = async () => {
+
+    if (!user?.avatar_url) return;
+
+
+
+    setAvatarStatus("removing");
+
+    setErrorMessage(null);
+
+
+
+    try {
 
       await edgestore.publicImages.delete({ url: user.avatar_url });
 
-      // Update backend profile
+
+
       const updatedUser: UpdateUserMeReq = {
+
         display_name: user.display_name,
+
         avatar_url: null,
+
         avatar_thumbnail_url: null,
+
       };
+
       await updateUserMe(updatedUser);
 
-      console.log("Deleted file at:", user.avatar_url);
     } catch (err: unknown) {
-      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : String(err);
+
+      const errorMsg =
+
+        typeof err === "object" && err !== null && "message" in err
+
+          ? String((err as Record<string, unknown>).message)
+
+          : String(err);
+
       console.error("EdgeStore delete failed:", errorMsg);
+
+      setErrorMessage("Failed to remove user profile picture. Please try again.");
+
+      setTimeout(() => setErrorMessage(null), 3000);
+
     } finally {
-      updateUser({ avatar_url: null });
+
+      revokePreview();
+
+      updateUser({ avatar_url: null, avatar_thumbnail_url: null });
+
+      setAvatarStatus("idle");
+
       setShowOptions(false);
+
     }
+
   };
 
-  // Handle input change
-  const handleFieldChange = (field: keyof typeof fields, value: string) => {
+
+
+  useEffect(() => () => revokePreview(), []);
+
+
+
+  const handleFieldChange = (field: ProfileField, value: string) => {
+
     setFields((prev) => ({ ...prev, [field]: value }));
+
     setHasChanges(true);
+
   };
 
-  // Handle copy to clipboard with feedback
-  const handleCopy = async (field: keyof typeof fields, value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
+
+
+  const getCopyValue = (field: ProfileField) => fields[field];
+
+
+
+  const getDisplayValue = (field: ProfileField) =>
+
+    field === "username" ? `@${fields[field]}` : fields[field];
+
+
+
+  const handleCopy = (field: ProfileField) => {
+
+    const value = getCopyValue(field);
+
+    if (!value) return;
+
+
+
+    if (copyTextToClipboard(value)) {
+
       setCopiedField(field);
-      // Clear the feedback after 2 seconds
-      setTimeout(() => setCopiedField(null), 1000);
-    } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
-      setErrorMessage("Copy failed - clipboard access not available");
-      setTimeout(() => setErrorMessage(null), 1000);
+
+      setTimeout(() => setCopiedField(null), 2000);
+
+      return;
+
     }
+
+
+
+    setErrorMessage("Copy failed — clipboard access not available");
+
+    setTimeout(() => setErrorMessage(null), 3000);
+
   };
 
-  // Save changes handler
+
+
+  const showError = (message: string) => {
+
+    setErrorMessage(message);
+
+    setTimeout(() => setErrorMessage(null), 4000);
+
+  };
+
+
+
   const handleSave = async () => {
+
     if (!user) return;
+
+
+
+    const displayName = fields["display name"].trim().replace(/\s+/g, " ");
+
+    const validationError = validateDisplayName(displayName);
+
+    if (validationError) {
+
+      showError(validationError);
+
+      return;
+
+    }
+
+
+
     try {
+
       const updatedUser: UpdateUserMeReq = {
-        display_name: fields["display name"],
+
+        display_name: displayName,
+
         avatar_url: user.avatar_url ?? null,
+
         avatar_thumbnail_url: user.avatar_thumbnail_url ?? null,
+
       };
 
-      await updateUserMe(updatedUser);
+
+
+      const saved = await updateUserMe(updatedUser);
+
+      if (!saved) {
+
+        showError("Failed to save profile. Please try again.");
+
+        return;
+
+      }
+
+
+
       updateUser({
-        display_name: fields["display name"],
-        avatar_url: user.avatar_url ?? undefined,
-        avatar_thumbnail_url: user.avatar_thumbnail_url ?? undefined,
+
+        display_name: saved.display_name,
+
+        avatar_url: saved.avatar_url ?? undefined,
+
+        avatar_thumbnail_url: saved.avatar_thumbnail_url ?? undefined,
+
       });
+
+      setFields((prev) => ({ ...prev, "display name": saved.display_name }));
+
       setHasChanges(false);
+
       setEditingField(null);
+
+      setErrorMessage(null);
+
     } catch (err: unknown) {
-      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : String(err);
-      setErrorMessage("Failed to save changes." + errorMsg);
-      setTimeout(() => setErrorMessage(null), 3000);
+
+      const errorMsg =
+
+        err instanceof Error
+
+          ? err.message
+
+          : typeof err === "object" && err !== null && "message" in err
+
+            ? String((err as Record<string, unknown>).message)
+
+            : "Request failed";
+
+      showError(formatSaveError(errorMsg));
+
     }
+
   };
+
+
 
   const handleBlur = () => setEditingField(null);
 
+
+
   const handleSignOut = async () => {
+
     try {
+
       await authSignOut();
+
       localStorage.removeItem("userProfile");
+
       setUser({} as UserMeRes);
 
+
+
       if (
+
         document.cookie
+
           .split("; ")
+
           .find((row) => row.startsWith("remember_me="))
+
       ) {
+
         document.cookie = `remember_me=false; max-age=0; path=/; samesite=lax`;
+
       }
 
+
+
       router.push("/signin");
+
     } catch (err: unknown) {
-      const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? String((err as Record<string, unknown>).message) : "Sign out failed";
+
+      const errorMsg =
+
+        typeof err === "object" && err !== null && "message" in err
+
+          ? String((err as Record<string, unknown>).message)
+
+          : "Sign out failed";
+
       console.error(errorMsg);
+
     }
+
   };
 
+
+
+  const openFilePicker = () => {
+
+    if (avatarBusy) return;
+
+    fileInputRef.current?.click();
+
+  };
+
+
+
   return (
-    <div className="flex flex-col justify-between gap-8 bg-white mt-4">
-      {/* Profile Image */}
-      <div className="flex flex-col items-center mb-6">
+
+    <div className="space-y-8">
+
+      {errorMessage && (
+
+        <div className="text-sm text-destructive bg-destructive-muted border border-destructive px-3 py-2 rounded-lg">
+
+          {errorMessage}
+
+        </div>
+
+      )}
+
+
+
+      <div className="flex flex-col items-center">
+
         <div
-          className="w-24 h-24 overflow-hidden rounded-full group relative"
+
+          className={`w-32 h-32 overflow-hidden rounded-full group relative ${avatarBusy ? "pointer-events-none" : "cursor-pointer"}`}
+
           onClick={() => {
-            if (avatarUrl) setShowOptions(!showOptions);
-            else document.getElementById("fileUpload")?.click();
+
+            if (avatarBusy) return;
+
+            if (hasAvatar) setShowOptions(!showOptions);
+
+            else openFilePicker();
+
           }}
+
         >
-          {avatarUrl ? (
+
+          {hasAvatar ? (
+
             <Image
+
+              key={avatarThumbnailUrl}
+
               src={avatarThumbnailUrl}
-              alt="Profile"
+
+              alt="User profile picture"
+
               fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+
+              sizes="128px"
+
+              unoptimized
+
               style={{ objectFit: "cover" }}
+
             />
+
           ) : (
-            <div className="flex items-center justify-center w-full h-full bg-gray-200">
-              <HiOutlineUser size={40} className="text-gray-500" />
+
+            <div className="flex items-center justify-center w-full h-full bg-surface-control">
+
+              <HiOutlineUser size={52} className="text-list-muted" />
+
             </div>
+
           )}
 
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
-            <FaPen className="text-white text-lg" />
-          </div>
+
+
+          {!avatarBusy && (
+
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-75 transition">
+
+              <FaPen className="text-white text-lg" />
+
+            </div>
+
+          )}
+
+
+
+          {avatarBusy && (
+
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-full bg-black/60">
+
+              <Loader2 className="h-8 w-8 animate-spin text-white" aria-hidden />
+
+              <span className="mt-2 text-xs font-medium text-white">
+
+                {avatarStatus === "removing"
+
+                  ? "Removing…"
+
+                  : uploadProgress > 0
+
+                    ? `Uploading ${Math.round(uploadProgress)}%`
+
+                    : "Uploading…"}
+
+              </span>
+
+            </div>
+
+          )}
+
         </div>
 
-        {user?.avatar_url && showOptions && (
-          <div
-            ref={optionsRef}
-            className="absolute mt-28 bg-white border border-[#dcd9d3] shadow-lg rounded-lg w-32 text-sm z-50"
-          >
-            <label
-              htmlFor="fileUpload"
-              className="block px-4 py-2 cursor-pointer hover:bg-gray-100 rounded-t-lg"
-            >
-              Change
-            </label>
-            <div className="flex-grow h-px bg-gray-600 opacity-35" />
-            <button
-              onClick={handleRemovePic}
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
-            >
-              Remove
-            </button>
+
+
+        {hasAvatar && showOptions && !avatarBusy && (
+
+          <div ref={optionsRef} className={`${contextMenuPanelClass("absolute")} w-52 mt-36`}>
+
+            <ContextMenuList
+
+              items={[
+
+                {
+
+                  label: "View user profile picture",
+
+                  onClick: () => {
+
+                    setShowOptions(false);
+
+                    setShowAvatarViewer(true);
+
+                  },
+
+                },
+
+                {
+
+                  label: "Change",
+
+                  onClick: openFilePicker,
+
+                },
+
+                {
+
+                  label: "Remove",
+
+                  danger: true,
+
+                  onClick: handleRemovePic,
+
+                  disabled: !user?.avatar_url,
+
+                },
+
+              ]}
+
+            />
+
           </div>
+
         )}
+
+
+
+        <Modal
+
+          isOpen={showAvatarViewer}
+
+          onClose={() => setShowAvatarViewer(false)}
+
+          panelClassName="relative flex max-h-[92vh] max-w-[min(92vw,40rem)] flex-col items-center"
+
+          overlayClassName="bg-black/80"
+
+        >
+
+          <button
+
+            type="button"
+
+            onClick={() => setShowAvatarViewer(false)}
+
+            className="absolute -top-10 right-0 text-white/80 transition hover:text-white"
+
+            aria-label="Close user profile picture viewer"
+
+          >
+
+            <IoIosClose size={32} />
+
+          </button>
+
+          {profilePictureViewUrl ? (
+
+            <Image
+
+              key={profilePictureViewUrl}
+
+              src={profilePictureViewUrl}
+
+              alt={`${user?.display_name || "User"}'s user profile picture`}
+
+              width={640}
+
+              height={640}
+
+              unoptimized
+
+              className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
+
+            />
+
+          ) : null}
+
+        </Modal>
+
+
 
         <input
+
+          ref={fileInputRef}
+
           type="file"
+
           accept="image/*"
-          id="fileUpload"
+
           className="hidden"
+
+          disabled={avatarBusy}
+
           onChange={handlePicChange}
+
         />
 
-        {errorMessage && (
-          <div className="mt-3 text-red-500 text-sm bg-red-100 px-3 py-1 rounded-md animate-fadeIn">
-            {errorMessage}
-          </div>
-        )}
+
+
       </div>
 
-      {/* Editable Fields */}
-      <div className="space-y-4">
-        {(["display name", "username", "email"] as (keyof typeof fields)[]).map(
-          (field) => (
-            <div key={field} className="group">
-              <label className="block text-sm text-gray-500 capitalize">
-                {field === "username" ? "username" : field}
-              </label>
-              <div
-                className={`flex justify-between items-center relative ${field === "display name" ? "cursor-pointer" : ""}`}
-                onClick={() => {
-                  if (field === "display name") setEditingField(field);
-                }}
-              >
-                {editingField === field && field === "display name" ? (
-                  <input
-                    type="text"
-                    value={fields[field]}
-                    onChange={(e) => handleFieldChange(field, e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSave();
-                    }}
-                    autoFocus
-                    className="border-b border-gray-300 focus:outline-none px-1"
-                  />
-                ) : (
-                  <p className="text-gray-800 select-none">
-                    {field === "username" ? `@${fields[field]}` : fields[field]}
-                  </p>
-                )}
 
-                {/* Copy icon and feedback */}
-                <div className="relative flex items-center">
-                  <FaCopy
-                    className="ml-2 text-gray-400 opacity-0 group-hover:opacity-100 cursor-pointer transition hover:text-gray-600 text-lg"
-                    onClick={(e) => {
-                      e.stopPropagation(); // prevent triggering edit
-                      handleCopy(field, fields[field]);
-                    }}
-                    title="Copy to clipboard"
-                  />
 
-                  {/* Copied feedback */}
-                  {copiedField === field && (
-                    <div className="absolute right-0 top-full mt-1 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10 animate-fadeIn">
-                      Copied!
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-b-2 border-transparent border-b-gray-800"></div>
-                    </div>
+      <SettingsForm>
+
+        {(["display name", "username", "email"] as ProfileField[]).map((field) => (
+
+          <SettingsField key={field} label={FIELD_LABELS[field]}>
+
+            <div className="relative">
+
+              {editingField === field && field === "display name" ? (
+
+                <input
+
+                  type="text"
+
+                  value={fields[field]}
+
+                  maxLength={DISPLAY_NAME_MAX_LENGTH}
+
+                  onChange={(e) => handleFieldChange(field, e.target.value)}
+
+                  onBlur={handleBlur}
+
+                  onKeyDown={(e) => {
+
+                    if (e.key === "Enter") handleSave();
+
+                  }}
+
+                  autoFocus
+
+                  className={`${SETTINGS_INPUT_CLASS} pr-20`}
+
+                />
+
+              ) : (
+
+                <input
+
+                  type="text"
+
+                  readOnly
+
+                  value={getDisplayValue(field)}
+
+                  className={`${SETTINGS_INPUT_CLASS} pr-20 cursor-default`}
+
+                />
+
+              )}
+
+              <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-4">
+
+                {field === "display name" &&
+
+                  editingField !== field &&
+
+                  !avatarBusy && (
+
+                    <button
+
+                      type="button"
+
+                      className="text-list-muted opacity-70 transition hover:text-heading hover:opacity-100"
+
+                      onClick={() => setEditingField("display name")}
+
+                      title="Edit display name"
+
+                      aria-label="Edit display name"
+
+                    >
+
+                      <FaPen className="text-base" />
+
+                    </button>
+
                   )}
-                </div>
-                {field === "display name"}
+
+                <button
+
+                  type="button"
+
+                  className="text-list-muted opacity-70 transition hover:text-heading hover:opacity-100"
+
+                  onClick={() => handleCopy(field)}
+
+                  title="Copy to clipboard"
+
+                  aria-label={`Copy ${FIELD_LABELS[field]}`}
+
+                >
+
+                  <FaCopy className="text-base" />
+
+                </button>
+
               </div>
+
+              {copiedField === field && (
+
+                <div className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded bg-surface-inverse px-2 py-1 text-xs text-white shadow-lg animate-fadeIn">
+
+                  Copied!
+
+                </div>
+
+              )}
+
             </div>
-          ),
-        )}
-        {/* creation of tags */}
-        <div
-          className={`text-gray-500 text-sm tracking-wide`}
-        >
-          <label>Tags:</label>
+
+          </SettingsField>
+
+        ))}
+
+
+
+        <SettingsField label="Tags">
+
           <TagManager />
-        </div>
+
+        </SettingsField>
 
 
-        {/* Social Links */}
-        <div className="gap-5">
-          <label className="block text-sm text-gray-500">Social Links</label>
-          <button className="flex items-center gap-1 text-blue-600 mt-2">
+
+        <SettingsField label="Social Links">
+
+          <button type="button" className="flex items-center gap-1 text-primary">
+
             <FaPlus /> Add Social Link
+
           </button>
+
+        </SettingsField>
+
+
+
+        <div className="flex justify-end">
+
+          <button
+
+            type="button"
+
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+
+            onClick={handleSave}
+
+            disabled={!hasChanges}
+
+          >
+
+            Save Changes
+
+          </button>
+
         </div>
+
+      </SettingsForm>
+
+
+
+      <div className="pt-8 border-t border-subtle">
+
+        <h3 className="text-lg font-bold text-destructive mb-2">Sign Out</h3>
+
+        <p className="text-sm text-secondary mb-4">
+
+          Sign out of your account on this device.
+
+        </p>
+
+        <button
+
+          type="button"
+
+          onClick={handleSignOut}
+
+          className="px-6 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive-muted transition-colors"
+
+        >
+
+          Sign Out
+
+        </button>
+
       </div>
 
-      {/* Actions */}
-      <div className="mt-6 flex justify-between items-center">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 text-[#cb3b40] font-base border py-1 px-4 border-[#dcd9d3] hover:bg-[#ebc8ca] hover:border-none rounded-lg cursor-pointer"
-        >
-          Sign Out
-        </button>
-        <button
-          className="flex justify-end items-center border mr-4 py-1 px-4 rounded-lg border-[#dcd9d3] text-[#222831] hover:bg-[#78C841] hover:text-[#F0F0F0] hover:border-none cursor-pointer disabled:opacity-50"
-          onClick={handleSave}
-          disabled={!hasChanges}
-        >
-          Save Changes
-        </button>
-      </div>
     </div>
+
   );
+
 }
+
+

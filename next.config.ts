@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: [
         "inocencia-null-patchouly.ngrok-free.dev",
         "https://yappserver.onrender.com",
-        "192.168.1.5"
+        "192.168.1.6"
     ],
 };
 

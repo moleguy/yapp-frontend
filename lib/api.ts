@@ -109,6 +109,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+function isAccessDeniedError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const message = err.message.toLowerCase();
+  return (
+    message.includes("permission") ||
+    message.includes("privilege") ||
+    message.includes("unauthorized") ||
+    message.includes("forbidden")
+  );
+}
+
+async function requestAllowDenied<T>(path: string, init?: RequestInit): Promise<T | null> {
+  try {
+    return await request<T>(path, init);
+  } catch (err) {
+    if (!isAccessDeniedError(err)) console.error(err);
+    return null;
+  }
+}
+
 // ========== TYPES ==========
 
 export type SignInReq = { email: string; password: string };
@@ -317,7 +337,8 @@ export type HallMember = {
   hall_id: string; user_id: string; role_id: string; nickname: string | null;
   joined_at: string; updated_at: string;
   presence?: { user_id: string; status: string; last_seen_at?: string; updated_at: string };
-  user?: UserMeRes;
+  /** Populated client-side via GET /users/:id — not included in the members list API. */
+  user?: UserPublic;
 };
 export type UpdateHallMemberRoleReq = { role_id: string };
 export type UpdateHallMemberNicknameReq = { nickname: string | null };
@@ -552,7 +573,10 @@ export async function getUserMe(): Promise<UserMeRes | null> {
 export async function updateUserMe(payload: UpdateUserMeReq | null): Promise<UpdateUserMeRes | null> {
   try {
     return await request<UpdateUserMeRes>("/api/v1/me/", { method: "PATCH", body: JSON.stringify(payload) });
-  } catch (err) { console.error(err); return null; }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
 
 export async function getUser(userId: string): Promise<UserMeRes | null> {
@@ -747,6 +771,50 @@ export async function getHallMembers(hallId: string): Promise<{ members: HallMem
   } catch (err) { console.error(err); return null; }
 }
 
+/** Members API returns ids only; resolve public profiles for display names. */
+export async function enrichHallMembersWithUsers(
+  members: HallMember[],
+): Promise<HallMember[]> {
+  if (members.length === 0) return members;
+
+  const userIds = [...new Set(members.map((m) => m.user_id))];
+  const profiles = await Promise.all(userIds.map((id) => getUser(id)));
+
+  const userById = new Map<string, UserPublic>();
+  userIds.forEach((id, index) => {
+    const profile = profiles[index];
+    if (!profile) return;
+    userById.set(id, {
+      id: profile.id,
+      username: profile.username,
+      display_name: profile.display_name,
+      avatar_url: profile.avatar_url,
+      avatar_thumbnail_url: profile.avatar_thumbnail_url,
+      description: profile.description,
+      app_links: profile.app_links,
+      friend_count: profile.friend_count,
+      mutual_friend_count: profile.mutual_friend_count,
+      is_friend: profile.is_friend,
+    });
+  });
+
+  return members.map((member) => ({
+    ...member,
+    user: userById.get(member.user_id) ?? member.user,
+  }));
+}
+
+export async function getHallMembersWithUsers(
+  hallId: string,
+): Promise<{ members: HallMember[]; total: number } | null> {
+  const res = await getHallMembers(hallId);
+  if (!res) return null;
+  return {
+    ...res,
+    members: await enrichHallMembersWithUsers(res.members),
+  };
+}
+
 export async function updateHallMemberRole(
   hallId: string,
   memberId: string,
@@ -825,10 +893,11 @@ export async function updateRolePermissions(
 }
 
 export async function getHallBans(hallId: string): Promise<HallBan[] | null> {
-  try {
-    const res = await request<{ bans: HallBan[] }>(`/api/v1/halls/${hallId}/settings/bans`, { method: "GET" });
-    return res?.bans ?? [];
-  } catch (err) { console.error(err); return null; }
+  const res = await requestAllowDenied<{ bans: HallBan[] }>(
+    `/api/v1/halls/${hallId}/settings/bans`,
+    { method: "GET" },
+  );
+  return res?.bans ?? null;
 }
 
 export async function banUser(hallId: string, payload: CreateBanReq): Promise<boolean> {
@@ -846,9 +915,10 @@ export async function unbanUser(hallId: string, banId: string): Promise<boolean>
 }
 
 export async function getHallInvites(hallId: string): Promise<HallInvite[] | null> {
-  try {
-    return await request<HallInvite[]>(`/api/v1/halls/${hallId}/settings/invites`, { method: "GET" });
-  } catch (err) { console.error(err); return null; }
+  return await requestAllowDenied<HallInvite[]>(
+    `/api/v1/halls/${hallId}/settings/invites`,
+    { method: "GET" },
+  );
 }
 
 export async function createInvite(hallId: string, payload: CreateInviteReq): Promise<HallInvite | null> {

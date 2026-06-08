@@ -31,7 +31,7 @@ export default function SocialLinksDisplay({
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-blue-400 hover:text-blue-300 underline"
+          className="text-sm text-primary/80 hover:text-primary/80 underline"
         >
           {PROVIDER_LABELS[link.provider] || link.provider}
         </a>

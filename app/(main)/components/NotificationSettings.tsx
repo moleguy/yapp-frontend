@@ -56,42 +56,39 @@ export function NotificationSettings(){
   const ToggleRow = ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <div className="flex items-center justify-between">
       <div>
-        <p className="font-base text-[#222831]">{title}</p>
-        {subtitle && <p className="text-sm text-[#7A7A73]">{subtitle}</p>}
+        <p className="font-base text-list-emphasis">{title}</p>
+        {subtitle && <p className="text-sm text-list-muted">{subtitle}</p>}
       </div>
 
       <label className="relative inline-block w-[3.4em] h-[1.8em] text-[17px]">
         <input type="checkbox" className="sr-only peer" />
-        <span className="absolute inset-0 cursor-pointer rounded-[30px] border border-[#adb5bd] bg-white transition duration-300 peer-checked:bg-[#007bff] peer-checked:border-[#007bff]"></span>
-        <span className="absolute bottom-[0.30em] left-[0.27em] h-[1.2em] w-[1.2em] rounded-full bg-[#adb5bd] transition duration-400 peer-checked:translate-x-[1.6em] peer-checked:bg-white cursor-pointer"></span>
+        <span className="absolute inset-0 cursor-pointer rounded-[30px] border border-toggle bg-surface-card transition duration-300 peer-checked:bg-surface-toggle-active peer-checked:border-surface-toggle-active"></span>
+        <span className="absolute bottom-[0.30em] left-[0.27em] h-[1.2em] w-[1.2em] rounded-full bg-toggle-inactive transition duration-400 peer-checked:translate-x-[1.6em] peer-checked:bg-surface-card cursor-pointer"></span>
       </label>
     </div>
   );
 
   return (
-    <div className="space-y-2">
-        {rows.map((r, i) => (
-            <div key={i}>
-              {i > 0 && (
-                <div className="flex-grow h-px mb-2 bg-gray-300 opacity-35" />
-              )}
-              <ToggleRow {...r} />
-            </div>
+    <div className="space-y-6">
+        <div className="space-y-4">
+        {rows.map((r) => (
+            <ToggleRow key={r.title} {...r} />
         ))}
-
-        <div className="flex items-center w-full" role="separator">
-            <div className="flex-grow h-px my-2 bg-gray-300 opacity-35" />
         </div>
 
-        <div className="relative">
-            <h2 className="text-lg mb-2">Notification Tones</h2>
-            <p className="mt-1 text-[#7A7A73]">Select your notification tones for the messages you recieve</p>
+        <div className="space-y-2">
+            <label className="block text-sm font-semibold text-strong uppercase tracking-wider">
+              Notification Tones
+            </label>
+            <p className="text-sm text-list-muted">
+              Select notification tones for messages you receive
+            </p>
 
-            <div className="flex gap-2">
-    
+            <div className="relative flex gap-2">
                 <button
+                    type="button"
                     onClick={toggleDropdown}
-                    className="relative flex items-center justify-start w-[240px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2"
+                    className="relative flex flex-1 items-center justify-start px-4 py-2 border border-default rounded-lg bg-surface-elevated text-heading focus:rounded-b-none focus:rounded-t-lg focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer transition-all duration-200 gap-2"
                 >
                     <span>
                         {notificationSounds.find((o) => o.id === selected)?.name ?? selected}
@@ -102,7 +99,8 @@ export function NotificationSettings(){
                 </button>
 
                 <button
-                    className="px-3 py-2 text-sm border flex items-center justify-center rounded-lg border-[#dcd9d3] cursor-pointer"
+                    type="button"
+                    className="px-3 py-2 text-sm border flex items-center justify-center rounded-lg border-default bg-surface-card hover:bg-surface-muted transition-colors cursor-pointer"
                     onClick={() => {
                       const file = notificationSounds.find((o) => o.id ===selected)?.file;
                       if(file) playPreview(file);
@@ -113,12 +111,12 @@ export function NotificationSettings(){
             </div>
 
             {isOpen && (
-              <ul className="absolute z-10 w-[240px] bg-white border border-[#dcd9d3] rounded-b-lg shadow-lg">
+              <ul className="absolute left-0 z-10 w-full bg-surface-elevated border border-default rounded-b-lg shadow-lg">
                 {notificationSounds.map((option) => (
                   <li
                     key={option.id}
-                    className={`p-2 cursor-pointer text-[#222831] rounded-md transition-colors ${
-                      selected === option.id ? "hover:bg-[#efefef] text-[#222831]" : "hover:bg-[#efefef] text-[#222831]"
+                    className={`p-2 cursor-pointer text-list-emphasis rounded-md transition-colors ${
+                      selected === option.id ? "hover:bg-list-hover text-list-emphasis" : "hover:bg-list-hover text-list-emphasis"
                     }`}
                     onClick={() => handleDropDownSelect(option.id)}
                   >

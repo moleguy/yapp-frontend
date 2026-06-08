@@ -3,6 +3,10 @@
 import React, { useState } from "react";
 import { HallMember, Role } from "@/lib/api";
 import { HiOutlineUserMinus } from "react-icons/hi2";
+import { useDialog } from "@/app/contexts/DialogContext";
+import { usePresenceByUserId } from "@/app/store/usePresenceStore";
+import { presenceBgClass, resolvePresenceStatus } from "@/lib/presenceUtils";
+import { roleDotColor, roleNameClassName } from "@/lib/roleUtils";
 
 interface MembersListProps {
   members: HallMember[];
@@ -25,22 +29,25 @@ export default function MembersList({
   currentUserId,
   isOwner,
 }: MembersListProps) {
+  const { confirm, prompt } = useDialog();
+  const presenceByUserId = usePresenceByUserId();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const getRoleName = (roleId: string) =>
     roles.find((r) => r.id === roleId)?.name || "Unknown Role";
 
-  const getRoleColor = (roleId: string) =>
-    roles.find((r) => r.id === roleId)?.color ?? "#73726e";
+  const getRole = (roleId: string) => roles.find((r) => r.id === roleId);
+
+  const getRoleColor = (roleId: string) => roleDotColor(getRole(roleId));
 
   const displayName = (member: HallMember) =>
     member.nickname ||
     member.user?.display_name ||
     member.user?.username ||
-    "Unknown User";
+    `User ${member.user_id.slice(0, 8)}`;
 
   const handleKick = async (memberId: string) => {
-    if (!window.confirm("Are you sure you want to kick this member?")) return;
+    if (!(await confirm({ message: "Are you sure you want to kick this member?", destructive: true, confirmLabel: "Kick" }))) return;
     setLoadingId(memberId);
     await onKick(memberId);
     setLoadingId(null);
@@ -48,7 +55,7 @@ export default function MembersList({
 
   const handleBan = async (member: HallMember) => {
     if (!onBan) return;
-    if (!window.confirm(`Ban ${displayName(member)} from this hall?`)) return;
+    if (!(await confirm({ message: `Ban ${displayName(member)} from this hall?`, destructive: true, confirmLabel: "Ban" }))) return;
     setLoadingId(member.id);
     await onBan(member.user_id);
     setLoadingId(null);
@@ -56,7 +63,11 @@ export default function MembersList({
 
   const handleNickname = async (member: HallMember) => {
     if (!onUpdateNickname) return;
-    const nickname = window.prompt("Set nickname (leave empty to clear)", member.nickname || "");
+    const nickname = await prompt({
+      title: "Set nickname",
+      message: "Leave empty to clear",
+      defaultValue: member.nickname || "",
+    });
     if (nickname === null) return;
     setLoadingId(member.id);
     await onUpdateNickname(member.id, nickname.trim() || null);
@@ -67,26 +78,33 @@ export default function MembersList({
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-[#dcd9d3] text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <tr className="border-b border-default text-xs font-semibold text-list-muted uppercase tracking-wider">
             <th className="px-4 py-3">Member</th>
             <th className="px-4 py-3">Role</th>
             <th className="px-4 py-3">Joined</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#dcd9d3]">
+        <tbody className="divide-y divide-divider">
           {members.map((member) => (
-            <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={member.id} className="hover:bg-list-hover transition-colors">
               <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                    <span className="text-gray-500 font-medium">
-                      {displayName(member).charAt(0).toUpperCase()}
-                    </span>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-surface-control flex items-center justify-center overflow-hidden">
+                      <span className="text-list-muted font-medium">
+                        {displayName(member).charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div
+                      className={`absolute -bottom-0 right-0 w-3 h-3 border-2 border-surface-card rounded-full ${presenceBgClass(
+                        resolvePresenceStatus(member.user_id, presenceByUserId, member.presence)
+                      )}`}
+                    />
                   </div>
                   <div>
-                    <div className="font-medium text-[#1e1e1e]">{displayName(member)}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="font-medium text-heading">{displayName(member)}</div>
+                    <div className="text-xs text-list-muted">
                       {member.user?.username ? `@${member.user.username}` : member.user_id.substring(0, 8)}
                     </div>
                   </div>
@@ -97,7 +115,7 @@ export default function MembersList({
                   <select
                     value={member.role_id}
                     onChange={(e) => onUpdateRole(member.id, e.target.value)}
-                    className="text-sm border border-[#dcd9d3] rounded px-2 py-1"
+                    className="text-sm border border-default rounded px-2 py-1"
                     disabled={loadingId === member.id}
                   >
                     {roles.map((role) => (
@@ -112,13 +130,13 @@ export default function MembersList({
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: getRoleColor(member.role_id) }}
                     />
-                    <span className="text-sm text-[#1e1e1e] font-medium">
+                    <span className={roleNameClassName(getRole(member.role_id))}>
                       {getRoleName(member.role_id)}
                     </span>
                   </div>
                 )}
               </td>
-              <td className="px-4 py-4 text-sm text-gray-500">
+              <td className="px-4 py-4 text-sm text-list-muted">
                 {new Date(member.joined_at).toLocaleDateString()}
               </td>
               <td className="px-4 py-4 text-right">
@@ -129,7 +147,7 @@ export default function MembersList({
                         type="button"
                         onClick={() => handleNickname(member)}
                         disabled={loadingId === member.id}
-                        className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+                        className="px-2 py-1 text-xs text-primary hover:bg-primary-muted rounded"
                       >
                         Nickname
                       </button>
@@ -139,7 +157,7 @@ export default function MembersList({
                         type="button"
                         onClick={() => handleBan(member)}
                         disabled={loadingId === member.id}
-                        className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                        className="px-2 py-1 text-xs text-destructive hover:bg-destructive-muted rounded"
                       >
                         Ban
                       </button>
@@ -148,7 +166,7 @@ export default function MembersList({
                       type="button"
                       onClick={() => handleKick(member.id)}
                       disabled={loadingId === member.id}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-destructive hover:bg-destructive-muted rounded-lg transition-colors"
                       title="Kick Member"
                     >
                       <HiOutlineUserMinus size={20} />

@@ -5,9 +5,11 @@ import { useParams } from "next/navigation";
 import {
   useHallInvites,
   useSelectHall,
-  useSelectedHall
+  useSelectedHall,
+  useFetchInvites,
 } from "@/app/store/useHallStore";
 import { useUser } from "@/app/store/useUserStore";
+import { useDialog } from "@/app/contexts/DialogContext";
 import InviteList from "@/app/(main)/halls/components/InviteList";
 import { createInvite, revokeInvite, InviteExpireAfter } from "@/lib/api";
 import { HiOutlinePlus } from "react-icons/hi2";
@@ -18,18 +20,27 @@ export default function HallInvitesSettings() {
   const selectHall = useSelectHall();
   const hall = useSelectedHall();
   const invites = useHallInvites();
+  const fetchInvites = useFetchInvites();
   const user = useUser();
+  const { confirm, alert: showAlert } = useDialog();
 
   const [isCreating, setIsCreating] = useState(false);
   const [expireAfter, setExpireAfter] = useState<InviteExpireAfter>("7days");
   const [maxUses, setMaxUses] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [revokingAll, setRevokingAll] = useState(false);
 
   useEffect(() => {
     if (hallId) {
-      selectHall(hallId);
+      void selectHall(hallId);
     }
   }, [hallId, selectHall]);
+
+  useEffect(() => {
+    if (hall?.id === hallId) {
+      void fetchInvites();
+    }
+  }, [hall?.id, hallId, fetchInvites]);
 
   const handleCreateInvite = async () => {
     if (!hallId) return;
@@ -44,7 +55,7 @@ export default function HallInvitesSettings() {
       if (newInvite) {
         setIsCreating(false);
         setMaxUses("");
-        selectHall(hallId); // Refresh list
+        void fetchInvites();
       }
     } catch (error) {
       console.error("Failed to create invite:", error);
@@ -58,10 +69,46 @@ export default function HallInvitesSettings() {
     try {
       const success = await revokeInvite(hallId, inviteId);
       if (success) {
-        selectHall(hallId);
+        void fetchInvites();
       }
     } catch (error) {
       console.error("Failed to revoke invite:", error);
+    }
+  };
+
+  const handleRevokeAll = async () => {
+    if (!hallId || invites.length === 0) return;
+
+    const count = invites.length;
+    const confirmed = await confirm({
+      title: "Revoke all invites",
+      message: `Revoke all ${count} active invite link${count === 1 ? "" : "s"}? They will stop working immediately.`,
+      destructive: true,
+      confirmLabel: "Revoke All",
+    });
+    if (!confirmed) return;
+
+    setRevokingAll(true);
+    try {
+      const results = await Promise.all(
+        invites.map((invite) => revokeInvite(hallId, invite.id)),
+      );
+      const failed = results.filter((ok) => !ok).length;
+      await fetchInvites();
+      if (failed > 0) {
+        await showAlert({
+          title: "Some invites could not be revoked",
+          message: `${failed} of ${count} invite${count === 1 ? "" : "s"} failed to revoke. The list has been refreshed.`,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to revoke all invites:", error);
+      await showAlert({
+        title: "Revoke failed",
+        message: "Could not revoke all invites. Please try again.",
+      });
+    } finally {
+      setRevokingAll(false);
     }
   };
 
@@ -71,17 +118,23 @@ export default function HallInvitesSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Invites</h1>
-          <p className="text-[#73726e]">
-            Manage active invite links for this hall.
-          </p>
-        </div>
+      <div className="flex justify-end gap-2">
+        {isOwner && invites.length > 0 && (
+          <button
+            type="button"
+            onClick={handleRevokeAll}
+            disabled={revokingAll || loading}
+            className="px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive-muted transition-colors disabled:opacity-50"
+          >
+            {revokingAll ? "Revoking…" : "Revoke All"}
+          </button>
+        )}
         {isOwner && (
           <button
+            type="button"
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={revokingAll}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
           >
             <HiOutlinePlus size={20} />
             <span>Create Invite</span>
@@ -90,14 +143,14 @@ export default function HallInvitesSettings() {
       </div>
 
       {isCreating && (
-        <div className="p-6 bg-blue-50 border border-blue-100 rounded-xl space-y-4">
-          <h3 className="font-semibold text-blue-800">New Invite Link</h3>
+        <div className="p-6 bg-primary-muted border border-primary-subtle rounded-xl space-y-4">
+          <h3 className="font-semibold text-primary-emphasis">New Invite Link</h3>
           <div className="space-y-2">
-            <label className="block text-sm text-blue-700">Expires after</label>
+            <label className="block text-sm text-primary-emphasis">Expires after</label>
             <select
               value={expireAfter}
               onChange={(e) => setExpireAfter(e.target.value as InviteExpireAfter)}
-              className="w-full max-w-xs px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full max-w-xs px-3 py-2 border border-primary-soft rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-surface-card"
             >
               <option value="30min">30 minutes</option>
               <option value="1hr">1 hour</option>
@@ -109,11 +162,11 @@ export default function HallInvitesSettings() {
             </select>
           </div>
           <div className="space-y-2">
-            <label className="block text-sm text-blue-700">Max uses (leave empty for no limit)</label>
+            <label className="block text-sm text-primary-emphasis">Max uses (leave empty for no limit)</label>
             <select
               value={maxUses}
               onChange={(e) => setMaxUses(e.target.value)}
-              className="w-full max-w-xs px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full max-w-xs px-3 py-2 border border-primary-soft rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-surface-card"
             >
               <option value="">No limit</option>
               <option value="1">1</option>
@@ -128,13 +181,13 @@ export default function HallInvitesSettings() {
             <button
               onClick={handleCreateInvite}
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
             >
               {loading ? "Generating..." : "Generate Link"}
             </button>
             <button
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-secondary hover:text-heading"
             >
               Cancel
             </button>
@@ -142,7 +195,7 @@ export default function HallInvitesSettings() {
         </div>
       )}
 
-      <div className="bg-white border border-[#dcd9d3] rounded-xl overflow-hidden">
+      <div className="bg-surface-card border border-default rounded-xl overflow-hidden">
         <InviteList
           invites={invites}
           onRevoke={handleRevoke}

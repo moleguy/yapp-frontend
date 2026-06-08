@@ -36,11 +36,12 @@ const TextSizeDropDown: React.FC = () => {
     return (
         <div
             ref={textSizeRef}
-            className='relative w-64 mt-1'
+            className="relative w-full"
         >
             <button
+              type="button"
               onClick={toggleDropdown}
-              className='relative flex items-center justify-start w-[240px] p-2 border border-[#dcd9d3] rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none cursor-pointer transition-all duration-200 gap-2'
+              className="relative flex w-full items-center justify-start px-4 py-2 border border-default rounded-lg focus:rounded-b-none focus:rounded-t-lg focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer transition-all duration-200 gap-2 bg-surface-elevated text-heading"
             >
                 <span>{selectedSize}%</span>
                 <FaChevronDown className={`absolute right-2 w-4 h-4 transition-transform ${
@@ -48,13 +49,13 @@ const TextSizeDropDown: React.FC = () => {
             </button>
 
             {isOpen && (
-                <ul className="absolute z-10 w-[240px] bg-white border border-[#dcd9d3] rounded-b-lg shadow-lg">
+                <ul className="absolute left-0 z-10 w-full bg-surface-elevated border border-default rounded-b-lg shadow-lg">
                     {sizes.map((size) => (
                         <li
                             key={size}
                             onClick={() => handleSelect(size)}
                             className={`px-3 py-2 cursor-pointer ${
-                            size === selectedSize ? "bg-[#efefef] font-base hover:bg-[#efefef] rounded-md" : "hover:bg-[#efefef]"
+                            size === selectedSize ? "bg-list-selected font-base hover:bg-list-selected rounded-md" : "hover:bg-list-hover"
                             }`}
                         >
                             {size}%

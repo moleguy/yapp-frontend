@@ -1,5 +1,9 @@
 "use client";
 
+import { EmptyState, LoadingState } from "@/app/(main)/components/FeedbackStates";
+import { SettingsNotice } from "@/app/(main)/components/UserSettingsContent";
+import { Inbox } from "lucide-react";
+
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSelectHall, useSelectedHall } from "@/app/store/useHallStore";
@@ -78,43 +82,42 @@ export default function HallJoinRequestsSettings() {
 
   if (!hall.is_private) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-[#1e1e1e]">Join requests</h1>
-        <p className="text-[#73726e]">
-          Join requests only apply to private halls. This hall is public.
-        </p>
-      </div>
+      <SettingsNotice>
+        Join requests only apply to private halls. This hall is public.
+      </SettingsNotice>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1e1e1e] mb-2">Join requests</h1>
-        <p className="text-[#73726e]">
-          Pending requests to join this private hall ({total}).
-        </p>
-      </div>
+      {total > 0 ? (
+        <p className="text-list-muted">{total} pending request{total === 1 ? "" : "s"}.</p>
+      ) : null}
 
-      <div className="bg-white border border-[#dcd9d3] rounded-xl overflow-hidden">
+      <div className="bg-surface-card border border-default rounded-xl overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading…</div>
+          <LoadingState message="Loading requests…" fullHeight={false} />
         ) : requests.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No pending requests.</div>
+          <EmptyState
+            title="No pending requests"
+            description="Join requests for this private hall will appear here."
+            icon={<Inbox className="w-7 h-7" />}
+            fullHeight={false}
+          />
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#dcd9d3] text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <tr className="border-b border-default text-xs font-semibold text-list-muted uppercase tracking-wider">
                 <th className="px-4 py-3">User ID</th>
                 <th className="px-4 py-3">Requested</th>
                 {isOwner && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#dcd9d3]">
+            <tbody className="divide-y divide-divider">
               {requests.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
+                <tr key={r.id} className="hover:bg-list-hover">
                   <td className="px-4 py-3 font-mono text-sm">{r.user_id}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-secondary">
                     {new Date(r.created_at).toLocaleString()}
                   </td>
                   {isOwner && (
@@ -133,7 +136,7 @@ export default function HallJoinRequestsSettings() {
                           type="button"
                           onClick={() => onDecline(r.id)}
                           disabled={busyId === r.id}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          className="p-2 rounded-lg text-destructive hover:bg-destructive-muted disabled:opacity-50"
                           title="Decline"
                         >
                           <HiOutlineXMark size={22} />
