@@ -423,6 +423,14 @@ export type WSReadMessage = WSBaseMessage & {
   read_at?: string; 
 };
 export type WSErrorMessage = WSBaseMessage & { type: "error"; error: string };
+export type WSSubscribedRoomInfo = { room_id: string; hall_id: string };
+export type WSSubscriptionsSyncedMessage = {
+  type: "subscriptions_synced";
+  subscribed_room_count?: number;
+  subscribed_rooms?: WSSubscribedRoomInfo[];
+  synced_at?: string;
+  sent_at?: string;
+};
 export type WSMessage =
   | WSTextMessage
   | WSTypingMessage
@@ -434,7 +442,8 @@ export type WSMessage =
   | WSDeleteMessage
   | WSReactMessage
   | WSReadMessage
-  | WSErrorMessage;
+  | WSErrorMessage
+  | WSSubscriptionsSyncedMessage;
 export type WSSendTextMessage = {
   type: "text"; room_id: string; content: string; sent_at: string;
   mention_everyone?: boolean; mentions?: string[]; attachments?: Omit<AttachmentReq, "id">[];

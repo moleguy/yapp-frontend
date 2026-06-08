@@ -74,6 +74,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
         // Create stable message handler
         handleMessageRef.current = (message: WSMessage): void => {
             try {
+                // Connection-level events are not scoped to the active room
+                if (message.type === "subscriptions_synced") return;
+
                 if (message.room_id !== roomId) return;
 
                 switch (message.type) {

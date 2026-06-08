@@ -282,14 +282,28 @@ export class WebSocketClient {
             case "leave":
                 this.emit('leave', data);
                 break;
-            case "error":
-                // Handle server error messages properly
-                const errorMessage = (data as any).error || "Unknown WebSocket error";
+            case "error": {
+                const errorMessage = (data as { error?: string }).error || "Unknown WebSocket error";
                 console.error("WebSocket server error:", errorMessage, "Room:", data.room_id);
                 this.emit('error', new Error(errorMessage));
                 break;
+            }
+            case "subscriptions_synced": {
+                const synced = data as {
+                    subscribed_room_count?: number;
+                    subscribed_rooms?: { room_id: string; hall_id: string }[];
+                    synced_at?: string;
+                };
+                console.log(
+                    "[WebSocket] Subscriptions synced:",
+                    synced.subscribed_room_count ?? synced.subscribed_rooms?.length ?? 0,
+                    "rooms"
+                );
+                this.emit("subscriptions_synced", synced);
+                break;
+            }
             default:
-                console.warn("Unhandled message type:", (data as any).type, "Data:", data);
+                console.warn("Unhandled message type:", (data as { type?: string }).type, "Data:", data);
         }
     }
 }
