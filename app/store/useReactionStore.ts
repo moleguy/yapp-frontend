@@ -1,5 +1,8 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { Reaction } from "@/lib/api";
+
+const EMPTY_REACTIONS: Reaction[] = [];
 
 type ReactionState = {
     // Data - organized by room then message
@@ -121,7 +124,7 @@ export const useReactionStore = create<ReactionState>((set, get) => ({
 
     // ===== Helpers =====
     getReactionsForMessage: (roomId: string, messageId: string) => {
-        return get().reactionsByRoom[roomId]?.[messageId] || [];
+        return get().reactionsByRoom[roomId]?.[messageId] ?? EMPTY_REACTIONS;
     },
 
     getReactionCounts: (roomId: string, messageId: string) => {
@@ -148,13 +151,13 @@ export const useReactionStore = create<ReactionState>((set, get) => ({
 
 // Selectors
 export const useReactionsForMessage = (roomId: string, messageId: string) =>
-    useReactionStore((state) =>
-        state.getReactionsForMessage(roomId, messageId),
+    useReactionStore(
+        useShallow((state) => state.getReactionsForMessage(roomId, messageId))
     );
 
 export const useReactionCounts = (roomId: string, messageId: string) =>
-    useReactionStore((state) =>
-        state.getReactionCounts(roomId, messageId),
+    useReactionStore(
+        useShallow((state) => state.getReactionCounts(roomId, messageId))
     );
 
 export const useUserReacted = (
