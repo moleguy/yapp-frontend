@@ -9,8 +9,9 @@ import {
   useFetchMessages,
 } from "@/app/store/useMessageStore";
 import { useReactionCounts, useReactionStore } from "@/app/store/useReactionStore";
-import { getMessageDisplayName } from "@/lib/messageUtils";
+import { resolveMessageAuthor } from "@/lib/messageUtils";
 import { Message } from "@/lib/api";
+import { useHallMembers } from "@/app/store/useHallStore";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
@@ -68,6 +69,7 @@ export default function ChatArea({
   isDm,
 }: ChatAreaProps) {
   const user = useUser();
+  const hallMembers = useHallMembers();
   const safeHallId = hallId || "";
   const safeRoomId = roomId || "";
   const messages = useMessagesForRoom(safeRoomId);
@@ -114,8 +116,6 @@ export default function ChatArea({
     }
   }, [messages, safeRoomId, isDm, sendRead]);
 
-  const getUsername = (m: Message) => getMessageDisplayName(m, user);
-
   const formatTime = (t?: string) =>
     t
       ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -155,6 +155,7 @@ export default function ChatArea({
         {messages.map((m) => {
           const isCurrentUser = m.author_id === user?.id;
           const isEditing = editingId === m.id;
+          const { displayName, username } = resolveMessageAuthor(m, user, hallMembers);
 
           return (
             <div
@@ -162,11 +163,22 @@ export default function ChatArea({
               className={`mb-3 group ${isCurrentUser ? "flex justify-end" : "flex justify-start"}`}
             >
               <div className={`max-w-[70%] ${isCurrentUser ? "text-right" : "text-left"}`}>
-                <div className="flex gap-2 text-sm text-gray-600 mb-1 items-center">
-                  <span className="font-semibold">{getUsername(m)}</span>
+                <div
+                  className={`flex gap-2 text-sm text-gray-600 mb-1 items-center ${
+                    isCurrentUser ? "justify-end" : ""
+                  }`}
+                >
+                  {!isCurrentUser && (
+                    <span
+                      className="font-semibold cursor-default"
+                      title={username ? `@${username}` : undefined}
+                    >
+                      {displayName}
+                    </span>
+                  )}
                   <span>{formatTime(m.sent_at)}</span>
                   {isCurrentUser && !m.isOptimistic && (
-                    <span className="opacity-0 group-hover:opacity-100 flex gap-1 ml-1">
+                    <span className="opacity-0 group-hover:opacity-100 flex gap-1">
                       <button type="button" onClick={() => startEdit(m)} title="Edit">
                         <FiEdit2 className="w-3.5 h-3.5" />
                       </button>

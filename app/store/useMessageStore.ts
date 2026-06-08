@@ -9,6 +9,9 @@ import {
   ReactionGroup,
 } from "@/lib/api";
 import { useReactionStore } from "./useReactionStore";
+import { useHallStore } from "./useHallStore";
+import { useUserStore } from "./useUserStore";
+import { enrichMessageAuthor } from "@/lib/messageUtils";
 
 const EMPTY_MESSAGES: Message[] = [];
 
@@ -62,6 +65,12 @@ function normalizeMessages(messages: Message[]) {
     );
 }
 
+function enrichMessages(messages: Message[]): Message[] {
+  const currentUser = useUserStore.getState().user;
+  const hallMembers = useHallStore.getState().members;
+  return messages.map((m) => enrichMessageAuthor(m, currentUser, hallMembers));
+}
+
 function syncReactions(roomId: string, messages: Message[]) {
   messages.forEach((msg) => {
     if (!msg.reactions) return;
@@ -107,7 +116,7 @@ export const useMessageStore = create<MessageState>()(
             return;
           }
 
-          const messages = normalizeMessages(data.messages || []);
+          const messages = enrichMessages(normalizeMessages(data.messages || []));
           syncReactions(roomId, messages);
 
           set({
@@ -143,7 +152,7 @@ export const useMessageStore = create<MessageState>()(
           const data = res;
           if (!data) return;
           
-          const newMsgs = normalizeMessages(data?.messages || []);
+          const newMsgs = enrichMessages(normalizeMessages(data?.messages || []));
           syncReactions(roomId, newMsgs);
 
           set((state) => {
@@ -182,7 +191,7 @@ export const useMessageStore = create<MessageState>()(
           const data = res;
           if (!data) return;
           
-          const newMsgs = normalizeMessages(data?.messages || []);
+          const newMsgs = enrichMessages(normalizeMessages(data?.messages || []));
           syncReactions(roomId, newMsgs);
 
           set((state) => {
