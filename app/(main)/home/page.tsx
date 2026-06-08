@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { BiSolidMicrophone, BiSolidMicrophoneOff } from "react-icons/bi";
 import SettingsPopup from "../components/SettingsPopup";
 import Image from "next/image";
@@ -71,14 +71,21 @@ export default function HomePage() {
   const apiFriends = useFriends();
   const selectHall = useSelectHall();
 
-  const friends: Friend[] = apiFriends.map((u: { id: string; display_name: string; username: string; avatar_thumbnail_url?: string | null; mutual_friend_count?: number }) => ({
-    id: u.id,
-    name: u.display_name,
-    username: u.username,
-    avatarUrl: u.avatar_thumbnail_url ?? undefined,
-    status: "offline" as const,
-    mutualFriends: u.mutual_friend_count,
-  }));
+  const friends: Friend[] = useMemo(
+    () =>
+      apiFriends.map((u) => ({
+        id: u.id,
+        name: u.display_name,
+        username: u.username,
+        avatarUrl: u.avatar_thumbnail_url ?? undefined,
+        status: "offline" as const,
+        mutualFriends: u.mutual_friend_count,
+      })),
+    [apiFriends]
+  );
+
+  const sessionRestoredRef = useRef(false);
+  const friendRestoredRef = useRef(false);
 
   const onlineFriends = friends.filter((f) => f.status === "online");
   const offlineFriends = friends.filter((f) => f.status === "offline");
@@ -106,33 +113,50 @@ export default function HomePage() {
     void fetchFriends();
   }, [fetchFriends]);
 
+  // Restore hall/view selection once after halls load (not on every render)
   useEffect(() => {
+    if (sessionRestoredRef.current || halls.length === 0) return;
+    sessionRestoredRef.current = true;
+
     const savedView = localStorage.getItem("lastActiveView") as "server" | "dm" | null;
     const savedServerId = localStorage.getItem("lastActiveServerId");
     const hallDeselected = JSON.parse(localStorage.getItem("hallDeselectedManually") || "false");
     const friendDeselected = JSON.parse(localStorage.getItem("friendDeselectedManually") || "false");
-    const savedFriendId = localStorage.getItem("lastSelectedFriendId");
 
     setHallDeselectedManually(hallDeselected);
     setFriendDeselectedManually(friendDeselected);
     if (savedView) setActiveView(savedView);
 
-    if (!hallDeselected && savedServerId && halls.length > 0) {
+    if (!hallDeselected && savedServerId) {
       const savedHall = halls.find((h) => h.id === savedServerId);
       if (savedHall) {
         setLastActiveHall(savedHall);
         if (savedView === "server") {
           setActiveHall(savedHall);
           setSelectedRoom(null);
+          void selectHall(savedHall.id);
         }
       }
     }
+
+    if (friendDeselected) {
+      friendRestoredRef.current = true;
+    }
+  }, [halls, selectHall]);
+
+  // Restore selected friend once after friends load
+  useEffect(() => {
+    if (friendRestoredRef.current || friends.length === 0) return;
+
+    const friendDeselected = JSON.parse(localStorage.getItem("friendDeselectedManually") || "false");
+    const savedFriendId = localStorage.getItem("lastSelectedFriendId");
+    friendRestoredRef.current = true;
 
     if (!friendDeselected && savedFriendId) {
       const savedFriend = friends.find((f) => f.id === savedFriendId);
       if (savedFriend) setSelectedFriend(savedFriend);
     }
-  }, [halls, friends]);
+  }, [friends]);
 
   useEffect(() => {
     if (activeView) localStorage.setItem("lastActiveView", activeView);
@@ -153,6 +177,9 @@ export default function HomePage() {
     setLastActiveHall(hall);
     setHallDeselectedManually(false);
     setActiveView("server");
+    localStorage.setItem("lastActiveView", "server");
+    localStorage.setItem("lastActiveServerId", hall.id);
+    localStorage.setItem("hallDeselectedManually", "false");
     void selectHall(hall.id);
   };
 
@@ -196,8 +223,11 @@ export default function HomePage() {
     if (activeView === "dm") {
       setSelectedFriend(null);
       setFriendDeselectedManually(true);
+      localStorage.setItem("friendDeselectedManually", "true");
+      localStorage.removeItem("lastSelectedFriendId");
     } else {
       setActiveView("dm");
+      localStorage.setItem("lastActiveView", "dm");
       if (!friendDeselectedManually && selectedFriend) setSelectedFriend(selectedFriend);
     }
   };
@@ -206,6 +236,9 @@ export default function HomePage() {
     setSelectedFriend(friend);
     setFriendDeselectedManually(false);
     setActiveView("dm");
+    localStorage.setItem("lastActiveView", "dm");
+    localStorage.setItem("lastSelectedFriendId", friend.id);
+    localStorage.setItem("friendDeselectedManually", "false");
   };
 
   return (
